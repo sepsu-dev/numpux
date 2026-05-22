@@ -1,7 +1,7 @@
 import { Highlighter } from "@/components/highlighter";
 
 const faqs = [
-    { q: "Apakah benar-benar gratis?", a: "Ya, 100% gratis selama masa early access. Tidak perlu kartu kredit." },
+    { q: "Apakah benar-benar gratis?", a: "Ya, 100% gratis selama masa early access." },
     { q: "Bisa digunakan untuk tim?", a: "Numpux dirancang untuk kolaborasi tim dari skala kecil hingga enterprise." },
     { q: "Seberapa aman data saya?", a: "Data dienkripsi dengan standar industri. Keamanan adalah prioritas utama kami." },
     { q: "Tersedia di mobile?", a: "Web app Numpux sepenuhnya responsif dan optimal di semua perangkat." },

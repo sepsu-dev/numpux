@@ -56,15 +56,18 @@ export function Features() {
                         Capabilities
                     </span>
                     <h2 className="text-[32px] md:text-[48px] font-black tracking-[-0.03em] text-[#0A0A0A] font-heading leading-[1.1] mb-5">
-                        Semua yang{" "}
+                        Solusi Lengkap{" "}
                         <span className="relative inline-block">
-                            Anda Butuhkan.
+                            Manajemen Tugas.
                             <Highlighter variant={3} className="text-primary/20" />
                         </span>
                     </h2>
                     <p className="text-[15px] text-[#6B7280] font-medium leading-[1.7] max-w-md mx-auto">
-                        Satu platform. Semua instrumen produktivitas kelas dunia yang Anda butuhkan.
+                        Dari pencatatan harian hingga perencanaan proyek tim, semua dikelola secara otomatis, teratur, dan tanpa repot.
                     </p>
+
+
+
                 </div>
 
                 {/* Grid */}

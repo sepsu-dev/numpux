@@ -11,20 +11,24 @@ export function CTA() {
 
                 <div className="relative z-10">
                     <h2 className="text-[32px] md:text-[48px] font-black tracking-[-0.03em] text-white font-heading leading-[1.1] mb-6 relative inline-block">
-                        Siap Berhenti Menumpuk?
+                        Mulai Perjalanan Anda.
                         <Highlighter variant={3} className="text-white/10 -bottom-2" />
                     </h2>
                     <h2 className="text-[32px] md:text-[52px] font-black tracking-[-0.03em] text-white font-heading leading-[1.05] mb-6">
-                        Mulai Produktif{" "}
+                        Jadi Lebih Produktif{" "}
                         <span className="relative inline-block">
-                            <em className="not-italic text-accent">Hari Ini.</em>
+                            <em className="not-italic text-accent">Kapan Saja.</em>
                             <Highlighter variant={1} className="text-accent/30" />
                         </span>
                     </h2>
                 </div>
                 <p className="text-[15px] text-white/40 font-medium max-w-sm mx-auto mb-10 leading-[1.7]">
-                    Bergabung dan nikmati akses penuh secara gratis selama masa Early Access.
+                    Bergabung dengan ribuan orang lainnya yang telah berhasil mengubah cara mereka mengelola tugas menjadi lebih simpel.
                 </p>
+
+
+
+
                 <Link
                     href="/register"
                     className="inline-flex items-center gap-3 px-8 py-4 rounded-sm bg-accent text-white font-black text-[15px] hover:bg-white hover:text-[#0A0A0A] transition-all shadow-[0_0_40px_rgba(168,85,247,0.3)] active:scale-95"
@@ -34,7 +38,7 @@ export function CTA() {
                     <span className="text-[13px]">→</span>
                 </Link>
                 <p className="text-[11px] text-white/20 font-bold mt-5 uppercase tracking-[0.2em]">
-                    Tidak perlu kartu kredit · Akses penuh semua fitur
+                    Akses penuh semua fitur
                 </p>
             </div>
         </section>

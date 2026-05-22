@@ -11,14 +11,14 @@ export function Pricing() {
                         Pricing
                     </span>
                     <h2 className="text-[32px] md:text-[48px] font-black tracking-[-0.03em] text-[#0A0A0A] font-heading leading-[1.1] mb-5">
-                        Gratis Selama{" "}
+                        Pilih Paket{" "}
                         <span className="relative inline-block">
-                            <em className="not-italic text-accent">Early Access.</em>
+                            <em className="not-italic text-accent">Yang Sesuai.</em>
                             <Highlighter variant={3} className="text-accent/30" />
                         </span>
                     </h2>
                     <p className="text-[15px] text-[#6B7280] font-medium leading-[1.7]">
-                        Dapatkan akses penuh tanpa biaya apapun. Bantu kami berkembang dengan feedback Anda.
+                        Mulai dengan yang gratis selama Early Access. Tingkatkan efektivitas kerja Anda saat sudah siap mengelola proyek lebih pro.
                     </p>
                 </div>
 
@@ -40,7 +40,7 @@ export function Pricing() {
                                 Rp 0
                                 <Highlighter variant={1} className="text-primary/10 bottom-0 top-auto translate-y-2 h-[40%]" />
                             </span>
-                            <p className="text-[13px] text-[#6B7280] font-medium mt-6">per bulan · Tidak perlu kartu kredit</p>
+                            <p className="text-[13px] text-[#6B7280] font-medium mt-6">per bulan</p>
                         </div>
 
 
@@ -64,7 +64,7 @@ export function Pricing() {
                             href="/register"
                             className="w-full py-4 rounded-sm bg-[#0A0A0A] text-white font-black text-[15px] hover:bg-accent transition-colors shadow-[4px_4px_0_0_rgba(168,85,247,0.2)] hover:shadow-none flex items-center justify-center"
                         >
-                            Dapatkan Akses Gratis →
+                            Daftar Sekarang, Gratis →
                         </Link>
                     </div>
                 </div>

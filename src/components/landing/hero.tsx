@@ -21,26 +21,31 @@ export function Hero() {
                     </div>
 
                     <h1 className="text-[44px] md:text-[68px] font-black tracking-[-0.04em] mb-7 text-[#0A0A0A] leading-[1] font-heading">
-                        Selesaikan{" "}
+                        Atur Tugas, Jadi Lebih{" "}
                         <span className="relative inline-block">
-                            <em className="not-italic text-primary">Tumpukan</em>
+                            <em className="not-italic text-primary">Simpel</em>
                             <Highlighter variant={1} className="text-primary/30" />
                         </span>
                         {" "}<br className="hidden md:block" />
-                        Tugas Anda —{" "}
+                        dan Terukur. —{" "}
                         <span className="relative inline-block">
-                            <em className="not-italic text-accent">Luar Biasa.</em>
+                            <em className="not-italic text-accent">Numpux.</em>
                             <Highlighter variant={3} className="text-accent/30" />
                         </span>
                     </h1>
 
 
                     <p className="text-[15px] text-[#6B7280] font-medium mb-10 max-w-lg mx-auto leading-[1.7]">
-                        Platform manajemen tugas yang dirancang untuk kecepatan. Tingkatkan fokus dan capai target tim lebih cepat —{" "}
+                        Wujudkan produktivitas maksimal Anda setiap hari. Susun rencana lebih ringkas, pantau progres otomatis, dan{" "}
                         <span className="relative inline-block text-[#0A0A0A] font-black underline decoration-primary/30 decoration-2 underline-offset-4">
-                            Gratis Selama Early Access.
+                            Raih Target Anda
                         </span>
+                        {" "}dengan lebih pasti.
                     </p>
+
+
+
+
 
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -61,7 +66,7 @@ export function Hero() {
 
                     <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-[#9CA3AF] uppercase tracking-[0.2em] mt-6">
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                        <span>Tidak perlu kartu kredit · 100% Gratis</span>
+                        <span>100% Gratis</span>
                     </div>
                 </div>
 
