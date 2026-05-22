@@ -14,7 +14,7 @@ export function FAQ() {
                 <div className="flex flex-col lg:flex-row gap-16 items-start">
                     {/* Left */}
                     <div className="lg:w-1/3 lg:sticky lg:top-32">
-                        <span className="inline-block px-4 py-1.5 rounded-md bg-accent/10 text-accent text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-accent/15">
+                        <span className="inline-block px-4 py-1.5 rounded-sm bg-accent/10 text-accent text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-accent/15">
                             Pusat Bantuan
                         </span>
                         <h2 className="text-[32px] md:text-[40px] font-black tracking-[-0.03em] text-[#0A0A0A] font-heading leading-[1.1] mb-4">
@@ -31,7 +31,7 @@ export function FAQ() {
 
                     <div className="flex-1 space-y-4">
                         {faqs.map((item, i) => (
-                            <div key={i} className="p-6 rounded-md bg-white border border-black/[0.06] hover:border-black/15 transition-colors">
+                            <div key={i} className="p-6 rounded-sm bg-white border border-black/[0.06] hover:border-black/15 transition-colors">
 
                                 <h4 className="text-[15px] font-black text-[#0A0A0A] mb-2">{item.q}</h4>
                                 <p className="text-[13px] text-[#6B7280] font-medium leading-[1.6]">{item.a}</p>

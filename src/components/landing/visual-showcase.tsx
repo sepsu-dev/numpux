@@ -8,7 +8,7 @@ export function VisualShowcase() {
                 <div className="flex flex-col lg:flex-row items-center gap-16">
                     {/* Text */}
                     <div className="flex-1 text-left">
-                        <span className="inline-block px-4 py-1.5 rounded-md bg-accent/10 text-accent text-[10px] font-black mb-6 uppercase tracking-[0.25em] border border-accent/15">
+                        <span className="inline-block px-4 py-1.5 rounded-sm bg-accent/10 text-accent text-[10px] font-black mb-6 uppercase tracking-[0.25em] border border-accent/15">
                             Workflow
                         </span>
 
@@ -30,7 +30,7 @@ export function VisualShowcase() {
                                 { label: "Timeline Strategis", desc: "Rencanakan milestone dengan presisi." },
                             ].map((item, i) => (
                                 <li key={i} className="flex items-start gap-4">
-                                    <div className="w-7 h-7 rounded-md bg-[#0A0A0A] text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
+                                    <div className="w-7 h-7 rounded-sm bg-[#0A0A0A] text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
                                         0{i + 1}
                                     </div>
 
@@ -52,13 +52,13 @@ export function VisualShowcase() {
                         <div className="absolute -top-10 -right-10 w-32 h-32 text-accent/10 rotate-12 pointer-events-none">
                             <Highlighter variant={3} />
                         </div>
-                        <div className="rounded-md border-2 border-black/[0.08] bg-[#FAFAFA] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative z-10">
+                        <div className="rounded-sm border-2 border-black/[0.08] bg-[#FAFAFA] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative z-10">
 
                             <div className="mb-4 flex items-center justify-between">
                                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Mei 2026</span>
                                 <div className="flex gap-1">
-                                    <div className="w-5 h-5 rounded-md bg-black/[0.04] flex items-center justify-center text-[10px]">‹</div>
-                                    <div className="w-5 h-5 rounded-md bg-black/[0.04] flex items-center justify-center text-[10px]">›</div>
+                                    <div className="w-5 h-5 rounded-sm bg-black/[0.04] flex items-center justify-center text-[10px]">‹</div>
+                                    <div className="w-5 h-5 rounded-sm bg-black/[0.04] flex items-center justify-center text-[10px]">›</div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-7 gap-1 mb-3">
@@ -73,7 +73,7 @@ export function VisualShowcase() {
                                     const hasEvent = [5, 12, 19, 25, 28].includes(day);
                                     if (day < 1 || day > 31) return <div key={i} className="aspect-square" />;
                                     return (
-                                        <div key={i} className={`aspect-square flex items-center justify-center rounded-md text-[11px] font-bold relative
+                                        <div key={i} className={`aspect-square flex items-center justify-center rounded-sm text-[11px] font-bold relative
                                             ${isToday ? "bg-accent text-white shadow-md" : "hover:bg-black/[0.04] text-[#0A0A0A]"}
                                         `}>
                                             {day}
@@ -90,7 +90,7 @@ export function VisualShowcase() {
                                     { label: "Kick-off Meeting", time: "9:00", color: "bg-primary/10 text-primary border-primary/20" },
                                     { label: "Review Design Sprint", time: "14:00", color: "bg-accent/10 text-accent border-accent/20" },
                                 ].map((ev, i) => (
-                                    <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-md border text-[11px] font-bold ${ev.color}`}>
+                                    <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-sm border text-[11px] font-bold ${ev.color}`}>
 
                                         <span className="opacity-60 shrink-0">{ev.time}</span>
                                         <span>{ev.label}</span>

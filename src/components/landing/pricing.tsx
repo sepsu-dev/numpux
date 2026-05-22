@@ -7,7 +7,7 @@ export function Pricing() {
             <div className="container max-w-5xl mx-auto px-8">
                 {/* Header */}
                 <div className="text-center max-w-2xl mx-auto mb-16">
-                    <span className="inline-block px-4 py-1.5 rounded-md bg-accent/10 text-accent text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-accent/15">
+                    <span className="inline-block px-4 py-1.5 rounded-sm bg-accent/10 text-accent text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-accent/15">
                         Pricing
                     </span>
                     <h2 className="text-[32px] md:text-[48px] font-black tracking-[-0.03em] text-[#0A0A0A] font-heading leading-[1.1] mb-5">
@@ -26,11 +26,11 @@ export function Pricing() {
                     <div className="absolute -left-6 -top-6 w-20 h-20 text-accent/20 rotate-[-15deg] pointer-events-none group-hover:rotate-0 transition-transform">
                         <Highlighter variant={2} />
                     </div>
-                    <div className="rounded-md border-2 border-black/[0.08] bg-[#FAFAFA] p-8 text-center relative overflow-hidden hover:border-accent/40 transition-colors z-10">
+                    <div className="rounded-sm border-2 border-black/[0.08] bg-[#FAFAFA] p-8 text-center relative overflow-hidden hover:border-accent/40 transition-colors z-10">
 
 
                         <div className="absolute top-4 right-4">
-                            <span className="bg-accent text-white text-[9px] font-black px-2.5 py-1.5 rounded-md shadow uppercase tracking-widest">EARLY ACCESS</span>
+                            <span className="bg-accent text-white text-[9px] font-black px-2.5 py-1.5 rounded-sm shadow uppercase tracking-widest">EARLY ACCESS</span>
 
                         </div>
 
@@ -62,7 +62,7 @@ export function Pricing() {
 
                         <Link
                             href="/register"
-                            className="w-full py-4 rounded-md bg-[#0A0A0A] text-white font-black text-[15px] hover:bg-accent transition-colors shadow-[4px_4px_0_0_rgba(168,85,247,0.2)] hover:shadow-none flex items-center justify-center"
+                            className="w-full py-4 rounded-sm bg-[#0A0A0A] text-white font-black text-[15px] hover:bg-accent transition-colors shadow-[4px_4px_0_0_rgba(168,85,247,0.2)] hover:shadow-none flex items-center justify-center"
                         >
                             Dapatkan Akses Gratis →
                         </Link>

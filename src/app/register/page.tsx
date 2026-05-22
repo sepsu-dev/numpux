@@ -28,7 +28,7 @@ export default function RegisterPage() {
                     </div>
 
                     {/* Card */}
-                    <div className="bg-white rounded-md border border-black/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.06)] p-8">
+                    <div className="bg-white rounded-sm border border-black/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.06)] p-8">
                         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
                             <div className="space-y-1.5">
                                 <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6B7280]">Nama Lengkap</label>
@@ -37,7 +37,7 @@ export default function RegisterPage() {
                                     <input
                                         type="text"
                                         placeholder="John Doe"
-                                        className="w-full pl-10 pr-4 py-3 rounded-md border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
+                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
                                     />
                                 </div>
                             </div>
@@ -49,7 +49,7 @@ export default function RegisterPage() {
                                     <input
                                         type="email"
                                         placeholder="nama@email.com"
-                                        className="w-full pl-10 pr-4 py-3 rounded-md border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
+                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
                                     />
                                 </div>
                             </div>
@@ -61,14 +61,14 @@ export default function RegisterPage() {
                                     <input
                                         type="password"
                                         placeholder="••••••••"
-                                        className="w-full pl-10 pr-4 py-3 rounded-md border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A]"
+                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A]"
                                     />
                                 </div>
                             </div>
 
                             <button
                                 type="submit"
-                                className="w-full py-3.5 rounded-md bg-accent text-white font-black text-[14px] hover:bg-[#0A0A0A] transition-colors shadow-[3px_3px_0_0_rgba(168,85,247,0.2)] hover:shadow-none active:scale-[0.98] mt-2"
+                                className="w-full py-3.5 rounded-sm bg-accent text-white font-black text-[14px] hover:bg-[#0A0A0A] transition-colors shadow-[3px_3px_0_0_rgba(168,85,247,0.2)] hover:shadow-none active:scale-[0.98] mt-2"
                             >
                                 Buat Akun Sekarang
                             </button>

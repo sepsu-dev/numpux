@@ -39,7 +39,7 @@ export function SiteHeader({ name, showMenu = true }: SiteHeaderProps) {
               </Link>
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-md bg-[#0A0A0A] text-white font-black text-[13px] hover:bg-accent transition-colors shadow-[3px_3px_0_0_rgba(168,85,247,0.3)] hover:shadow-none active:scale-95"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-sm bg-[#0A0A0A] text-white font-black text-[13px] hover:bg-accent transition-colors shadow-[3px_3px_0_0_rgba(168,85,247,0.3)] hover:shadow-none active:scale-95"
               >
                 Daftar Gratis
               </Link>

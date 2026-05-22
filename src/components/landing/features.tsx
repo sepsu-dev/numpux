@@ -52,7 +52,7 @@ export function Features() {
             <div className="container max-w-5xl mx-auto px-8 relative z-10">
                 {/* Header */}
                 <div className="text-center max-w-2xl mx-auto mb-16">
-                    <span className="inline-block px-4 py-1.5 rounded-md bg-primary/10 text-primary text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-primary/15">
+                    <span className="inline-block px-4 py-1.5 rounded-sm bg-primary/10 text-primary text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-primary/15">
                         Capabilities
                     </span>
                     <h2 className="text-[32px] md:text-[48px] font-black tracking-[-0.03em] text-[#0A0A0A] font-heading leading-[1.1] mb-5">
@@ -72,14 +72,14 @@ export function Features() {
                     {features.map((feature, idx) => (
                         <div
                             key={idx}
-                            className="p-8 rounded-md border border-black/[0.06] bg-white hover:border-black/20 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 group flex items-start gap-5 relative overflow-hidden"
+                            className="p-8 rounded-sm border border-black/[0.06] bg-white hover:border-black/20 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 group flex items-start gap-5 relative overflow-hidden"
                         >
                             {/* Decorative Scribble */}
                             <div className="absolute -top-4 -right-4 w-12 h-12 text-primary/5 group-hover:scale-150 transition-transform">
                                 <Highlighter variant={idx % 3 + 1 as 1 | 2 | 3} />
                             </div>
 
-                            <div className={`w-11 h-11 shrink-0 rounded-md ${feature.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                            <div className={`w-11 h-11 shrink-0 rounded-sm ${feature.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                                 <feature.icon className={`w-5 h-5 ${feature.color}`} />
                             </div>
                             <div>
