@@ -1,84 +1,106 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { User, Mail, Lock } from "lucide-react";
-import { Highlighter } from "@/components/highlighter";
+import { User, Mail, Lock, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const router = useRouter();
+
+    const handleRegister = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!name || !email || !password) {
+            toast.error("Mohon isi semua bidang");
+            return;
+        }
+
+        toast.success("Berhasil daftar! Mengalihkan...");
+        router.push("/dashboard");
+    };
+
     return (
-        <div className="min-h-screen bg-[#FAFAFA] flex flex-col relative">
+        <div className="min-h-screen bg-background flex flex-col bg-dot-grid relative">
+            {/* Back link */}
+            <div className="absolute top-6 left-6">
+                <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
+                    <ArrowLeft className="w-4 h-4" />
+                    Kembali
+                </Link>
+            </div>
 
-
-            {/* Grid bg matching landing page */}
-            <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-
-            <div className="flex-1 flex flex-col justify-center items-center px-4 relative z-10 py-12">
-                <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    {/* Form Header */}
-                    <div className="text-center mb-10">
-                        <h1 className="text-[28px] md:text-[36px] font-black tracking-[-0.03em] text-[#0A0A0A] leading-tight font-heading">
-                            Buat Akun{" "}
-                            <span className="relative inline-block">
-                                <em className="not-italic text-accent">Gratis.</em>
-                                <Highlighter variant={2} className="text-accent/25" />
-                            </span>
+            <div className="flex-1 flex flex-col justify-center items-center px-4 py-12">
+                <div className="w-full max-w-[390px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-sans font-black text-foreground tracking-tight">
+                            Daftar Akun <span className="text-primary lowercase font-black">numpux</span>
                         </h1>
-                        <p className="text-[13px] text-[#6B7280] font-medium mt-2">Mulai produktivitas Anda hari ini</p>
+                        <p className="text-sm text-muted-foreground mt-2">Mulai perjalanan produktivitas Anda gratis</p>
                     </div>
 
                     {/* Card */}
-                    <div className="bg-white rounded-sm border border-black/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.06)] p-8">
-                        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6B7280]">Nama Lengkap</label>
-                                <div className="relative group">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] group-focus-within:text-accent transition-colors" />
+                    <div className="bg-white rounded-xl border border-border shadow-lg p-8 crave-shadow">
+                        <form className="space-y-5" onSubmit={handleRegister}>
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-xs font-black text-foreground uppercase tracking-wider">Nama</label>
+                                <div className="relative">
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
-                                        type="text"
-                                        placeholder="John Doe"
-                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
+                                        placeholder="Nama Lengkap"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground placeholder:text-muted-foreground/50"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6B7280]">Email</label>
-                                <div className="relative group">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] group-focus-within:text-accent transition-colors" />
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-xs font-black text-foreground uppercase tracking-wider">Email</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
                                         type="email"
                                         placeholder="nama@email.com"
-                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground placeholder:text-muted-foreground/50"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6B7280]">Sandi</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] group-focus-within:text-accent transition-colors" />
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-xs font-black text-foreground uppercase tracking-wider">Kata sandi</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
                                         type="password"
                                         placeholder="••••••••"
-                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A]"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground"
                                     />
                                 </div>
                             </div>
 
                             <button
                                 type="submit"
-                                className="w-full py-3.5 rounded-sm bg-accent text-white font-black text-[14px] hover:bg-[#0A0A0A] transition-colors shadow-[3px_3px_0_0_rgba(168,85,247,0.2)] hover:shadow-none active:scale-[0.98] mt-2"
+                                className="w-full py-3.5 rounded-xl lime-glow-button text-primary-foreground font-black text-sm flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                Buat Akun Sekarang
+                                Daftar Gratis
                             </button>
                         </form>
                     </div>
 
-                    <p className="mt-7 text-center text-[13px] font-medium text-[#6B7280]">
+                    <p className="mt-6 text-center text-sm text-muted-foreground font-medium">
                         Sudah punya akun?{" "}
-                        <Link href="/login" className="font-black text-primary hover:underline underline-offset-4">
-                            Masuk Saja
+                        <Link href="/login" className="font-bold text-primary hover:opacity-85">
+                            Masuk
                         </Link>
                     </p>
                 </div>

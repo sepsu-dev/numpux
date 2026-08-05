@@ -23,55 +23,55 @@ export default function EditTaskPage() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4">
-                <Link href="/dashboard/tasks" className="p-2 hover:bg-[#FAFAFA] rounded-sm text-[#9CA3AF] hover:text-[#0A0A0A] transition-colors border border-black/[0.05]">
+                <Link href="/dashboard/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-black text-[#0A0A0A] tracking-tighter">Edit Tugas #{id}</h2>
-                    <p className="text-[#6B7280] font-medium">Perbarui status dan detail rencana Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Tugas #{id}</h2>
+                    <p className="text-muted-foreground font-medium">Perbarui status dan detail rencana Anda.</p>
                 </div>
             </div>
 
-            <div className="bg-white border border-black/[0.08] rounded-sm p-10 shadow-sm max-w-4xl">
+            <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm max-w-4xl">
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="title" className="font-black text-[11px] uppercase tracking-widest text-[#9CA3AF]">Judul Tugas</Label>
+                            <Label htmlFor="title" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Judul Tugas</Label>
                             <Input
                                 id="title"
                                 defaultValue="Refactor API Gateway"
-                                className="h-12 text-base rounded-sm border-black/[0.1] focus:border-accent font-medium text-[#0A0A0A]"
+                                className="h-12 text-base rounded-lg border-border focus:border-primary font-medium text-foreground"
                                 required
                             />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="project" className="font-black text-[11px] uppercase tracking-widest text-[#9CA3AF]">Proyek</Label>
+                                <Label htmlFor="project" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Proyek</Label>
                                 <Input
                                     id="project"
                                     defaultValue="Numpux Engine"
-                                    className="rounded-sm border-black/[0.1] focus:border-accent font-medium text-[#0A0A0A]"
+                                    className="rounded-lg border-border focus:border-primary font-medium text-foreground"
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="date" className="font-black text-[11px] uppercase tracking-widest text-[#9CA3AF]">Tenggat Waktu</Label>
+                                <Label htmlFor="date" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Tenggat Waktu</Label>
                                 <Input
                                     id="date"
                                     type="date"
                                     defaultValue="2026-05-25"
-                                    className="rounded-sm border-black/[0.1] focus:border-accent font-medium text-[#0A0A0A]"
+                                    className="rounded-lg border-border focus:border-primary font-medium text-foreground"
                                 />
                             </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="priority" className="font-black text-[11px] uppercase tracking-widest text-[#9CA3AF]">Prioritas</Label>
+                            <Label htmlFor="priority" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Prioritas</Label>
                             <div className="flex gap-4">
                                 {['Low', 'Medium', 'High', 'Critical'].map((p) => (
                                     <label key={p} className="flex-1 cursor-pointer">
                                         <input type="radio" name="priority" className="sr-only peer" defaultChecked={p === 'High'} />
-                                        <div className="flex items-center justify-center p-3 text-[10px] font-black uppercase border-2 border-black/[0.05] rounded-sm peer-checked:border-accent peer-checked:bg-accent/5 peer-checked:text-accent transition-all">
+                                        <div className="flex items-center justify-center p-3 text-[10px] font-bold uppercase border-2 border-border/40 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all">
                                             {p}
                                         </div>
                                     </label>
@@ -80,18 +80,18 @@ export default function EditTaskPage() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="description" className="font-black text-[11px] uppercase tracking-widest text-[#9CA3AF]">Deskripsi Tugas</Label>
+                            <Label htmlFor="description" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Deskripsi Tugas</Label>
                             <Textarea
                                 id="description"
                                 defaultValue="Lakukan restrukturisasi pada modul gateway untuk mendukung latency yang lebih rendah."
-                                className="min-h-[120px] rounded-sm border-black/[0.1] focus:border-accent resize-none p-4 font-medium text-[#0A0A0A]"
+                                className="min-h-[120px] rounded-lg border-border focus:border-primary resize-none p-4 font-medium text-foreground"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6 border-t border-black/[0.04] flex items-center justify-end gap-4">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-bold text-[#6B7280]">Batal</Button>
-                        <Button type="submit" className="bg-[#0A0A0A] hover:bg-accent text-white font-black px-10 h-12 rounded-sm shadow-[6px_6px_0_0_rgba(168,85,247,0.2)] hover:shadow-none transition-all">
+                    <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-4">
+                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-bold text-muted-foreground">Batal</Button>
+                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-10 h-12 rounded-lg shadow-[0_8px_24px_rgba(217,166,64,0.25)] hover:shadow-none transition-all">
                             Simpan Perubahan
                         </Button>
                     </div>

@@ -1,4 +1,4 @@
-import { cn } from "@/utils";
+import { cn } from "@/lib/utils";
 
 interface HighlighterProps {
     variant?: 1 | 2 | 3;

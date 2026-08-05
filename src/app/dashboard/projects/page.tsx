@@ -49,12 +49,12 @@ export default function ProjectsPage() {
             {/* Header */}
             <div className="flex items-center justify-between gap-8 pb-8">
                 <div>
-                    <h2 className="text-3xl font-black text-[#0A0A0A] tracking-tighter">Proyek</h2>
-                    <p className="text-[#9CA3AF] text-sm font-medium mt-1">Kelola visi besar Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Proyek</h2>
+                    <p className="text-muted-foreground text-sm font-medium mt-1">Kelola visi besar Anda.</p>
                 </div>
 
                 <Link href="/dashboard/projects/new">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-[#0A0A0A] text-white rounded-sm text-[11px] font-black hover:bg-black transition-all shadow-sm active:scale-95">
+                    <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg text-[11px] font-bold hover:bg-foreground transition-all shadow-sm active:scale-95">
                         <Plus size={16} />
                         PROYEK BARU
                     </button>
@@ -66,20 +66,20 @@ export default function ProjectsPage() {
                 {projects.map((project) => (
                     <div
                         key={project.id}
-                        className="bg-white border border-black/[0.04] p-10 rounded-sm shadow-sm group hover:border-accent/20 hover:shadow-md transition-all flex flex-col justify-between min-h-[340px]"
+                        className="bg-white border border-border/60 p-10 rounded-lg shadow-sm group hover:border-primary/20 hover:shadow-md transition-all flex flex-col justify-between min-h-[340px]"
                     >
                         <div className="space-y-6">
                             <div className="flex justify-between items-start">
-                                <div className="w-10 h-10 rounded-sm bg-[#FAFAFA] border border-black/[0.04] flex items-center justify-center text-[#9CA3AF] group-hover:text-accent transition-colors">
+                                <div className="w-10 h-10 rounded-lg bg-muted/50 border border-border/60 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
                                     <Briefcase size={20} />
                                 </div>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <button className="p-2 bg-white border border-black/[0.08] rounded-sm text-[#0A0A0A] hover:bg-[#FAFAFA] transition-all">
+                                        <button className="p-2 bg-white border border-border/60 rounded-lg text-foreground hover:bg-muted/50 transition-all">
                                             <MoreHorizontal size={18} />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="rounded-sm border border-black/[0.04] font-sans font-bold shadow-lg">
+                                    <DropdownMenuContent align="end" className="rounded-lg border border-border/60 font-sans font-bold shadow-lg">
                                         <DropdownMenuItem asChild>
                                             <Link href={`/dashboard/projects/edit/${project.id}`} className="cursor-pointer">
                                                 <Edit size={14} className="mr-2" /> Ubah
@@ -96,20 +96,20 @@ export default function ProjectsPage() {
                             </div>
 
                             <div>
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-accent block mb-2">{project.category}</span>
-                                <h3 className="text-xl font-black text-[#0A0A0A] tracking-tighter group-hover:text-accent transition-colors mb-1">{project.title}</h3>
-                                <p className="text-xs font-bold text-[#9CA3AF] line-clamp-2">{project.description}</p>
+                                <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary block mb-2">{project.category}</span>
+                                <h3 className="text-xl font-bold text-foreground tracking-tighter group-hover:text-primary transition-colors mb-1">{project.title}</h3>
+                                <p className="text-xs font-bold text-muted-foreground line-clamp-2">{project.description}</p>
                             </div>
                         </div>
 
                         <div className="mt-8 space-y-3">
                             <div className="flex justify-between items-end">
-                                <span className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest">{project.tasks} Tugas</span>
-                                <span className="text-[10px] font-black">{project.progress}%</span>
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{project.tasks} Tugas</span>
+                                <span className="text-[10px] font-bold">{project.progress}%</span>
                             </div>
-                            <div className="h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-[#0A0A0A] group-hover:bg-accent rounded-full transition-all duration-1000"
+                                    className="h-full bg-primary group-hover:bg-primary rounded-full transition-all duration-1000"
                                     style={{ width: `${project.progress}%` }}
                                 />
                             </div>
@@ -119,13 +119,13 @@ export default function ProjectsPage() {
 
                 {/* Tambah Proyek */}
                 <Link href="/dashboard/projects/new" className="group h-full">
-                    <div className="h-full min-h-[340px] border border-dashed border-black/[0.1] rounded-sm flex flex-col items-center justify-center gap-4 hover:border-accent hover:bg-accent/[0.02] transition-all hover:shadow-sm">
-                        <div className="w-16 h-16 rounded-sm border border-black/[0.1] bg-white flex items-center justify-center text-[#9CA3AF] group-hover:text-accent group-hover:border-accent transition-all shadow-sm">
+                    <div className="h-full min-h-[340px] border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-4 hover:border-primary hover:bg-primary/[0.02] transition-all hover:shadow-sm">
+                        <div className="w-16 h-16 rounded-lg border border-border bg-white flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary transition-all shadow-sm">
                             <Plus size={32} />
                         </div>
                         <div className="text-center">
-                            <h4 className="text-lg font-black text-[#0A0A0A] tracking-tight">Proyek Baru</h4>
-                            <p className="text-xs font-medium text-[#9CA3AF]">Mulai rencana besar Anda.</p>
+                            <h4 className="text-lg font-bold text-foreground tracking-tight">Proyek Baru</h4>
+                            <p className="text-xs font-medium text-muted-foreground">Mulai rencana besar Anda.</p>
                         </div>
                     </div>
                 </Link>
@@ -133,19 +133,19 @@ export default function ProjectsPage() {
 
             {/* Dialog Hapus */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="rounded-sm border border-black/[0.1] p-12 font-sans shadow-2xl max-w-lg">
+                <DialogContent className="rounded-lg border border-border p-12 font-sans shadow-2xl max-w-lg">
                     <DialogHeader className="space-y-4">
-                        <div className="w-20 h-20 rounded-sm border border-red-500/20 bg-red-50 flex items-center justify-center text-red-500 mb-2">
+                        <div className="w-20 h-20 rounded-lg border border-red-500/20 bg-red-50 flex items-center justify-center text-red-500 mb-2">
                             <Trash2 size={40} />
                         </div>
-                        <DialogTitle className="text-3xl font-black text-[#0A0A0A] tracking-tighter leading-tight">Hapus Proyek?</DialogTitle>
-                        <DialogDescription className="text-base font-medium text-[#6B7280]">
+                        <DialogTitle className="text-3xl font-bold text-foreground tracking-tighter leading-tight">Hapus Proyek?</DialogTitle>
+                        <DialogDescription className="text-base font-medium text-muted-foreground">
                             Semua data di dalam proyek ini akan hilang selamanya. Anda yakin ingin menghapusnya?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-12 flex gap-4">
-                        <Button variant="outline" className="font-bold text-[#6B7280] flex-1 h-14 rounded-sm border border-black/[0.1]" onClick={() => setIsDeleteDialogOpen(false)}>Batal</Button>
-                        <Button className="bg-red-500 hover:bg-red-600 text-white font-black flex-1 h-14 rounded-sm shadow-sm" onClick={handleDelete}>Ya, Hapus</Button>
+                        <Button variant="outline" className="font-bold text-muted-foreground flex-1 h-14 rounded-lg border border-border" onClick={() => setIsDeleteDialogOpen(false)}>Batal</Button>
+                        <Button className="bg-red-500 hover:bg-red-600 text-white font-bold flex-1 h-14 rounded-lg shadow-sm" onClick={handleDelete}>Ya, Hapus</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

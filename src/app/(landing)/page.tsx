@@ -1,9 +1,8 @@
 import { Hero } from "@/components/landing/hero";
 import { Features } from "@/components/landing/features";
 import { VisualShowcase } from "@/components/landing/visual-showcase";
-import { Pricing } from "@/components/landing/pricing";
 import { FAQ } from "@/components/landing/faq";
-import { CTA } from "@/components/landing/cta";
+import { WhyChooseUs } from "@/components/landing/why-choose-us";
 
 export default function LandingPage() {
   return (
@@ -21,9 +20,8 @@ export default function LandingPage() {
         <Hero />
         <Features />
         <VisualShowcase />
-        <Pricing />
         <FAQ />
-        <CTA />
+        <WhyChooseUs />
       </main>
     </div>
   );

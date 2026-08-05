@@ -1,96 +1,62 @@
 "use client";
 
-import {
-    Layers,
-    Users,
-    BarChart3,
-    Zap
-} from "lucide-react";
-import { Highlighter } from "@/components/highlighter";
-
-const features = [
-    {
-        title: "Kanban Board",
-        desc: "Visualisasi alur kerja yang intuitif dengan drag-and-drop, status kustom, dan filter cepat.",
-        icon: Layers,
-        color: "text-primary",
-        bg: "bg-primary/5"
-    },
-    {
-        title: "Strategic Calendar",
-        desc: "Sinkronisasi deadline dan milestone dalam satu tampilan kalender yang komprehensif.",
-        icon: BarChart3,
-        color: "text-accent",
-        bg: "bg-accent/5"
-    },
-    {
-        title: "Team Collaboration",
-        desc: "Assign tugas, komentar, dan pantau progres bersama tim di mana saja secara real-time.",
-        icon: Users,
-        color: "text-primary",
-        bg: "bg-primary/5"
-    },
-    {
-        title: "Smart Reminders",
-        desc: "Notifikasi proaktif yang memastikan tidak ada satu pun deadline yang terlewat.",
-        icon: Zap,
-        color: "text-accent",
-        bg: "bg-accent/5"
-    },
-];
+import { Layers, Calendar, Users, BarChart3 } from "lucide-react";
 
 export function Features() {
     return (
-        <section id="features" className="py-24 bg-[#F9FAFB] relative overflow-hidden">
-            <div className="absolute -top-10 -left-10 w-64 h-64 text-primary/5 rotate-[-15deg] pointer-events-none">
-                <Highlighter variant={1} />
-            </div>
-            <div className="absolute -bottom-10 -right-10 w-64 h-64 text-accent/5 rotate-[15deg] pointer-events-none">
-                <Highlighter variant={3} />
-            </div>
+        <section id="features" className="py-20 relative overflow-hidden bg-background">
+            {/* Soft grid background */}
+            <div className="absolute inset-0 bg-dot-grid pointer-events-none z-0" />
 
-            <div className="container max-w-5xl mx-auto px-8 relative z-10">
-                {/* Header */}
-                <div className="text-center max-w-2xl mx-auto mb-16">
-                    <span className="inline-block px-4 py-1.5 rounded-sm bg-primary/10 text-primary text-[10px] font-black mb-5 uppercase tracking-[0.25em] border border-primary/15">
-                        Capabilities
+            <div className="container max-w-5xl mx-auto px-6 relative z-10">
+                {/* Section Header */}
+                <div className="text-center max-w-xl mx-auto mb-16">
+                    <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground bg-primary/20 px-3.5 py-1.5 rounded-xl mb-4">
+                        Fitur Utama
                     </span>
-                    <h2 className="text-[32px] md:text-[48px] font-black tracking-[-0.03em] text-[#0A0A0A] font-heading leading-[1.1] mb-5">
-                        Solusi Lengkap{" "}
-                        <span className="relative inline-block">
-                            Manajemen Tugas.
-                            <Highlighter variant={3} className="text-primary/20" />
-                        </span>
+                    <h2 className="text-3xl md:text-4xl font-sans font-black text-foreground tracking-tight mb-4">
+                        Kelola Proyek Lebih Terstruktur
                     </h2>
-                    <p className="text-[15px] text-[#6B7280] font-medium leading-[1.7] max-w-md mx-auto">
-                        Dari pencatatan harian hingga perencanaan proyek tim, semua dikelola secara otomatis, teratur, dan tanpa repot.
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        Alat manajemen tugas yang dirancang untuk menjaga fokus dan produktivitas tim Anda tetap optimal.
                     </p>
-
-
-
                 </div>
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {features.map((feature, idx) => (
-                        <div
-                            key={idx}
-                            className="p-8 rounded-sm border border-black/[0.06] bg-white hover:border-black/20 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 group flex items-start gap-5 relative overflow-hidden"
-                        >
-                            {/* Decorative Scribble */}
-                            <div className="absolute -top-4 -right-4 w-12 h-12 text-primary/5 group-hover:scale-150 transition-transform">
-                                <Highlighter variant={idx % 3 + 1 as 1 | 2 | 3} />
-                            </div>
-
-                            <div className={`w-11 h-11 shrink-0 rounded-sm ${feature.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <feature.icon className={`w-5 h-5 ${feature.color}`} />
-                            </div>
+                {/* Additional Features Grid - 4 Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                        {
+                            title: "Papan Kanban",
+                            desc: "Kelola alur kerja secara visual menggunakan fitur drag-and-drop papan Kanban yang intuitif.",
+                            icon: Layers,
+                            color: "bg-rose-100 text-rose-700"
+                        },
+                        {
+                            title: "Kalender Tim",
+                            desc: "Petakan tenggat waktu tugas, rencana rilis, dan milestone mingguan dalam kalender rapi.",
+                            icon: Calendar,
+                            color: "bg-blue-100 text-blue-700"
+                        },
+                        {
+                            title: "Kolaborasi Instan",
+                            desc: "Undang rekan kerja tanpa batasan, delegasikan tugas harian, dan berdiskusi secara real-time.",
+                            icon: Users,
+                            color: "bg-amber-100 text-amber-700"
+                        },
+                        {
+                            title: "Analitik Progres",
+                            desc: "Pantau persentase penyelesaian tugas dan performa sprint mingguan dengan grafik ringkas.",
+                            icon: BarChart3,
+                            color: "bg-emerald-100 text-emerald-700"
+                        }
+                    ].map((feature, idx) => (
+                        <div key={idx} className="p-6 rounded-xl border border-border bg-white text-left crave-shadow flex flex-col justify-between hover:scale-[1.02] transition-all duration-300">
                             <div>
-                                <h3 className="text-[16px] font-black mb-1.5 text-[#0A0A0A] tracking-tight relative inline-block">
-                                    {feature.title}
-                                    <Highlighter variant={(idx % 3 + 1) as 1 | 2 | 3} className="opacity-0 group-hover:opacity-100 transition-opacity text-primary/10" />
-                                </h3>
-                                <p className="text-[13px] text-[#6B7280] font-medium leading-[1.6]">{feature.desc}</p>
+                                <div className={`w-10 h-10 rounded-xl ${feature.color} flex items-center justify-center mb-4`}>
+                                    <feature.icon className="w-5 h-5" />
+                                </div>
+                                <h3 className="text-sm font-black text-foreground mb-2">{feature.title}</h3>
+                                <p className="text-[12px] text-muted-foreground leading-relaxed">{feature.desc}</p>
                             </div>
                         </div>
                     ))}

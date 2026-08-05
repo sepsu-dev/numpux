@@ -1,22 +1,18 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Outfit, Bricolage_Grotesque } from "next/font/google";
+import { Inter, Fredoka } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta",
+  variable: "--font-inter",
 });
 
-const outfit = Outfit({
+const fredoka = Fredoka({
   subsets: ["latin"],
-  variable: "--font-outfit",
-});
-
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
-  variable: "--font-bricolage",
+  variable: "--font-fredoka",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export function generateMetadata(): Metadata {
@@ -37,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${plusJakartaSans.variable} ${outfit.variable} ${bricolage.variable}`} data-scroll-behavior="smooth">
+    <html lang="id" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth">
       <body className="antialiased font-sans min-h-screen bg-background text-foreground">
         <NextTopLoader showSpinner={false} color="#6366f1" />
         <TooltipProvider>

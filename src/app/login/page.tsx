@@ -1,9 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Mail, Lock, Loader2 } from "lucide-react";
-import { Highlighter } from "@/components/highlighter";
+import { Mail, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -24,7 +22,6 @@ export default function LoginPage() {
 
         setIsLoading(true);
 
-        // Dummy login simulation
         setTimeout(() => {
             if (email === "admin@numpux.com" && password === "admin123") {
                 toast.success("Berhasil masuk! Mengalihkan...");
@@ -37,54 +34,55 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA] flex flex-col relative">
-            {/* Grid bg matching landing page */}
-            <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+        <div className="min-h-screen bg-background flex flex-col bg-dot-grid relative">
+            {/* Back link */}
+            <div className="absolute top-6 left-6">
+                <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
+                    <ArrowLeft className="w-4 h-4" />
+                    Kembali
+                </Link>
+            </div>
 
-            <div className="flex-1 flex flex-col justify-center items-center px-4 relative z-10">
-                <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-                    {/* Form Header */}
-                    <div className="text-center mb-10">
-                        <h1 className="text-[28px] md:text-[36px] font-black tracking-[-0.03em] text-[#0A0A0A] leading-tight font-heading">
-                            Selamat{" "}
-                            <span className="relative inline-block">
-                                <em className="not-italic text-primary">Datang.</em>
-                                <Highlighter variant={1} className="text-primary/25" />
-                            </span>
+            <div className="flex-1 flex flex-col justify-center items-center px-4 py-12">
+                <div className="w-full max-w-[390px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-sans font-black text-foreground tracking-tight">
+                            Masuk ke <span className="text-primary lowercase font-black">numpux</span>
                         </h1>
-                        <p className="text-[13px] text-[#6B7280] font-medium mt-2">Masuk ke akun Numpux Anda</p>
+                        <p className="text-sm text-muted-foreground mt-2">Lanjutkan produktivitas kerja Anda</p>
                     </div>
 
                     {/* Card */}
-                    <div className="bg-white rounded-sm border border-black/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.06)] p-8">
+                    <div className="bg-white rounded-xl border border-border shadow-lg p-8 crave-shadow">
                         <form className="space-y-5" onSubmit={handleLogin}>
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6B7280]">Email</label>
-                                <div className="relative group">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] group-focus-within:text-accent transition-colors" />
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-xs font-black text-foreground uppercase tracking-wider">Email</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
                                         type="email"
                                         placeholder="nama@email.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A] placeholder:text-[#D1D5DB]"
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground placeholder:text-muted-foreground/50"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-1.5 text-left">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6B7280]">Sandi</label>
-                                    <Link href="#" className="text-[11px] font-bold text-accent hover:underline underline-offset-2">Lupa?</Link>
+                                    <label className="text-xs font-black text-foreground uppercase tracking-wider">Kata Sandi</label>
+                                    <Link href="#" className="text-xs font-bold text-primary hover:opacity-85">Lupa?</Link>
                                 </div>
-                                <div className="relative group">
-                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] group-focus-within:text-accent transition-colors" />
+                                <div className="relative">
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
                                         type="password"
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 rounded-sm border border-black/[0.08] bg-[#FAFAFA] focus:outline-none focus:border-accent/40 focus:bg-white transition-all text-sm font-medium text-[#0A0A0A]"
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground"
                                     />
                                 </div>
                             </div>
@@ -92,7 +90,7 @@ export default function LoginPage() {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full py-3.5 rounded-sm bg-[#0A0A0A] text-white font-black text-[14px] hover:bg-accent transition-colors shadow-[3px_3px_0_0_rgba(168,85,247,0.2)] hover:shadow-none active:scale-[0.98] mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
+                                className="w-full py-3.5 rounded-xl lime-glow-button text-primary-foreground font-black text-sm disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 {isLoading ? (
                                     <>
@@ -106,10 +104,10 @@ export default function LoginPage() {
                         </form>
                     </div>
 
-                    <p className="mt-7 text-center text-[13px] font-medium text-[#6B7280]">
-                        Belum ada akun?{" "}
-                        <Link href="/register" className="font-black text-accent hover:underline underline-offset-4">
-                            Daftar Gratis
+                    <p className="mt-6 text-center text-sm text-muted-foreground font-medium">
+                        Belum punya akun?{" "}
+                        <Link href="/register" className="font-bold text-primary hover:opacity-85">
+                            Daftar gratis
                         </Link>
                     </p>
                 </div>

@@ -14,10 +14,10 @@ export default function TeamPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-3xl font-black text-[#0A0A0A] tracking-tighter">Anggota Tim</h2>
-                    <p className="text-[#6B7280] font-medium mt-1">Kelola kolaborasi dan izin tim Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Anggota Tim</h2>
+                    <p className="text-muted-foreground font-medium mt-1">Kelola kolaborasi dan izin tim Anda.</p>
                 </div>
-                <button className="flex items-center gap-2 px-6 py-3 bg-[#0A0A0A] text-white rounded-sm text-sm font-black hover:bg-accent hover:shadow-none shadow-[4px_4px_0_0_rgba(168,85,247,0.3)] transition-all">
+                <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary hover:shadow-none shadow-[0_8px_24px_rgba(217,166,64,0.25)] transition-all">
                     <Plus size={18} />
                     Undang Anggota
                 </button>
@@ -25,30 +25,30 @@ export default function TeamPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {members.map((member) => (
-                    <div key={member.id} className="bg-white border border-black/[0.08] p-6 rounded-sm shadow-sm flex items-center justify-between group hover:border-accent transition-all">
+                    <div key={member.id} className="bg-white border border-border/60 p-6 rounded-lg shadow-sm flex items-center justify-between group hover:border-primary transition-all">
                         <div className="flex items-center gap-5">
                             <div className="relative">
-                                <div className="w-16 h-16 rounded-sm bg-[#F3F4F6] border border-black/[0.08] flex items-center justify-center text-xl font-black text-[#6B7280]">
+                                <div className="w-16 h-16 rounded-lg bg-muted border border-border/60 flex items-center justify-center text-xl font-bold text-muted-foreground">
                                     {member.name[0]}
                                 </div>
                                 <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${member.status === 'Online' ? 'bg-emerald-500' :
-                                        member.status === 'Busy' ? 'bg-red-500' : 'bg-gray-400'
+                                        member.status === 'Busy' ? 'bg-red-500' : 'bg-muted'
                                     }`}></div>
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-[#0A0A0A] group-hover:text-accent transition-colors">{member.name}</h3>
-                                <p className="text-xs font-black text-accent uppercase tracking-wider mb-2">{member.role}</p>
-                                <div className="flex items-center gap-3 text-[#9CA3AF]">
+                                <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{member.name}</h3>
+                                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">{member.role}</p>
+                                <div className="flex items-center gap-3 text-muted-foreground">
                                     <Mail size={14} />
                                     <span className="text-[11px] font-medium">{member.email}</span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                            <button className="p-2 hover:bg-[#FAFAFA] rounded-sm transition-colors text-[#9CA3AF] hover:text-[#0A0A0A]">
+                            <button className="p-2 hover:bg-muted/50 rounded-lg transition-colors text-muted-foreground hover:text-foreground">
                                 <MoreHorizontal size={20} />
                             </button>
-                            <button className="px-3 py-1.5 text-[10px] font-black uppercase text-accent border border-accent/20 rounded-sm hover:bg-accent hover:text-white transition-all">
+                            <button className="px-3 py-1.5 text-[10px] font-bold uppercase text-primary border border-primary/20 rounded-lg hover:bg-primary hover:text-white transition-all">
                                 Profil
                             </button>
                         </div>

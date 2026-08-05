@@ -1,49 +1,37 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
 import {
     CheckCircle2,
-    Clock,
-    Briefcase,
-    ArrowRight,
-    Plus,
     TrendingUp,
-    Zap,
     CalendarDays,
-    CircleDashed,
-    PlayCircle
+    ArrowUpRight
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
-import { Highlighter } from "@/components/highlighter";
 import {
     BarChart,
     Bar,
     XAxis,
-    YAxis,
     Tooltip,
     ResponsiveContainer,
     Cell,
-    PieChart,
-    Pie,
-} from 'recharts';
+} from "recharts";
 
 const taskData = [
-    { day: 'Sen', tasks: 12 },
-    { day: 'Sel', tasks: 18 },
-    { day: 'Rab', tasks: 15 },
-    { day: 'Kam', tasks: 25 },
-    { day: 'Jum', tasks: 20 },
-    { day: 'Sab', tasks: 8 },
-    { day: 'Min', tasks: 5 },
+    { day: "Sen", commits: 12 },
+    { day: "Sel", commits: 18 },
+    { day: "Rab", commits: 15 },
+    { day: "Kam", commits: 25 },
+    { day: "Jum", commits: 20 },
+    { day: "Sab", commits: 8 },
+    { day: "Min", commits: 5 },
 ];
 
-const projectDistribution = [
-    { name: 'Desain', value: 45, color: '#A855F7' },
-    { name: 'Sistem', value: 25, color: '#0A0A0A' },
-    { name: 'Konten', value: 20, color: '#6366F1' },
-    { name: 'Lainnya', value: 10, color: '#9CA3AF' },
+const metrics = [
+    { label: "Total Proyek", value: "12", change: "+2", up: true },
+    { label: "Tugas Selesai", value: "128", change: "+18%", up: true },
+    { label: "Dalam Progress", value: "24", change: "-3", up: false },
+    { label: "Anggota Tim", value: "8", change: "+1", up: true },
 ];
 
 export default function DashboardPage() {
@@ -52,239 +40,174 @@ export default function DashboardPage() {
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-
-            {/* Simple Header */}
-            <div className="flex items-center justify-between gap-8 pb-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+            {/* Header */}
+            <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-3xl font-black text-[#0A0A0A] tracking-tighter">Ringkasan</h2>
-                    <p className="text-[#9CA3AF] text-sm font-medium mt-1">Status terbaru aktivitas Anda hari ini.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Beranda</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Ringkasan aktivitas proyek Anda</p>
                 </div>
-
-                <Link href="/dashboard/tasks/new">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-[#0A0A0A] text-white rounded-sm text-[11px] font-black hover:bg-black transition-all shadow-sm active:scale-95">
-                        <Plus size={16} />
-                        TUGAS BARU
-                    </button>
+                <Link
+                    href="/dashboard/projects"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline underline-offset-4"
+                >
+                    Lihat semua
+                    <ArrowUpRight className="w-4 h-4" />
                 </Link>
             </div>
 
-            {/* Top Metrics - Landing Page Style */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <MiniStat
-                    label="Selesai"
-                    value="128"
-                    icon={<CheckCircle2 size={16} />}
-                    color="text-emerald-600"
-                    bgColor="bg-emerald-50"
-                />
-                <MiniStat
-                    label="Proses"
-                    value="15"
-                    icon={<PlayCircle size={16} />}
-                    color="text-primary"
-                    bgColor="bg-primary/10"
-                />
-                <MiniStat
-                    label="Antrean"
-                    value="24"
-                    icon={<CircleDashed size={16} />}
-                    color="text-blue-600"
-                    bgColor="bg-blue-50"
-                />
-                <MiniStat
-                    label="Proyek"
-                    value="4"
-                    icon={<Briefcase size={16} />}
-                    color="text-accent"
-                    bgColor="bg-accent/10"
-                />
+            {/* Metrics cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {metrics.map((m) => (
+                    <div
+                        key={m.label}
+                        className="bg-card border border-border rounded-xl p-5 hover:border-primary/20 hover:shadow-sm transition-all"
+                    >
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{m.label}</p>
+                        <div className="flex items-baseline justify-between">
+                            <span className="text-2xl font-bold text-foreground">{m.value}</span>
+                            <span className={`text-xs font-semibold ${m.up ? "text-emerald-500" : "text-red-500"}`}>
+                                {m.change}
+                            </span>
+                        </div>
+                    </div>
+                ))}
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-
-                <div className="xl:col-span-8 space-y-8">
-
-                    {/* Activity Chart */}
-                    <div className="bg-white border border-black/[0.04] p-10 rounded-sm shadow-sm hover:shadow-md hover:border-accent/20 transition-all">
-                        <div className="flex items-center justify-between mb-10">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-slate-50 border border-black/[0.04] rounded-sm">
-                                    <TrendingUp size={16} className="text-[#0A0A0A]" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0A0A0A]">Efisiensi Mingguan</h3>
-                                    <p className="text-[10px] text-[#9CA3AF] font-bold">Volume tugas selesai</p>
-                                </div>
-                            </div>
-                            <div className="text-emerald-500 font-black text-[10px] flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100">
-                                +12%
-                            </div>
+            {/* Chart + Right sidebar */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Activity chart */}
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 className="text-sm font-bold text-foreground">Aktivitas Mingguan</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">Commit per hari</p>
                         </div>
-                        <div className="h-[300px] w-full relative">
-                            {isMounted && (
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
-                                    <BarChart data={taskData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                                        <XAxis
-                                            dataKey="day"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fill: '#9CA3AF', fontWeight: '900', fontSize: 10 }}
-                                            dy={15}
-                                        />
-                                        <Tooltip
-                                            cursor={{ fill: 'rgba(168,85,247,0.05)' }}
-                                            contentStyle={{
-                                                border: 'none',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                                                fontSize: '11px',
-                                                fontWeight: '900',
-                                                padding: '12px'
-                                            }}
-                                        />
-                                        <Bar dataKey="tasks" barSize={38} radius={[4, 4, 0, 0]}>
-                                            {taskData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={index === 3 || index === 4 ? 'var(--primary)' : '#E5E7EB'} />
-                                            ))}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            )}
+                        <span className="text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-full">
+                            +12%
+                        </span>
+                    </div>
+                    <div className="h-[240px] w-full">
+                        {isMounted && (
+                            <ResponsiveContainer width="100%" height={240} minWidth={0} debounce={100}>
+                                <BarChart data={taskData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                    <XAxis
+                                        dataKey="day"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: "var(--muted-foreground)", fontWeight: "600", fontSize: 11 }}
+                                        dy={10}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: "rgba(99,102,241,0.04)" }}
+                                        contentStyle={{
+                                            background: "var(--card)",
+                                            border: "1px solid var(--border)",
+                                            borderRadius: "10px",
+                                            boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+                                            fontSize: "11px",
+                                            fontWeight: "600",
+                                            padding: "10px",
+                                        }}
+                                    />
+                                    <Bar dataKey="commits" barSize={34} radius={[4, 4, 0, 0]}>
+                                        {taskData.map((_, index) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill={index === 3 || index === 4 ? "var(--primary)" : "var(--border)"}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Priority tasks */}
+                <div className="bg-card border border-border rounded-xl p-6 flex flex-col">
+                    <div className="flex items-center gap-2.5 mb-5">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <CheckCircle2 size={18} className="text-primary" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-foreground">Prioritas</h3>
+                            <p className="text-[11px] text-muted-foreground">3 tugas mendesak</p>
                         </div>
                     </div>
 
-                    {/* Task List - Simplified */}
+                    <div className="space-y-3 flex-1">
+                        {[
+                            { title: "Refactor auth service", project: "Backend", urgent: true },
+                            { title: "Fix bug Dockerfile", project: "DevOps" },
+                            { title: "Optimize query DB", project: "Backend" },
+                        ].map((task, i) => (
+                            <div
+                                key={i}
+                                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/20 hover:bg-muted/50 transition-all cursor-pointer"
+                            >
+                                <div className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                                    <CheckCircle2 size={14} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[13px] font-semibold text-foreground truncate">{task.title}</p>
+                                    <p className="text-[11px] text-muted-foreground">{task.project}</p>
+                                </div>
+                                {task.urgent && (
+                                    <span className="ml-auto text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-red-50 text-red-500 border border-red-100 dark:bg-red-950/20 dark:border-red-900/40 shrink-0">
+                                        Mendesak
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <Link
+                        href="/dashboard/tasks"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline mt-4"
+                    >
+                        Lihat semua tugas →
+                    </Link>
+                </div>
+            </div>
+
+            {/* Bottom row — deadlines + progress */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Deadlines */}
+                <div className="bg-card border border-border rounded-xl p-6">
+                    <div className="flex items-center gap-2.5 mb-5">
+                        <CalendarDays size={18} className="text-primary" />
+                        <h3 className="text-sm font-bold text-foreground">Deadline Mendatang</h3>
+                    </div>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-3">
-                                <CheckCircle2 size={14} className="text-accent" />
-                                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A0A0A]">Prioritas Utama</h3>
-                            </div>
+                        <div className="border-l-2 border-primary pl-4 py-1">
+                            <p className="text-sm font-semibold text-foreground">Deploy ke Production</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Besok, 09:00</p>
                         </div>
-                        <div className="grid grid-cols-1 gap-3">
-                            <SimpleTaskCard title="Audit Sistem Numpux" project="Sistem" priority="Mendesak" />
-                            <SimpleTaskCard title="Desain Aplikasi Mobile" project="Desain" />
-                            <SimpleTaskCard title="Update Database Server" project="Sistem" />
+                        <div className="border-l-2 border-muted pl-4 py-1">
+                            <p className="text-sm font-semibold text-foreground">Code Review PR #402</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">26 Mei, 14:00</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Right Sidebar */}
-                <div className="xl:col-span-4 space-y-8">
-
-                    {/* Project Dist - Smaller */}
-                    <div className="bg-white border border-black/[0.04] p-8 rounded-sm shadow-sm hover:shadow-md transition-all flex flex-col">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A0A0A] mb-8">Fokus Proyek</h3>
-
-                        <div className="h-[160px] w-full relative mb-8">
-                            {isMounted && (
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
-                                    <PieChart>
-                                        <Pie
-                                            data={projectDistribution}
-                                            innerRadius={50}
-                                            outerRadius={65}
-                                            paddingAngle={4}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {projectDistribution.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            )}
+                {/* Progress */}
+                <div className="bg-card border border-border rounded-xl p-6">
+                    <div className="flex justify-between items-end mb-4">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Progress Sprint</p>
+                            <p className="text-sm font-bold text-foreground mt-1">Sprint #14</p>
                         </div>
-
-                        <div className="space-y-2">
-                            {projectDistribution.slice(0, 3).map((item) => (
-                                <div key={item.name} className="flex items-center justify-between text-[10px]">
-                                    <span className="font-bold text-[#9CA3AF] uppercase tracking-wider">{item.name}</span>
-                                    <span className="font-black text-[#0A0A0A]">{item.value}%</span>
-                                </div>
-                            ))}
-                        </div>
+                        <span className="text-sm font-bold text-primary">72%</span>
                     </div>
-
-                    {/* Dedlines - High Impact but Simple */}
-                    <div className="bg-white border border-black/[0.04] p-8 rounded-sm shadow-sm hover:shadow-md hover:border-accent/20 transition-all">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="w-10 h-10 rounded-sm bg-accent/10 border border-accent/20 flex items-center justify-center">
-                                <CalendarDays size={18} className="text-accent" />
-                            </div>
-                            <h3 className="text-xs font-black uppercase tracking-widest text-[#0A0A0A]">Prioritas Penting</h3>
-                        </div>
-                        <div className="space-y-6">
-                            <SimpleDeadline title="Pitch Deck Final" date="Besok, 09:00" />
-                            <SimpleDeadline title="QC Testing" date="26 Mei, 14:00" />
-                        </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full w-[72%] transition-all duration-700" />
                     </div>
-
-                    {/* Progress Bar - Minimalist */}
-                    <div className="bg-white border border-black/[0.04] p-8 rounded-sm shadow-sm hover:shadow-md hover:border-accent/20 transition-all">
-                        <div className="flex justify-between items-end mb-4">
-                            <div className="space-y-1">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-[#9CA3AF]">Level 12</span>
-                                <p className="text-sm font-black text-[#0A0A0A]">Master Produktivitas</p>
-                            </div>
-                            <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-0.5 rounded-sm">72%</span>
-                        </div>
-                        <div className="h-2 bg-[#F3F4F6] rounded-full overflow-hidden">
-                            <div className="h-full bg-accent rounded-full w-[72%] transition-all duration-1000" />
-                        </div>
-                        <p className="text-[9px] font-bold text-[#9CA3AF] mt-4 uppercase tracking-tighter">Butuh 1,240 XP lagi untuk naik level</p>
-                    </div>
-
+                    <p className="text-xs text-muted-foreground mt-4">8 dari 11 tugas selesai</p>
                 </div>
             </div>
-        </div>
-    );
-}
-
-function MiniStat({ label, value, icon, color, bgColor }: { label: string, value: string, icon: React.ReactNode, color: string, bgColor: string }) {
-    return (
-        <div className="bg-white border border-black/[0.04] p-7 rounded-sm shadow-sm hover:shadow-md transition-all group flex items-center justify-between">
-            <div className="flex items-center gap-5">
-                <div className={`w-11 h-11 ${bgColor} ${color} flex items-center justify-center rounded-sm transition-all border border-black/[0.02]`}>
-                    {icon}
-                </div>
-                <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#9CA3AF] mb-0.5">{label}</p>
-                    <span className="text-3xl font-black tracking-tighter text-[#0A0A0A]">{value}</span>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function SimpleTaskCard({ title, project, priority }: { title: string, project: string, priority?: string }) {
-    return (
-        <div className="bg-white border border-black/[0.04] p-5 rounded-sm flex items-center justify-between group hover:shadow-md transition-all cursor-pointer">
-            <div className="flex items-center gap-4">
-                <div className="w-9 h-9 border border-black/[0.03] rounded-sm flex items-center justify-center bg-[#FAFAFA] text-[#E5E7EB] group-hover:text-accent transition-colors">
-                    <CheckCircle2 size={16} />
-                </div>
-                <div>
-                    <h4 className="text-[14px] font-black text-[#0A0A0A] tracking-tight transition-colors group-hover:text-accent">{title}</h4>
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-[#9CA3AF]">{project}</span>
-                </div>
-            </div>
-            {priority && (
-                <span className="text-[8px] font-black uppercase px-2 py-1 bg-red-50 text-red-500 rounded-sm border border-red-100">{priority}</span>
-            )}
-        </div>
-    );
-}
-
-function SimpleDeadline({ title, date }: { title: string, date: string }) {
-    return (
-        <div className="space-y-1 group cursor-pointer border-l-2 border-slate-100 pl-4 hover:border-accent transition-colors">
-            <p className="text-sm font-black tracking-tight text-[#0A0A0A] group-hover:text-accent transition-colors">{title}</p>
-            <p className="text-[9px] font-bold text-[#9CA3AF] uppercase">{date}</p>
         </div>
     );
 }

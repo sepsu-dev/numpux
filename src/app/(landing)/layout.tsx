@@ -7,7 +7,7 @@ export default function LandingLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col min-h-screen bg-background text-foreground">
             <SiteHeader name="Numpux" />
             <main className="flex-1">
                 {children}

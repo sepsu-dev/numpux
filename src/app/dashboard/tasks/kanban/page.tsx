@@ -4,17 +4,15 @@ import { useState } from "react";
 import {
     Plus,
     MoreHorizontal,
-    Calendar,
     LayoutGrid,
     List,
     Clock,
-    AlertCircle,
     Briefcase
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 export default function KanbanPage() {
     const [columns, setColumns] = useState([
@@ -22,29 +20,29 @@ export default function KanbanPage() {
             id: "todo",
             title: "To Do",
             tasks: [
-                { id: 2, title: "Design Sprint: Navigation", project: "Marketing", priority: "Medium", date: "Besok" },
-                { id: 5, title: "User Interview Setup", project: "Product", priority: "Medium", date: "28 Mei" },
+                { id: 2, title: "Argue about spaces vs tabs", project: "Refactor", priority: "Medium", date: "Besok", badgeColor: "bg-blue-50 text-blue-500 border-blue-100" },
+                { id: 5, title: "Write integration tests (maybe)", project: "Docs", priority: "Low", date: "28 Mei", badgeColor: "bg-gray-50 text-gray-500 border-gray-100" },
             ]
         },
         {
             id: "inprogress",
             title: "In Progress",
             tasks: [
-                { id: 1, title: "Refactor API Gateway", project: "Numpux Engine", priority: "High", date: "Hari ini" },
+                { id: 1, title: "Fix 'Works on my machine' bug", project: "Bug Fixes", priority: "High", date: "Hari ini", badgeColor: "bg-orange-50 text-orange-500 border-orange-100" },
             ]
         },
         {
             id: "review",
             title: "Review",
             tasks: [
-                { id: 4, title: "Implement Dark Mode", project: "Numpux App", priority: "Low", date: "25 Mei" },
+                { id: 4, title: "Refactor spaghetti auth code", project: "Refactor", priority: "Critical", date: "25 Mei", badgeColor: "bg-red-50 text-red-500 border-red-100" },
             ]
         },
         {
             id: "done",
             title: "Done",
             tasks: [
-                { id: 3, title: "Fix Authentication Bug", project: "Core", priority: "Critical", date: "Kemarin" },
+                { id: 3, title: "Center a div in CSS", project: "Features", priority: "Medium", date: "Kemarin", badgeColor: "bg-blue-50 text-blue-500 border-blue-100" },
             ]
         }
     ]);
@@ -55,7 +53,7 @@ export default function KanbanPage() {
     }, []);
 
     const onDragEnd = (result: DropResult) => {
-        const { destination, source, draggableId } = result;
+        const { destination, source } = result;
 
         if (!destination) return;
 
@@ -108,27 +106,27 @@ export default function KanbanPage() {
     if (!isMounted) return null;
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 font-sans">
             {/* Header */}
-            <div className="flex items-center justify-between gap-8 pb-8">
+            <div className="flex items-center justify-between gap-8 pb-4">
                 <div>
-                    <h2 className="text-3xl font-black text-[#0A0A0A] tracking-tighter">Kanban</h2>
-                    <p className="text-[#9CA3AF] text-sm font-medium mt-1">Kelola workflow visual Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tight">Kanban</h2>
+                    <p className="text-muted-foreground text-sm font-medium mt-1">Kelola workflow visual Anda.</p>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="bg-slate-50 p-1 rounded-sm flex border border-black/[0.04]">
+                    <div className="bg-muted/60 p-1 rounded-lg flex border border-border/60">
                         <Link href="/dashboard/tasks">
-                            <button className="p-2 text-[#9CA3AF] hover:text-[#0A0A0A] transition-colors rounded-sm">
+                            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md">
                                 <List size={16} />
                             </button>
                         </Link>
-                        <button className="p-2 bg-white text-accent rounded-sm shadow-sm border border-black/[0.08]">
+                        <button className="p-2 bg-card text-primary rounded-md shadow-sm">
                             <LayoutGrid size={16} />
                         </button>
                     </div>
                     <Link href="/dashboard/tasks/new">
-                        <button className="flex items-center gap-2 px-6 py-3 bg-[#0A0A0A] text-white rounded-sm text-[11px] font-black hover:bg-black transition-all shadow-sm active:scale-95">
+                        <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full text-[11px] font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95">
                             <Plus size={16} />
                             TUGAS BARU
                         </button>
@@ -140,11 +138,11 @@ export default function KanbanPage() {
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
                     {columns.map((column) => (
-                        <div key={column.id} className="bg-slate-50/30 border border-black/[0.03] rounded-sm p-6 flex flex-col min-h-[600px] transition-all">
-                            <div className="flex items-center justify-between mb-8 px-1">
-                                <div className="flex items-center gap-3">
-                                    <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-[#0A0A0A]">{column.title}</h3>
-                                    <span className="text-[9px] font-black text-[#9CA3AF] opacity-50">{column.tasks.length}</span>
+                        <div key={column.id} className="bg-muted/40 dark:bg-zinc-900/10 border border-border/30 rounded-2xl p-5 flex flex-col min-h-[560px]">
+                            <div className="flex items-center justify-between mb-6 px-1">
+                                <div className="flex items-center gap-2.5">
+                                    <h3 className="font-bold text-xs uppercase tracking-wider text-foreground">{column.title}</h3>
+                                    <span className="text-[10px] font-bold text-muted-foreground bg-card border border-border/60 px-2 py-0.5 rounded-full">{column.tasks.length}</span>
                                 </div>
                             </div>
 
@@ -162,29 +160,32 @@ export default function KanbanPage() {
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
                                                         {...provided.dragHandleProps}
-                                                        className={`bg-white border border-black/[0.04] p-6 rounded-sm transition-all group ${snapshot.isDragging ? 'shadow-xl border-[#A855F7]/30 scale-105 z-50' : 'shadow-sm hover:shadow-md hover:border-[#A855F7]/20'} cursor-grab active:cursor-grabbing`}
+                                                        className={cn(
+                                                            "bg-card border border-border/40 p-5 rounded-2xl transition-all group cursor-grab active:cursor-grabbing",
+                                                            snapshot.isDragging ? 'shadow-2xl border-primary/45 scale-105 z-50' : 'shadow-sm hover:shadow-md hover:border-primary/20'
+                                                        )}
                                                     >
-                                                        <div className="flex justify-between items-start mb-5">
-                                                            <div className={`px-2.5 py-0.5 text-[8px] font-black uppercase rounded-full border ${task.priority === 'Critical' ? 'border-red-100/50 text-red-500/70 bg-red-50/30' :
-                                                                task.priority === 'High' ? 'border-orange-100/50 text-orange-500/70 bg-orange-50/30' :
-                                                                    'border-blue-100/50 text-blue-500/70 bg-blue-50/30'
-                                                                }`}>
+                                                        <div className="flex justify-between items-start mb-4">
+                                                            <div className={cn(
+                                                                "px-2.5 py-0.5 text-[8px] font-bold uppercase rounded-md border",
+                                                                task.badgeColor
+                                                            )}>
                                                                 {task.priority}
                                                             </div>
-                                                            <button className="text-[#E5E7EB] opacity-0 group-hover:opacity-100 hover:text-[#9CA3AF] transition-all">
+                                                            <button className="text-muted-foreground/60 opacity-0 group-hover:opacity-100 hover:text-foreground transition-all">
                                                                 <MoreHorizontal size={14} />
                                                             </button>
                                                         </div>
-                                                        <h4 className="text-sm font-black text-[#1F2937] mb-6 transition-colors leading-snug">{task.title}</h4>
+                                                        <h4 className="text-sm font-bold text-foreground mb-5 transition-colors leading-normal">{task.title}</h4>
 
-                                                        <div className="flex items-center justify-between pt-5 border-t border-black/[0.02]">
+                                                        <div className="flex items-center justify-between pt-4 border-t border-border/30">
                                                             <div className="flex items-center gap-1.5">
-                                                                <div className="w-5 h-5 rounded-sm bg-slate-50 flex items-center justify-center border border-black/[0.02]">
-                                                                    <Briefcase size={10} className="text-[#9CA3AF]" />
+                                                                <div className="w-5 h-5 rounded-md bg-muted/60 flex items-center justify-center border border-border/30">
+                                                                    <Briefcase size={10} className="text-muted-foreground" />
                                                                 </div>
-                                                                <span className="text-[9px] font-black uppercase text-[#9CA3AF] tracking-tight">{task.project}</span>
+                                                                <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tight">{task.project}</span>
                                                             </div>
-                                                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#9CA3AF]">
+                                                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground font-mono">
                                                                 <Clock size={10} />
                                                                 {task.date}
                                                             </div>
@@ -195,7 +196,7 @@ export default function KanbanPage() {
                                         ))}
                                         {provided.placeholder}
 
-                                        <button className="w-full py-3 border-2 border-dashed border-black/[0.05] rounded-sm text-[10px] font-black uppercase text-[#9CA3AF] hover:text-accent hover:border-accent/30 transition-all flex items-center justify-center gap-2 group">
+                                        <button className="w-full py-3 border border-dashed border-border/60 hover:border-primary/40 rounded-xl text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground transition-all flex items-center justify-center gap-2 group cursor-pointer bg-card shadow-sm">
                                             <Plus size={14} className="group-hover:scale-110 transition-transform" />
                                             TAMBAH TUGAS
                                         </button>
