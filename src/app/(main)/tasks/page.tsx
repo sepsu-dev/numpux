@@ -102,7 +102,7 @@ export default function TasksPage() {
                             Filter Status: {statusFilter}
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border border-border/40 font-sans shadow-xl bg-card">
+                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border border-border/40 font-sans shadow-sm bg-card">
                         {["Semua", "Proses", "Selesai", "Belum Mulai", "Peninjauan"].map((s) => (
                             <DropdownMenuItem
                                 key={s}
@@ -120,7 +120,7 @@ export default function TasksPage() {
             <div className="grid grid-cols-1 gap-4">
                 {filteredTasks.length > 0 ? (
                     filteredTasks.map((task) => (
-                        <div key={task.id} className="bg-card border border-border/40 p-6 rounded-2xl shadow-sm flex items-center justify-between group hover:shadow-md hover:border-primary/20 transition-all">
+                        <div key={task.id} className="bg-card border border-border/40 p-6 rounded-2xl shadow-sm flex items-center justify-between group hover:shadow-sm hover:border-primary/20 transition-all">
                             <div className="flex items-center gap-6">
                                 <div className="w-10 h-10 rounded-lg border border-border/40 bg-muted/50 flex items-center justify-center group-hover:text-primary transition-colors">
                                     <CheckCircle2 size={18} className="text-muted-foreground/60 group-hover:text-primary" />
@@ -154,7 +154,7 @@ export default function TasksPage() {
                                             <MoreHorizontal size={18} />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="rounded-xl border border-border bg-card font-sans shadow-xl">
+                                    <DropdownMenuContent align="end" className="rounded-xl border border-border bg-card font-sans shadow-sm">
                                         <DropdownMenuItem asChild>
                                             <Link href={`/dashboard/tasks/edit/${task.id}`} className="cursor-pointer py-2 px-3 hover:bg-muted/50">
                                                 <Edit size={14} className="mr-2" /> Ubah
@@ -180,7 +180,7 @@ export default function TasksPage() {
 
             {/* Dialog Hapus */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="rounded-2xl border border-border p-10 font-sans shadow-2xl bg-card">
+                <DialogContent className="rounded-2xl border border-border p-10 font-sans shadow-lg bg-card">
                     <DialogHeader className="space-y-4">
                         <div className="w-16 h-16 rounded-xl bg-red-50 dark:bg-red-950/20 text-red-500 flex items-center justify-center mb-2 shadow-sm">
                             <Trash2 size={28} />

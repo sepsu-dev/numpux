@@ -133,22 +133,22 @@
 }
 
 .crave-shadow {
-  box-shadow: 0px 10px 40px rgba(17, 29, 20, 0.04);
+  box-shadow: 0px 2px 8px rgba(17, 29, 20, 0.04);
 }
 
 .crave-border {
-  border: 1.5px solid #e9ede4;
+  border: 1px solid #e9ede4;
 }
 
 .lime-glow-button {
   background: linear-gradient(135deg, #82e25e 0%, #a2f27e 100%);
-  border: 1.5px solid rgba(17, 29, 20, 0.15);
-  box-shadow: 0 4px 14px rgba(130, 226, 94, 0.35);
+  border: 1px solid rgba(17, 29, 20, 0.15);
+  box-shadow: 0 2px 6px rgba(130, 226, 94, 0.35);
   transition: all 0.2s ease-in-out;
 }
 
 .lime-glow-button:hover {
-  box-shadow: 0 6px 20px rgba(130, 226, 94, 0.55);
+  box-shadow: 0 3px 8px rgba(130, 226, 94, 0.55);
   transform: translateY(-1.5px);
 }
 

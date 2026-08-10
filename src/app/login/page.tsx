@@ -54,7 +54,7 @@ export default function LoginPage() {
                     </div>
 
                     {/* Card */}
-                    <div className="bg-white rounded-xl border border-border shadow-lg p-8 crave-shadow">
+                    <div className="bg-white rounded-xl border border-border shadow-sm p-8 crave-shadow">
                         <form className="space-y-5" onSubmit={handleLogin}>
                             <div className="space-y-1.5 text-left">
                                 <label className="text-xs font-black text-foreground uppercase tracking-wider">Email</label>

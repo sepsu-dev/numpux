@@ -49,7 +49,7 @@ export default function NewTaskPage() {
                 </div>
             </div>
 
-            <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm hover:shadow-md hover:border-primary/20 transition-all max-w-4xl">
+            <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm hover:shadow-sm hover:border-primary/20 transition-all max-w-4xl">
                 <form onSubmit={handleSubmit} className="space-y-10">
                     <div className="space-y-8">
                         <div className="grid gap-3">
@@ -78,7 +78,7 @@ export default function NewTaskPage() {
                                             <ChevronDown size={14} className="text-muted-foreground opacity-50" />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[300px] md:w-[400px] rounded-lg border border-border/60 p-2 font-sans font-bold shadow-xl">
+                                    <DropdownMenuContent align="start" className="w-[300px] md:w-[400px] rounded-lg border border-border/60 p-2 font-sans font-bold shadow-sm">
                                         {projects.map((project) => (
                                             <DropdownMenuItem
                                                 key={project}
@@ -125,7 +125,7 @@ export default function NewTaskPage() {
                             <Textarea
                                 id="description"
                                 placeholder="Tulis catatan atau detail tugas..."
-                                className="min-h-[160px] rounded-lg border border-border focus:border-primary resize-none p-6 font-medium text-base bg-white transition-all text-foreground shadow-sm focus:shadow-md"
+                                className="min-h-[160px] rounded-lg border border-border focus:border-primary resize-none p-6 font-medium text-base bg-white transition-all text-foreground shadow-sm focus:shadow-sm"
                             />
                         </div>
                     </div>

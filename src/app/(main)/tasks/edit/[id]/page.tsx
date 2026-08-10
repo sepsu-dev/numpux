@@ -71,7 +71,7 @@ export default function EditTaskPage() {
                                 {['Low', 'Medium', 'High', 'Critical'].map((p) => (
                                     <label key={p} className="flex-1 cursor-pointer">
                                         <input type="radio" name="priority" className="sr-only peer" defaultChecked={p === 'High'} />
-                                        <div className="flex items-center justify-center p-3 text-[10px] font-bold uppercase border-2 border-border/40 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all">
+                                        <div className="flex items-center justify-center p-3 text-[10px] font-bold uppercase border border-border/40 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all">
                                             {p}
                                         </div>
                                     </label>
@@ -91,7 +91,7 @@ export default function EditTaskPage() {
 
                     <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-4">
                         <Button type="button" variant="ghost" onClick={() => router.back()} className="font-bold text-muted-foreground">Batal</Button>
-                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-10 h-12 rounded-lg shadow-[0_8px_24px_rgba(217,166,64,0.25)] hover:shadow-none transition-all">
+                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-10 h-12 rounded-lg shadow-sm hover:shadow-none transition-all">
                             Simpan Perubahan
                         </Button>
                     </div>

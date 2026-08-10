@@ -43,7 +43,6 @@ export default function DashboardLayout({
                     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-20">
                         <div className="flex items-center gap-3 flex-1">
                             <SidebarTrigger className="text-muted-foreground hover:bg-muted transition-colors rounded-lg p-1.5 cursor-pointer" />
-
                         </div>
 
                          <div className="flex items-center gap-2">
@@ -60,15 +59,15 @@ export default function DashboardLayout({
                                         <Plus size={16} />
                                     </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-xl border border-border shadow-lg bg-card">
+                                <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-xl border border-border shadow-sm bg-card">
                                     <DropdownMenuItem asChild>
-                                        <Link href="/dashboard/tasks/new" className="flex items-center gap-2.5 py-2.5 px-3 cursor-pointer rounded-xl hover:bg-muted">
+                                        <Link href="/tasks/new" className="flex items-center gap-2.5 py-2.5 px-3 cursor-pointer rounded-xl hover:bg-muted">
                                             <Plus size={14} className="text-primary" />
                                             <span className="text-sm font-semibold">Tugas Baru</span>
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
-                                        <Link href="/dashboard/projects/new" className="flex items-center gap-2.5 py-2.5 px-3 cursor-pointer rounded-xl hover:bg-muted">
+                                        <Link href="/projects/new" className="flex items-center gap-2.5 py-2.5 px-3 cursor-pointer rounded-xl hover:bg-muted">
                                             <Briefcase size={14} />
                                             <span className="text-sm font-semibold">Proyek Baru</span>
                                         </Link>

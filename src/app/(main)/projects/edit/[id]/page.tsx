@@ -76,7 +76,7 @@ export default function EditProjectPage() {
 
                     <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-4">
                         <Button type="button" variant="ghost" onClick={() => router.back()} className="font-bold text-muted-foreground">Batal</Button>
-                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-10 h-12 rounded-lg shadow-[0_8px_24px_rgba(217,166,64,0.25)] hover:shadow-none transition-all">
+                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-10 h-12 rounded-lg shadow-sm hover:shadow-none transition-all">
                             Simpan Perubahan
                         </Button>
                     </div>

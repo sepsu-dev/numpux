@@ -50,7 +50,7 @@ export default function DashboardPage() {
                     <p className="text-sm text-muted-foreground mt-1">Ringkasan aktivitas proyek Anda</p>
                 </div>
                 <Link
-                    href="/dashboard/projects"
+                    href="/projects"
                     className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline underline-offset-4"
                 >
                     Lihat semua
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                     </div>
 
                     <Link
-                        href="/dashboard/tasks"
+                        href="/tasks"
                         className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline mt-4"
                     >
                         Lihat semua tugas →

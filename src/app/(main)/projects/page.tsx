@@ -66,7 +66,7 @@ export default function ProjectsPage() {
                 {projects.map((project) => (
                     <div
                         key={project.id}
-                        className="bg-white border border-border/60 p-10 rounded-lg shadow-sm group hover:border-primary/20 hover:shadow-md transition-all flex flex-col justify-between min-h-[340px]"
+                        className="bg-white border border-border/60 p-10 rounded-lg shadow-sm group hover:border-primary/20 hover:shadow-sm transition-all flex flex-col justify-between min-h-[340px]"
                     >
                         <div className="space-y-6">
                             <div className="flex justify-between items-start">
@@ -79,7 +79,7 @@ export default function ProjectsPage() {
                                             <MoreHorizontal size={18} />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="rounded-lg border border-border/60 font-sans font-bold shadow-lg">
+                                    <DropdownMenuContent align="end" className="rounded-lg border border-border/60 font-sans font-bold shadow-sm">
                                         <DropdownMenuItem asChild>
                                             <Link href={`/dashboard/projects/edit/${project.id}`} className="cursor-pointer">
                                                 <Edit size={14} className="mr-2" /> Ubah
@@ -133,7 +133,7 @@ export default function ProjectsPage() {
 
             {/* Dialog Hapus */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="rounded-lg border border-border p-12 font-sans shadow-2xl max-w-lg">
+                <DialogContent className="rounded-lg border border-border p-12 font-sans shadow-lg max-w-lg">
                     <DialogHeader className="space-y-4">
                         <div className="w-20 h-20 rounded-lg border border-red-500/20 bg-red-50 flex items-center justify-center text-red-500 mb-2">
                             <Trash2 size={40} />

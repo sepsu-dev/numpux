@@ -58,7 +58,7 @@ export function VisualShowcase() {
                         <div className="absolute inset-0 bg-primary/25 rounded-[36px] blur-3xl -z-10 transform scale-105" />
 
                         {/* Phone Container */}
-                        <div className="w-[280px] h-[560px] rounded-[36px] border-[10px] border-stone-950 bg-white shadow-2xl relative overflow-hidden flex flex-col shrink-0 crave-shadow select-none">
+                        <div className="w-[280px] h-[560px] rounded-[36px] border-[10px] border-stone-950 bg-white shadow-lg relative overflow-hidden flex flex-col shrink-0 crave-shadow select-none">
                             {/* Dynamic Island Capsule Notch */}
                             <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-4.5 bg-stone-950 rounded-full z-40 flex items-center justify-center" />
 

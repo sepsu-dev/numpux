@@ -162,7 +162,7 @@ export default function KanbanPage() {
                                                         {...provided.dragHandleProps}
                                                         className={cn(
                                                             "bg-card border border-border/40 p-5 rounded-2xl transition-all group cursor-grab active:cursor-grabbing",
-                                                            snapshot.isDragging ? 'shadow-2xl border-primary/45 scale-105 z-50' : 'shadow-sm hover:shadow-md hover:border-primary/20'
+                                                            snapshot.isDragging ? 'shadow-lg border-primary/45 scale-105 z-50' : 'shadow-sm hover:shadow-sm hover:border-primary/20'
                                                         )}
                                                     >
                                                         <div className="flex justify-between items-start mb-4">

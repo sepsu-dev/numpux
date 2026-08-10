@@ -49,7 +49,7 @@ export function Hero() {
                         <div className="absolute w-[300px] h-[300px] bg-primary/20 rounded-full blur-[80px] -z-10" />
 
                         {/* Web Mockup Container */}
-                        <div className="relative w-full max-w-[480px] lg:max-w-[500px] p-2 rounded-2xl border crave-border bg-stone-100/50 backdrop-blur-xl shadow-2xl shadow-black/5">
+                        <div className="relative w-full max-w-[480px] lg:max-w-[500px] p-2 rounded-2xl border crave-border bg-stone-100/50 backdrop-blur-xl shadow-lg shadow-black/5">
                             <div className="rounded-xl border border-stone-200 bg-white overflow-hidden crave-shadow">
                                 {/* Window Header */}
                                 <div className="flex items-center gap-2 px-4 py-3 border-b border-stone-100 bg-stone-50">
@@ -76,7 +76,6 @@ export function Hero() {
                                         <div className="space-y-1">
                                             {[
                                                 { label: "Papan", icon: Layers, active: true },
-                                                { label: "Kalender", icon: Calendar },
                                                 { label: "Tim", icon: Users },
                                             ].map((item, i) => (
                                                 <div
@@ -132,7 +131,7 @@ export function Hero() {
                             </div>
 
                             {/* Floating Web Circular Stats Widget */}
-                            <div className="absolute -bottom-6 -left-6 p-3 rounded-xl border border-stone-200/80 bg-white shadow-xl flex items-center gap-3 max-w-[190px] z-20">
+                            <div className="absolute -bottom-6 -left-6 p-3 rounded-xl border border-stone-200/80 bg-white shadow-sm flex items-center gap-3 max-w-[190px] z-20">
                                 <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
                                     <svg className="w-full h-full transform -rotate-90">
                                         <circle cx="20" cy="20" r="16" className="stroke-stone-100 fill-none" strokeWidth="2.5" />
@@ -148,7 +147,7 @@ export function Hero() {
                             </div>
 
                             {/* Floating Active Members Widget */}
-                            <div className="absolute -top-6 -right-6 p-3.5 rounded-xl border border-stone-200/80 bg-white shadow-xl min-w-[180px] z-20 hidden sm:block">
+                            <div className="absolute -top-6 -right-6 p-3.5 rounded-xl border border-stone-200/80 bg-white shadow-sm min-w-[180px] z-20 hidden sm:block">
                                 <h4 className="text-[8px] font-black uppercase text-muted-foreground/80 mb-2 text-left">Kolaborator Aktif</h4>
                                 <div className="space-y-2 text-left">
                                     {[

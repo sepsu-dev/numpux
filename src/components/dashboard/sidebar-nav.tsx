@@ -8,7 +8,6 @@ import {
     LayoutDashboard,
     CheckSquare,
     Briefcase,
-    Calendar,
     LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,12 +31,8 @@ interface NavItem {
 
 const mainNav: NavItem[] = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Beranda" },
-    { href: "/dashboard/tasks", icon: CheckSquare, label: "Tugas", count: 5 },
-    { href: "/dashboard/projects", icon: Briefcase, label: "Proyek" },
-];
-
-const productivityNav: NavItem[] = [
-    { href: "/dashboard/calendar", icon: Calendar, label: "Kalender" },
+    { href: "/tasks", icon: CheckSquare, label: "Tugas", count: 5 },
+    { href: "/projects", icon: Briefcase, label: "Proyek" },
 ];
 
 export function SidebarNav() {
@@ -68,7 +63,7 @@ export function SidebarNav() {
             <SidebarContent className="py-4 px-2 group-data-[collapsible=icon]:px-0 space-y-2 bg-card">
                 <SidebarGroup>
                     <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-3 mb-1 group-data-[collapsible=icon]:hidden">
-                        Utama
+                        MENU
                     </SidebarGroupLabel>
                     <SidebarMenu>
                         {mainNav.map((item) => (
@@ -96,35 +91,6 @@ export function SidebarNav() {
                                                 {item.count}
                                             </span>
                                         )}
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </SidebarGroup>
-
-                <SidebarGroup>
-                    <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-3 mb-1 group-data-[collapsible=icon]:hidden">
-                        Produktivitas
-                    </SidebarGroupLabel>
-                    <SidebarMenu>
-                        {productivityNav.map((item) => (
-                            <SidebarMenuItem key={item.href}>
-                                <SidebarMenuButton
-                                    asChild
-                                    isActive={pathname === item.href}
-                                    tooltip={item.label}
-                                    className={cn(
-                                        "h-9 px-3 rounded-xl transition-colors",
-                                        "group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:justify-center",
-                                        pathname === item.href
-                                            ? "bg-primary/10 text-primary font-bold"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                    )}
-                                >
-                                    <Link href={item.href} className="flex items-center w-full group-data-[collapsible=icon]:justify-center">
-                                        <item.icon size={16} className={cn("shrink-0", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
-                                        <span className="ml-3 text-[13px] group-data-[collapsible=icon]:hidden">{item.label}</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
