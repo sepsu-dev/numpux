@@ -4,13 +4,9 @@ import { useState } from "react";
 import {
     Plus,
     MoreHorizontal,
-    Calendar,
-    Users,
     Briefcase,
     Edit,
-    Trash2,
-    ArrowUpRight,
-    TrendingUp
+    Trash2
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -53,7 +49,7 @@ export default function ProjectsPage() {
                     <p className="text-muted-foreground text-sm font-medium mt-1">Kelola visi besar Anda.</p>
                 </div>
 
-                <Link href="/dashboard/projects/new">
+                <Link href="/projects/new">
                     <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg text-[11px] font-bold hover:bg-foreground transition-all shadow-sm active:scale-95">
                         <Plus size={16} />
                         PROYEK BARU
@@ -81,7 +77,7 @@ export default function ProjectsPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="rounded-lg border border-border/60 font-sans font-bold shadow-sm">
                                         <DropdownMenuItem asChild>
-                                            <Link href={`/dashboard/projects/edit/${project.id}`} className="cursor-pointer">
+                                            <Link href={`/projects/edit/${project.id}`} className="cursor-pointer">
                                                 <Edit size={14} className="mr-2" /> Ubah
                                             </Link>
                                         </DropdownMenuItem>
@@ -118,7 +114,7 @@ export default function ProjectsPage() {
                 ))}
 
                 {/* Tambah Proyek */}
-                <Link href="/dashboard/projects/new" className="group h-full">
+                <Link href="/projects/new" className="group h-full">
                     <div className="h-full min-h-[340px] border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-4 hover:border-primary hover:bg-primary/[0.02] transition-all hover:shadow-sm">
                         <div className="w-16 h-16 rounded-lg border border-border bg-white flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary transition-all shadow-sm">
                             <Plus size={32} />

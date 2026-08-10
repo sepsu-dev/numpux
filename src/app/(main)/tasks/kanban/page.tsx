@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Plus,
     MoreHorizontal,
@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export default function KanbanPage() {
@@ -116,7 +115,7 @@ export default function KanbanPage() {
 
                 <div className="flex items-center gap-4">
                     <div className="bg-muted/60 p-1 rounded-lg flex border border-border/60">
-                        <Link href="/dashboard/tasks">
+                        <Link href="/tasks">
                             <button className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md">
                                 <List size={16} />
                             </button>
@@ -125,7 +124,7 @@ export default function KanbanPage() {
                             <LayoutGrid size={16} />
                         </button>
                     </div>
-                    <Link href="/dashboard/tasks/new">
+                    <Link href="/tasks/new">
                         <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full text-[11px] font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95">
                             <Plus size={16} />
                             TUGAS BARU

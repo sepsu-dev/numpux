@@ -68,13 +68,13 @@ export default function TasksPage() {
                         <button className="p-2 bg-card text-primary rounded-md shadow-sm">
                             <List size={16} />
                         </button>
-                        <Link href="/dashboard/tasks/kanban">
+                        <Link href="/tasks/kanban">
                             <button className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md">
                                 <LayoutGrid size={16} />
                             </button>
                         </Link>
                     </div>
-                    <Link href="/dashboard/tasks/new">
+                    <Link href="/tasks/new">
                         <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full text-[11px] font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95">
                             <Plus size={16} />
                             TUGAS BARU
@@ -156,7 +156,7 @@ export default function TasksPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="rounded-xl border border-border bg-card font-sans shadow-sm">
                                         <DropdownMenuItem asChild>
-                                            <Link href={`/dashboard/tasks/edit/${task.id}`} className="cursor-pointer py-2 px-3 hover:bg-muted/50">
+                                            <Link href={`/tasks/edit/${task.id}`} className="cursor-pointer py-2 px-3 hover:bg-muted/50">
                                                 <Edit size={14} className="mr-2" /> Ubah
                                             </Link>
                                         </DropdownMenuItem>

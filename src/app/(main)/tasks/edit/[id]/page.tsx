@@ -17,13 +17,13 @@ export default function EditTaskPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         toast.info(`Perubahan pada tugas #${id} berhasil disimpan!`);
-        router.push("/dashboard/tasks");
+        router.push("/tasks");
     };
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4">
-                <Link href="/dashboard/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
+                <Link href="/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
                     <ArrowLeft size={20} />
                 </Link>
                 <div>

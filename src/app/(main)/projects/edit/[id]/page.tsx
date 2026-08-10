@@ -17,13 +17,13 @@ export default function EditProjectPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         toast.success(`Proyek #${id} berhasil diperbarui!`);
-        router.push("/dashboard/projects");
+        router.push("/projects");
     };
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4">
-                <Link href="/dashboard/projects" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
+                <Link href="/projects" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
                     <ArrowLeft size={20} />
                 </Link>
                 <div>

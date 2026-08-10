@@ -22,13 +22,13 @@ export default function NewProjectPage() {
                 error: 'Gagal membuat proyek.',
             }
         );
-        setTimeout(() => router.push("/dashboard/projects"), 1500);
+        setTimeout(() => router.push("/projects"), 1500);
     };
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-6">
-                <Link href="/dashboard/projects" className="p-2 hover:bg-muted/50 rounded-lg text-foreground transition-all border border-border bg-white active:scale-95 shadow-sm">
+                <Link href="/projects" className="p-2 hover:bg-muted/50 rounded-lg text-foreground transition-all border border-border bg-white active:scale-95 shadow-sm">
                     <ArrowLeft size={16} />
                 </Link>
                 <div>
