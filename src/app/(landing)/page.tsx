@@ -1,6 +1,5 @@
 import { Hero } from "@/components/landing/hero";
 import { Features } from "@/components/landing/features";
-import { VisualShowcase } from "@/components/landing/visual-showcase";
 import { FAQ } from "@/components/landing/faq";
 import { WhyChooseUs } from "@/components/landing/why-choose-us";
 
@@ -16,12 +15,11 @@ export default function LandingPage() {
       <div className="fixed top-1/2 left-1/3 w-96 h-96 bg-accent/5 rounded-full blur-[150px] pointer-events-none animate-blob [animation-delay:4s]" />
 
 
-      <main className="relative z-10 animate-in fade-in duration-1000">
+      <main className="relative z-10">
         <Hero />
         <Features />
-        <VisualShowcase />
-        <FAQ />
         <WhyChooseUs />
+        <FAQ />
       </main>
     </div>
   );

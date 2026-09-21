@@ -11,13 +11,13 @@ export function Features() {
             <div className="container max-w-5xl mx-auto px-6 relative z-10">
                 {/* Section Header */}
                 <div className="text-center max-w-xl mx-auto mb-16">
-                    <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground bg-primary/20 px-3.5 py-1.5 rounded-xl mb-4">
+                    <span className="inline-block text-xs font-semibold uppercase tracking-[0.15em] text-primary-foreground bg-primary/20 px-3 py-1 rounded-full mb-4">
                         Fitur Utama
                     </span>
-                    <h2 className="text-3xl md:text-4xl font-sans font-black text-foreground tracking-tight mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
                         Kelola Proyek Lebih Terstruktur
                     </h2>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                         Alat manajemen tugas yang dirancang untuk menjaga fokus dan produktivitas tim Anda tetap optimal.
                     </p>
                 </div>
@@ -55,8 +55,8 @@ export function Features() {
                                 <div className={`w-10 h-10 rounded-xl ${feature.color} flex items-center justify-center mb-4`}>
                                     <feature.icon className="w-5 h-5" />
                                 </div>
-                                <h3 className="text-sm font-black text-foreground mb-2">{feature.title}</h3>
-                                <p className="text-[12px] text-muted-foreground leading-relaxed">{feature.desc}</p>
+                                <h3 className="text-sm font-bold text-foreground mb-2">{feature.title}</h3>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
                             </div>
                         </div>
                     ))}

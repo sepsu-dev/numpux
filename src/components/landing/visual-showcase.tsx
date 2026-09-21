@@ -11,9 +11,9 @@ export function VisualShowcase() {
             <div className="container max-w-5xl mx-auto px-6 relative z-10 text-center">
                 {/* Header */}
                 <div className="max-w-xl mx-auto mb-16">
-                    <h2 className="text-3xl md:text-[40px] font-sans font-black text-foreground tracking-tight leading-tight mb-4">
+                    <h2 className="text-3xl md:text-[38px] font-bold text-foreground tracking-tight leading-tight mb-4">
                         Lacak, Tingkatkan, dan<br />
-                        Berkembang Setiap Hari
+                        <span className="text-muted-foreground font-medium">Berkembang Setiap Hari</span>
                     </h2>
                 </div>
 
@@ -22,14 +22,14 @@ export function VisualShowcase() {
                     {/* Left Column - Floating Cards */}
                     <div className="flex-1 flex flex-col gap-6 w-full max-w-[280px]">
                         {/* Yellow Card */}
-                        <div className="p-5 rounded-xl bg-amber-100 border border-amber-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
+                        <div className="p-5 rounded-xl bg-amber-100/80 border border-amber-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
                                     <AlertCircle className="w-4.5 h-4.5 text-amber-600" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-black text-amber-950">Prioritas Cerdas</h4>
-                                    <p className="text-[10px] text-amber-900/80 leading-normal mt-0.5 font-bold">
+                                    <h4 className="text-xs font-bold text-amber-950">Prioritas Cerdas</h4>
+                                    <p className="text-[11px] text-amber-900/80 leading-normal mt-0.5 font-normal">
                                         Urutkan tugas berdasarkan tenggat waktu terdekat.
                                     </p>
                                 </div>
@@ -37,14 +37,14 @@ export function VisualShowcase() {
                         </div>
 
                         {/* Teal/Light Green Card */}
-                        <div className="p-5 rounded-xl bg-emerald-100 border border-emerald-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
+                        <div className="p-5 rounded-xl bg-emerald-100/80 border border-emerald-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
                                     <Edit3 className="w-4.5 h-4.5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-black text-emerald-950">Deskripsi Lengkap</h4>
-                                    <p className="text-[10px] text-emerald-900/80 leading-normal mt-0.5 font-bold">
+                                    <h4 className="text-xs font-bold text-emerald-950">Deskripsi Lengkap</h4>
+                                    <p className="text-[11px] text-emerald-900/80 leading-normal mt-0.5 font-normal">
                                         Tambahkan sub-tugas dan daftar checklist detail.
                                     </p>
                                 </div>
@@ -63,7 +63,7 @@ export function VisualShowcase() {
                             <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-4.5 bg-stone-950 rounded-full z-40 flex items-center justify-center" />
 
                             {/* Status Bar */}
-                            <div className="h-10 px-6 flex justify-between items-center text-[9px] font-black text-stone-900 z-30 pt-1">
+                            <div className="h-10 px-6 flex justify-between items-center text-[9px] font-semibold text-stone-900 z-30 pt-1">
                                 <span>9:41</span>
                                 <div className="flex items-center gap-1">
                                     <span className="w-2.5 h-2.5 bg-stone-900 rounded-full scale-[0.8]" />
@@ -77,9 +77,9 @@ export function VisualShowcase() {
                                 <div className="flex items-center justify-between mb-4 mt-1">
                                     <div>
                                         <p className="text-[9px] text-muted-foreground font-medium">Hai Kristin ⚡</p>
-                                        <p className="text-[11px] font-black text-foreground">Selamat Siang!</p>
+                                        <p className="text-[11px] font-semibold text-foreground">Selamat Siang!</p>
                                     </div>
-                                    <div className="w-7 h-7 rounded-full bg-stone-200 flex items-center justify-center text-[10px] font-bold text-foreground border border-stone-300">
+                                    <div className="w-7 h-7 rounded-full bg-stone-200 flex items-center justify-center text-[10px] font-medium text-foreground border border-stone-300">
                                         K
                                     </div>
                                 </div>
@@ -87,60 +87,60 @@ export function VisualShowcase() {
                                 {/* Calendar dots */}
                                 <div className="grid grid-cols-7 gap-1.5 mb-4 border-b border-stone-200/40 pb-3">
                                     {["S", "S", "R", "K", "J", "S", "M"].map((d, i) => (
-                                        <div key={i} className="flex flex-col items-center gap-0.5">
-                                            <span className="text-[7px] font-black text-muted-foreground/60">{d}</span>
-                                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-black ${i === 4 ? 'bg-primary text-primary-foreground' : 'bg-stone-200/50 text-foreground'}`}>
-                                                {i + 2}
-                                            </span>
-                                        </div>
+                                         <div key={i} className="flex flex-col items-center gap-0.5">
+                                             <span className="text-[7px] font-medium text-muted-foreground/60">{d}</span>
+                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-semibold ${i === 4 ? 'bg-primary text-primary-foreground' : 'bg-stone-200/50 text-foreground'}`}>
+                                                 {i + 2}
+                                             </span>
+                                         </div>
                                     ))}
                                 </div>
 
                                 {/* Main Section Heading */}
-                                <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/60 mb-2.5">Perjalanan Proyek</p>
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2.5">Perjalanan Proyek</p>
                                 
                                 {/* Yellow & Green Mini Cards Side-by-Side */}
                                 <div className="grid grid-cols-2 gap-2 mb-3">
                                     <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-200/80">
                                         <AlertCircle className="w-3.5 h-3.5 text-amber-700 mb-1" />
-                                        <p className="text-[8px] font-black text-amber-950">Tugas Mendesak</p>
+                                        <p className="text-[8px] font-semibold text-amber-950">Tugas Mendesak</p>
                                     </div>
                                     <div className="p-2.5 rounded-xl bg-[#8CE460]/20 border border-[#8CE460]/40">
                                         <Sparkles className="w-3.5 h-3.5 text-green-700 mb-1" />
-                                        <p className="text-[8px] font-black text-green-950">Kolaborasi Aktif</p>
+                                        <p className="text-[8px] font-semibold text-green-950">Kolaborasi Aktif</p>
                                     </div>
                                 </div>
 
                                 {/* Explore Gradient Card */}
                                 <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-yellow-400 to-rose-400 text-white flex flex-col justify-between h-[85px] mb-4 shadow-sm">
-                                    <p className="text-[9px] font-black leading-tight text-foreground">Jelajahi sumber daya pembelajaran kami</p>
-                                    <button className="w-max px-2.5 py-1 rounded bg-stone-950 text-white text-[7px] font-black uppercase tracking-wider">
+                                    <p className="text-[9px] font-bold leading-tight text-foreground">Jelajahi sumber daya pembelajaran kami</p>
+                                    <button className="w-max px-2.5 py-1 rounded bg-stone-950 text-white text-[7px] font-semibold uppercase tracking-wider">
                                         Sumber Daya ↗
                                     </button>
                                 </div>
 
                                 {/* My Habits Checklist */}
-                                <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/60 mb-2">Tugas Harian</p>
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">Tugas Harian</p>
                                 <div className="space-y-2">
                                     <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 flex items-center justify-between shadow-sm">
                                         <div className="flex items-center gap-2">
                                             <div className="w-4 h-4 rounded bg-stone-100 flex items-center justify-center border border-stone-300">
-                                                <Check className="w-3 h-3 text-green-700" strokeWidth={3} />
+                                                <Check className="w-3 h-3 text-green-700" strokeWidth={2.5} />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-black text-foreground">Desain Wireframe</p>
-                                                <p className="text-[7px] text-muted-foreground">Selesai • 13:00</p>
+                                                <p className="text-[9px] font-semibold text-foreground">Desain Wireframe</p>
+                                                <p className="text-[7px] text-muted-foreground font-normal">Selesai • 13:00</p>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 flex items-center justify-between shadow-sm">
                                         <div className="flex items-center gap-2">
                                             <div className="w-4 h-4 rounded bg-stone-100 flex items-center justify-center border border-stone-300">
-                                                <Check className="w-3 h-3 text-green-700" strokeWidth={3} />
+                                                <Check className="w-3 h-3 text-green-700" strokeWidth={2.5} />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-black text-foreground">Refactor API Auth</p>
-                                                <p className="text-[7px] text-muted-foreground">Selesai • 14:15</p>
+                                                <p className="text-[9px] font-semibold text-foreground">Refactor API Auth</p>
+                                                <p className="text-[7px] text-muted-foreground font-normal">Selesai • 14:15</p>
                                             </div>
                                         </div>
                                     </div>
@@ -152,7 +152,7 @@ export function VisualShowcase() {
                                 <span className="text-[12px] opacity-80 cursor-pointer">🏠</span>
                                 <span className="text-[12px] opacity-40 cursor-pointer">📊</span>
                                 <div className="w-6.5 h-6.5 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-sm">
-                                    <span className="text-[10px] font-black text-primary-foreground">+</span>
+                                    <span className="text-[10px] font-bold text-primary-foreground">+</span>
                                 </div>
                                 <span className="text-[12px] opacity-40 cursor-pointer">💬</span>
                                 <span className="text-[12px] opacity-40 cursor-pointer">⚙️</span>
@@ -169,8 +169,8 @@ export function VisualShowcase() {
                                     <Sparkles className="w-4.5 h-4.5 text-green-700" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-black text-green-950">Kolaborasi Tim</h4>
-                                    <p className="text-[10px] text-green-900/80 leading-normal mt-0.5 font-bold">
+                                    <h4 className="text-xs font-bold text-green-950">Kolaborasi Tim</h4>
+                                    <p className="text-[11px] text-green-900/80 leading-normal mt-0.5 font-normal">
                                         Bagikan proyek & delegasikan tugas secara langsung.
                                     </p>
                                 </div>
@@ -184,8 +184,8 @@ export function VisualShowcase() {
                                     <BookOpen className="w-4.5 h-4.5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-black text-blue-950">Analitik Progres</h4>
-                                    <p className="text-[10px] text-blue-900/80 leading-normal mt-0.5 font-bold">
+                                    <h4 className="text-xs font-bold text-blue-950">Analitik Progres</h4>
+                                    <p className="text-[11px] text-blue-900/80 leading-normal mt-0.5 font-normal">
                                         Pantau grafik penyelesaian tugas tim mingguan.
                                     </p>
                                 </div>

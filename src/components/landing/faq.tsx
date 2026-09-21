@@ -26,14 +26,14 @@ export function FAQ() {
                 <div className="flex flex-col lg:flex-row gap-16 items-start">
                     {/* Left */}
                     <div className="lg:w-1/3 lg:sticky lg:top-32">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground bg-primary/20 px-3.5 py-1.5 rounded-xl mb-4">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-primary-foreground bg-primary/20 px-3 py-1 rounded-full mb-4">
                             <HelpCircle className="w-3.5 h-3.5 text-green-800" />
                             FAQ
                         </span>
-                        <h2 className="text-3xl md:text-4xl font-sans font-black text-foreground tracking-tight mb-4">
+                        <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
                             Pertanyaan Umum
                         </h2>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-normal">
                             Temukan jawaban cepat untuk pertanyaan yang sering diajukan mengenai Numpux.
                         </p>
                     </div>
@@ -49,7 +49,7 @@ export function FAQ() {
                                 >
                                     <button
                                         onClick={() => toggleIndex(idx)}
-                                        className="w-full flex items-center justify-between p-5 text-left font-bold text-xs text-foreground hover:bg-stone-50 transition-colors cursor-pointer"
+                                        className="w-full flex items-center justify-between p-5 text-left font-semibold text-sm text-foreground hover:bg-stone-50 transition-colors cursor-pointer"
                                     >
                                         <span>{item.q}</span>
                                         <ChevronDown
@@ -65,7 +65,7 @@ export function FAQ() {
                                             isOpen ? "max-h-40 border-t border-stone-100" : "max-h-0"
                                         }`}
                                     >
-                                        <div className="p-5 text-left text-xs font-bold leading-relaxed text-muted-foreground">
+                                        <div className="p-5 text-left text-xs leading-relaxed text-muted-foreground font-normal">
                                             {item.a}
                                         </div>
                                     </div>

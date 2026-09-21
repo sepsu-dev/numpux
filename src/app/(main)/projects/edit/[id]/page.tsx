@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,17 +9,61 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Link from "next/link";
+import type { Project } from "@/lib/types";
 
 export default function EditProjectPage() {
     const router = useRouter();
     const params = useParams();
-    const id = params.id;
+    const id = params?.id as string;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [project, setProject] = useState<Project | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (!id) return;
+        fetch(`/api/projects/${id}`)
+            .then((res) => res.json())
+            .then((res) => {
+                if (res.data) setProject(res.data);
+            })
+            .catch(() => {})
+            .finally(() => setIsLoading(false));
+    }, [id]);
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        toast.success(`Proyek #${id} berhasil diperbarui!`);
-        router.push("/projects");
+        const formData = new FormData(e.currentTarget);
+        const title = formData.get("title") as string;
+        const category = formData.get("category") as string;
+        const status = formData.get("status") as "Aktif" | "Perencanaan" | "Selesai";
+        const description = formData.get("description") as string;
+
+        setIsSaving(true);
+        try {
+            const res = await fetch(`/api/projects/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, category, status, description }),
+            });
+            if (!res.ok) throw new Error("Gagal menyimpan");
+            toast.success(`Proyek "${title}" berhasil diperbarui!`);
+            router.push("/projects");
+            router.refresh();
+        } catch {
+            toast.error("Gagal memperbarui proyek.");
+        } finally {
+            setIsSaving(false);
+        }
     };
+
+    if (isLoading) {
+        return (
+            <div className="py-20 text-center text-muted-foreground text-sm font-medium">
+                Memuat data proyek...
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -27,8 +72,8 @@ export default function EditProjectPage() {
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Proyek #{id}</h2>
-                    <p className="text-muted-foreground font-medium">Sesuaikan detail visi proyek Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Proyek</h2>
+                    <p className="text-muted-foreground font-medium text-xs">Sesuaikan detail visi proyek Anda.</p>
                 </div>
             </div>
 
@@ -36,48 +81,57 @@ export default function EditProjectPage() {
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="p-title" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Nama Proyek</Label>
+                            <Label htmlFor="p-title" className="font-semibold text-xs text-foreground">Nama Proyek</Label>
                             <Input
                                 id="p-title"
-                                defaultValue="Numpux Engine"
-                                className="h-12 text-base rounded-lg border-border focus:border-primary font-medium text-foreground"
+                                name="title"
+                                defaultValue={project?.title || ""}
+                                className="h-11 text-sm rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5"
                                 required
                             />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="p-status" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Status</Label>
-                                <select id="p-status" defaultValue="Active" className="h-10 w-full rounded-lg border border-border bg-transparent px-3 text-sm focus:border-primary focus:outline-none font-bold text-foreground">
-                                    <option>Active</option>
-                                    <option>Planning</option>
-                                    <option>On Hold</option>
+                                <Label htmlFor="p-status" className="font-semibold text-xs text-foreground">Status</Label>
+                                <select
+                                    id="p-status"
+                                    name="status"
+                                    defaultValue={project?.status || "Aktif"}
+                                    className="h-11 w-full rounded-lg border border-border bg-transparent px-3 text-sm focus:border-primary focus:outline-none font-medium text-foreground"
+                                >
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Perencanaan">Perencanaan</option>
+                                    <option value="Selesai">Selesai</option>
                                 </select>
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="p-category" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Kategori</Label>
+                                <Label htmlFor="p-category" className="font-semibold text-xs text-foreground">Kategori</Label>
                                 <Input
                                     id="p-category"
-                                    defaultValue="Backend Engine"
-                                    className="rounded-lg border-border focus:border-primary font-medium text-foreground"
+                                    name="category"
+                                    defaultValue={project?.category || ""}
+                                    className="h-11 text-sm rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5"
+                                    required
                                 />
                             </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="p-desc" className="font-bold text-[11px] uppercase tracking-widest text-muted-foreground">Deskripsi Proyek</Label>
+                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground">Deskripsi Proyek</Label>
                             <Textarea
                                 id="p-desc"
-                                defaultValue="Sistem inti untuk manajemen task real-time yang menggunakan arsitektur event-driven."
-                                className="min-h-[120px] rounded-lg border-border focus:border-primary resize-none p-4 font-medium text-foreground"
+                                name="description"
+                                defaultValue={project?.description || ""}
+                                className="min-h-[120px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-sm text-foreground"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-4">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-bold text-muted-foreground">Batal</Button>
-                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-10 h-12 rounded-lg shadow-sm hover:shadow-none transition-all">
-                            Simpan Perubahan
+                    <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-3">
+                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm">Batal</Button>
+                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm">
+                            {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
                         </Button>
                     </div>
                 </form>

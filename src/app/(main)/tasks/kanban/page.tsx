@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
     Plus,
     MoreHorizontal,
@@ -12,50 +13,60 @@ import {
 import Link from "next/link";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
+import type { Task, TaskStatus } from "@/lib/types";
+
+const STATUS_COLUMNS: { id: TaskStatus; title: string }[] = [
+    { id: "Belum Mulai", title: "Belum Mulai" },
+    { id: "Proses", title: "Sedang Dikerjakan" },
+    { id: "Peninjauan", title: "Peninjauan" },
+    { id: "Selesai", title: "Selesai" },
+];
+
+const PRIORITY_BADGE_STYLE: Record<string, string> = {
+    Rendah: "bg-gray-50 text-gray-500 border-gray-100",
+    Sedang: "bg-blue-50 text-blue-500 border-blue-100",
+    Tinggi: "bg-orange-50 text-orange-500 border-orange-100",
+    Mendesak: "bg-red-50 text-red-500 border-red-100",
+};
 
 export default function KanbanPage() {
-    const [columns, setColumns] = useState([
-        {
-            id: "todo",
-            title: "To Do",
-            tasks: [
-                { id: 2, title: "Argue about spaces vs tabs", project: "Refactor", priority: "Medium", date: "Besok", badgeColor: "bg-blue-50 text-blue-500 border-blue-100" },
-                { id: 5, title: "Write integration tests (maybe)", project: "Docs", priority: "Low", date: "28 Mei", badgeColor: "bg-gray-50 text-gray-500 border-gray-100" },
-            ]
-        },
-        {
-            id: "inprogress",
-            title: "In Progress",
-            tasks: [
-                { id: 1, title: "Fix 'Works on my machine' bug", project: "Bug Fixes", priority: "High", date: "Hari ini", badgeColor: "bg-orange-50 text-orange-500 border-orange-100" },
-            ]
-        },
-        {
-            id: "review",
-            title: "Review",
-            tasks: [
-                { id: 4, title: "Refactor spaghetti auth code", project: "Refactor", priority: "Critical", date: "25 Mei", badgeColor: "bg-red-50 text-red-500 border-red-100" },
-            ]
-        },
-        {
-            id: "done",
-            title: "Done",
-            tasks: [
-                { id: 3, title: "Center a div in CSS", project: "Features", priority: "Medium", date: "Kemarin", badgeColor: "bg-blue-50 text-blue-500 border-blue-100" },
-            ]
-        }
-    ]);
+    const searchParams = useSearchParams();
+    const projectId = searchParams.get("projectId") || "";
+
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [isMounted, setIsMounted] = useState(false);
+    const [projectName, setProjectName] = useState<string>("");
+
+    const loadTasks = () => {
+        const url = projectId ? `/api/tasks?projectId=${projectId}` : "/api/tasks";
+        fetch(url)
+            .then((res) => res.json())
+            .then((res) => {
+                if (res.data) setTasks(res.data);
+            })
+            .catch(() => {});
+
+        if (projectId) {
+            fetch(`/api/projects`)
+                .then((res) => res.json())
+                .then((res) => {
+                    const found = res.data?.find((p: any) => p.id === projectId);
+                    if (found) setProjectName(found.title);
+                })
+                .catch(() => {});
+        } else {
+            setProjectName("");
+        }
+    };
 
     useEffect(() => {
         setIsMounted(true);
-    }, []);
+        loadTasks();
+    }, [projectId]);
 
     const onDragEnd = (result: DropResult) => {
-        const { destination, source } = result;
-
+        const { destination, source, draggableId } = result;
         if (!destination) return;
-
         if (
             destination.droppableId === source.droppableId &&
             destination.index === source.index
@@ -63,71 +74,53 @@ export default function KanbanPage() {
             return;
         }
 
-        const sourceCol = columns.find(col => col.id === source.droppableId);
-        const destCol = columns.find(col => col.id === destination.droppableId);
+        const targetStatus = destination.droppableId as TaskStatus;
 
-        if (!sourceCol || !destCol) return;
-
-        if (sourceCol === destCol) {
-            const newTasks = Array.from(sourceCol.tasks);
-            const [removed] = newTasks.splice(source.index, 1);
-            newTasks.splice(destination.index, 0, removed);
-
-            const newColumns = columns.map(col => {
-                if (col.id === sourceCol.id) {
-                    return { ...col, tasks: newTasks };
-                }
-                return col;
-            });
-
-            setColumns(newColumns);
-        } else {
-            const sourceTasks = Array.from(sourceCol.tasks);
-            const [removed] = sourceTasks.splice(source.index, 1);
-
-            const destTasks = Array.from(destCol.tasks);
-            destTasks.splice(destination.index, 0, removed);
-
-            const newColumns = columns.map(col => {
-                if (col.id === sourceCol.id) {
-                    return { ...col, tasks: sourceTasks };
-                }
-                if (col.id === destCol.id) {
-                    return { ...col, tasks: destTasks };
-                }
-                return col;
-            });
-
-            setColumns(newColumns);
-        }
+        setTasks((prev) =>
+            prev.map((t) => (t.id === draggableId ? { ...t, status: targetStatus } : t))
+        );
     };
 
     if (!isMounted) return null;
 
+    const listHref = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
+    const newHref = projectId ? `/tasks/new?projectId=${projectId}` : "/tasks/new";
+
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 font-sans">
+        <div className="space-y-6 pb-16 font-sans">
             {/* Header */}
-            <div className="flex items-center justify-between gap-8 pb-4">
+            <div className="flex items-center justify-between gap-4 pb-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tight">Kanban</h2>
-                    <p className="text-muted-foreground text-sm font-medium mt-1">Kelola workflow visual Anda.</p>
+                    <div className="flex items-center gap-2.5">
+                        <h2 className="text-xl font-bold text-foreground tracking-tight">Kanban</h2>
+                        {projectName && (
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                                {projectName}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                        {projectName
+                            ? `Alur tugas visual khusus proyek ${projectName}`
+                            : "Pantau alur tugas visual tim Anda secara dinamis."}
+                    </p>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="bg-muted/60 p-1 rounded-lg flex border border-border/60">
-                        <Link href="/tasks">
-                            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md">
-                                <List size={16} />
+                <div className="flex items-center gap-2.5">
+                    <div className="bg-muted p-0.5 rounded-lg flex border border-border">
+                        <Link href={listHref}>
+                            <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md cursor-pointer">
+                                <List size={15} />
                             </button>
                         </Link>
-                        <button className="p-2 bg-card text-primary rounded-md shadow-sm">
-                            <LayoutGrid size={16} />
+                        <button className="p-1.5 bg-card text-primary rounded-md shadow-xs">
+                            <LayoutGrid size={15} />
                         </button>
                     </div>
-                    <Link href="/tasks/new">
-                        <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full text-[11px] font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95">
-                            <Plus size={16} />
-                            TUGAS BARU
+                    <Link href={newHref}>
+                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all shadow-sm cursor-pointer">
+                            <Plus size={14} />
+                            Tugas Baru
                         </button>
                     </Link>
                 </div>
@@ -135,75 +128,89 @@ export default function KanbanPage() {
 
             {/* Kanban Grid */}
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
-                    {columns.map((column) => (
-                        <div key={column.id} className="bg-muted/40 dark:bg-zinc-900/10 border border-border/30 rounded-2xl p-5 flex flex-col min-h-[560px]">
-                            <div className="flex items-center justify-between mb-6 px-1">
-                                <div className="flex items-center gap-2.5">
-                                    <h3 className="font-bold text-xs uppercase tracking-wider text-foreground">{column.title}</h3>
-                                    <span className="text-[10px] font-bold text-muted-foreground bg-card border border-border/60 px-2 py-0.5 rounded-full">{column.tasks.length}</span>
-                                </div>
-                            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+                    {STATUS_COLUMNS.map((column) => {
+                        const colTasks = tasks.filter((t) => t.status === column.id);
 
-                            <Droppable droppableId={column.id}>
-                                {(provided) => (
-                                    <div
-                                        {...provided.droppableProps}
-                                        ref={provided.innerRef}
-                                        className="space-y-4 flex-1"
-                                    >
-                                        {column.tasks.map((task, index) => (
-                                            <Draggable key={task.id.toString()} draggableId={task.id.toString()} index={index}>
-                                                {(provided, snapshot) => (
-                                                    <div
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        {...provided.dragHandleProps}
-                                                        className={cn(
-                                                            "bg-card border border-border/40 p-5 rounded-2xl transition-all group cursor-grab active:cursor-grabbing",
-                                                            snapshot.isDragging ? 'shadow-lg border-primary/45 scale-105 z-50' : 'shadow-sm hover:shadow-sm hover:border-primary/20'
-                                                        )}
-                                                    >
-                                                        <div className="flex justify-between items-start mb-4">
-                                                            <div className={cn(
-                                                                "px-2.5 py-0.5 text-[8px] font-bold uppercase rounded-md border",
-                                                                task.badgeColor
-                                                            )}>
-                                                                {task.priority}
-                                                            </div>
-                                                            <button className="text-muted-foreground/60 opacity-0 group-hover:opacity-100 hover:text-foreground transition-all">
-                                                                <MoreHorizontal size={14} />
-                                                            </button>
-                                                        </div>
-                                                        <h4 className="text-sm font-bold text-foreground mb-5 transition-colors leading-normal">{task.title}</h4>
-
-                                                        <div className="flex items-center justify-between pt-4 border-t border-border/30">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className="w-5 h-5 rounded-md bg-muted/60 flex items-center justify-center border border-border/30">
-                                                                    <Briefcase size={10} className="text-muted-foreground" />
-                                                                </div>
-                                                                <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tight">{task.project}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground font-mono">
-                                                                <Clock size={10} />
-                                                                {task.date}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                        ))}
-                                        {provided.placeholder}
-
-                                        <button className="w-full py-3 border border-dashed border-border/60 hover:border-primary/40 rounded-xl text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground transition-all flex items-center justify-center gap-2 group cursor-pointer bg-card shadow-sm">
-                                            <Plus size={14} className="group-hover:scale-110 transition-transform" />
-                                            TAMBAH TUGAS
-                                        </button>
+                        return (
+                            <div key={column.id} className="bg-muted/40 border border-border rounded-xl p-3.5 flex flex-col min-h-[500px]">
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold text-xs tracking-tight text-foreground">{column.title}</h3>
+                                        <span className="text-[10px] font-medium text-muted-foreground bg-card border border-border px-1.5 py-0.2 rounded-full">
+                                            {colTasks.length}
+                                        </span>
                                     </div>
-                                )}
-                            </Droppable>
-                        </div>
-                    ))}
+                                </div>
+
+                                <Droppable droppableId={column.id}>
+                                    {(provided) => (
+                                        <div
+                                            {...provided.droppableProps}
+                                            ref={provided.innerRef}
+                                            className="space-y-3 flex-1"
+                                        >
+                                            {colTasks.map((task, index) => (
+                                                <Draggable key={task.id} draggableId={task.id} index={index}>
+                                                    {(provided, snapshot) => (
+                                                        <div
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            {...provided.dragHandleProps}
+                                                            className={cn(
+                                                                "bg-card border border-border/60 p-3.5 rounded-xl transition-all group cursor-grab active:cursor-grabbing",
+                                                                snapshot.isDragging
+                                                                    ? "shadow-lg border-primary scale-105 z-50 bg-card"
+                                                                    : "shadow-sm hover:border-primary/30"
+                                                            )}
+                                                        >
+                                                            <div className="flex justify-between items-start mb-2.5">
+                                                                <div className={cn(
+                                                                    "px-2 py-0.5 text-[9px] font-semibold uppercase rounded-md border",
+                                                                    PRIORITY_BADGE_STYLE[task.priority] || PRIORITY_BADGE_STYLE.Sedang
+                                                                )}>
+                                                                    {task.priority}
+                                                                </div>
+                                                                <Link href={`/tasks/edit/${task.id}`}>
+                                                                    <button className="text-muted-foreground/60 opacity-0 group-hover:opacity-100 hover:text-foreground transition-all cursor-pointer">
+                                                                        <MoreHorizontal size={14} />
+                                                                    </button>
+                                                                </Link>
+                                                            </div>
+                                                            <h4 className="text-xs font-semibold text-foreground mb-3 leading-snug">
+                                                                {task.title}
+                                                            </h4>
+
+                                                            <div className="flex items-center justify-between pt-2.5 border-t border-border/40">
+                                                                <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                                                                    <Briefcase size={11} className="text-muted-foreground shrink-0" />
+                                                                    <span className="text-[10px] font-medium text-muted-foreground truncate">
+                                                                        {task.project}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground shrink-0">
+                                                                    <Clock size={10} />
+                                                                    <span>{task.date}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+
+                                            <Link href={newHref} className="block w-full">
+                                                <button className="w-full py-2 border border-dashed border-border/80 hover:border-primary/50 rounded-xl text-[11px] font-medium text-muted-foreground hover:text-foreground transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-card/50 hover:bg-card">
+                                                    <Plus size={13} />
+                                                    Tambah Tugas
+                                                </button>
+                                            </Link>
+                                        </div>
+                                    )}
+                                </Droppable>
+                            </div>
+                        );
+                    })}
                 </div>
             </DragDropContext>
         </div>

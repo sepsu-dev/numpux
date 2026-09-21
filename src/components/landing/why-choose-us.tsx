@@ -11,13 +11,13 @@ export function WhyChooseUs() {
             <div className="container max-w-5xl mx-auto px-6 relative z-10">
                 {/* Header */}
                 <div className="text-center max-w-xl mx-auto mb-16">
-                    <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground bg-primary/20 px-3.5 py-1.5 rounded-xl mb-4">
+                    <span className="inline-block text-xs font-semibold uppercase tracking-[0.15em] text-primary-foreground bg-primary/20 px-3 py-1 rounded-full mb-4">
                         Mengapa Numpux?
                     </span>
-                    <h2 className="text-3xl md:text-4xl font-sans font-black text-foreground tracking-tight mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
                         Didesain untuk Efisiensi Kerja
                     </h2>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-normal">
                         Kami percaya bahwa manajemen tugas tidak harus rumit dan mahal. Berikut alasan mengapa profesional menyukai Numpux.
                     </p>
                 </div>
@@ -48,8 +48,8 @@ export function WhyChooseUs() {
                             <div className={`w-10 h-10 rounded-xl ${benefit.color} flex items-center justify-center mb-4`}>
                                 <benefit.icon className="w-5 h-5" />
                             </div>
-                            <h3 className="text-sm font-black text-foreground mb-2">{benefit.title}</h3>
-                            <p className="text-[12px] text-muted-foreground leading-relaxed">{benefit.desc}</p>
+                            <h3 className="text-sm font-bold text-foreground mb-2">{benefit.title}</h3>
+                            <p className="text-xs text-muted-foreground leading-relaxed font-normal">{benefit.desc}</p>
                         </div>
                     ))}
                 </div>
@@ -57,7 +57,7 @@ export function WhyChooseUs() {
                 {/* Staggered Testimonials */}
                 <div className="border-t border-border/80 pt-20">
                     <div className="text-center max-w-xl mx-auto mb-12">
-                        <h3 className="text-2xl font-black text-foreground tracking-tight">Apa Kata Pengguna Kami?</h3>
+                        <h3 className="text-2xl font-bold text-foreground tracking-tight">Apa Kata Pengguna Kami?</h3>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -84,7 +84,7 @@ export function WhyChooseUs() {
                             <div key={idx} className="bg-white p-6 rounded-xl border border-border text-left crave-shadow flex flex-col justify-between relative">
                                 <Quote className="absolute top-4 right-4 w-8 h-8 text-stone-100 -z-0" />
                                 <div className="relative z-10">
-                                    <p className="text-[12px] text-muted-foreground leading-relaxed italic mb-6">
+                                    <p className="text-xs text-muted-foreground leading-relaxed italic mb-6 font-normal">
                                         "{t.text}"
                                     </p>
                                 </div>
@@ -93,8 +93,8 @@ export function WhyChooseUs() {
                                         {t.avatar}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-foreground">{t.author}</p>
-                                        <p className="text-[10px] text-muted-foreground font-bold">{t.role}</p>
+                                        <p className="text-xs font-semibold text-foreground">{t.author}</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium">{t.role}</p>
                                     </div>
                                 </div>
                             </div>

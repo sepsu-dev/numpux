@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ChevronDown, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,26 +15,67 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import type { Project } from "@/lib/types";
 
 export default function NewTaskPage() {
     const router = useRouter();
-    const [selectedProject, setSelectedProject] = useState("Pilih Proyek");
+    const searchParams = useSearchParams();
+    const prefillProjectId = searchParams.get("projectId") || "";
 
-    const projects = [
-        "Numpux Engine",
-        "Situs Marketing",
-        "Aplikasi Numpux",
-        "Internal Dev"
-    ];
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>(prefillProjectId);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        fetch("/api/projects")
+            .then((res) => res.json())
+            .then((res) => {
+                if (res.data) {
+                    setProjects(res.data);
+                    if (prefillProjectId) {
+                        const found = res.data.find((p: Project) => p.id === prefillProjectId);
+                        if (found) setSelectedProjectId(found.id);
+                    }
+                }
+            })
+            .catch(() => {});
+    }, [prefillProjectId]);
+
+    const activeProject = projects.find((p) => p.id === selectedProjectId);
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (selectedProject === "Pilih Proyek") {
-            toast.error("Silakan pilih proyek terlebih dahulu!");
-            return;
+        const formData = new FormData(e.currentTarget);
+        const title = formData.get("title") as string;
+        const priority = formData.get("priority") as string;
+        const date = formData.get("date") as string;
+        const description = formData.get("description") as string;
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch("/api/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title,
+                    projectId: selectedProjectId || undefined,
+                    project: activeProject ? activeProject.title : "Proyek Utama",
+                    priority: priority || "Sedang",
+                    date: date || "Segera",
+                    description,
+                }),
+            });
+
+            if (!res.ok) throw new Error("Gagal membuat tugas");
+
+            toast.success("Tugas berhasil disimpan!");
+            router.push(selectedProjectId ? `/projects` : "/tasks");
+            router.refresh();
+        } catch {
+            toast.error("Gagal menyimpan tugas.");
+        } finally {
+            setIsSubmitting(false);
         }
-        toast.success("Tugas berhasil disimpan!");
-        router.push("/tasks");
     };
 
     return (
@@ -52,58 +93,69 @@ export default function NewTaskPage() {
             <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm hover:shadow-sm hover:border-primary/20 transition-all max-w-4xl">
                 <form onSubmit={handleSubmit} className="space-y-10">
                     <div className="space-y-8">
-                        <div className="grid gap-3">
-                            <Label htmlFor="title" className="font-bold text-[10px] uppercase tracking-[0.2em] text-foreground px-1">Nama Tugas</Label>
+                        <div className="grid gap-2.5">
+                            <Label htmlFor="title" className="font-semibold text-xs text-foreground px-0.5">Nama Tugas</Label>
                             <Input
                                 id="title"
+                                name="title"
                                 placeholder="Misal: Update Dashboard"
-                                className="h-14 text-base rounded-lg border border-border focus:border-primary font-bold px-6 bg-white transition-all text-foreground shadow-sm"
+                                className="h-12 text-sm rounded-lg border border-border focus:border-primary font-medium px-4 bg-white transition-all text-foreground shadow-sm"
                                 required
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                            <div className="grid gap-3">
-                                <Label className="font-bold text-[10px] uppercase tracking-[0.2em] text-foreground px-1">Pilih Proyek</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid gap-2.5">
+                                <Label className="font-semibold text-xs text-foreground px-0.5">Pilih Proyek</Label>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="h-14 w-full flex items-center justify-between rounded-lg border border-border px-6 bg-white hover:border-primary transition-all text-foreground font-bold shadow-sm"
+                                            className="h-12 w-full flex items-center justify-between rounded-lg border border-border px-4 bg-white hover:border-primary transition-all text-foreground font-medium shadow-sm text-sm"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <Briefcase size={16} className={selectedProject === "Pilih Proyek" ? "text-border" : "text-primary"} />
-                                                <span className={selectedProject === "Pilih Proyek" ? "text-muted-foreground" : "text-foreground"}>{selectedProject}</span>
+                                            <div className="flex items-center gap-2.5">
+                                                <Briefcase size={15} className={!activeProject ? "text-border" : "text-primary"} />
+                                                <span className={!activeProject ? "text-muted-foreground" : "text-foreground font-semibold"}>
+                                                    {activeProject ? activeProject.title : "Pilih Proyek (Opsional)"}
+                                                </span>
                                             </div>
-                                            <ChevronDown size={14} className="text-muted-foreground opacity-50" />
+                                            <ChevronDown size={14} className="text-muted-foreground opacity-60" />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[300px] md:w-[400px] rounded-lg border border-border/60 p-2 font-sans font-bold shadow-sm">
+                                    <DropdownMenuContent align="start" className="w-[300px] md:w-[400px] rounded-lg border border-border/60 p-1.5 font-sans shadow-sm">
+                                        <DropdownMenuItem
+                                            className="h-10 rounded-lg cursor-pointer hover:bg-muted transition-colors pl-3 text-xs font-medium"
+                                            onClick={() => setSelectedProjectId("")}
+                                        >
+                                            Tanpa Proyek Khusus
+                                        </DropdownMenuItem>
                                         {projects.map((project) => (
                                             <DropdownMenuItem
-                                                key={project}
-                                                className="h-12 rounded-lg cursor-pointer hover:bg-muted transition-colors pl-4 text-xs"
-                                                onClick={() => setSelectedProject(project)}
+                                                key={project.id}
+                                                className="h-10 rounded-lg cursor-pointer hover:bg-muted transition-colors pl-3 text-xs font-medium flex items-center justify-between"
+                                                onClick={() => setSelectedProjectId(project.id)}
                                             >
-                                                {project}
+                                                <span className="font-semibold">{project.title}</span>
+                                                <span className="text-[10px] text-muted-foreground uppercase">{project.category}</span>
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                            <div className="grid gap-3">
-                                <Label htmlFor="date" className="font-bold text-[10px] uppercase tracking-[0.2em] text-foreground px-1">Tenggat Waktu</Label>
+                            <div className="grid gap-2.5">
+                                <Label htmlFor="date" className="font-semibold text-xs text-foreground px-0.5">Tenggat Waktu</Label>
                                 <Input
                                     id="date"
+                                    name="date"
                                     type="date"
-                                    className="h-14 rounded-lg border border-border focus:border-primary font-bold px-6 bg-white transition-all text-foreground shadow-sm"
+                                    className="h-12 rounded-lg border border-border focus:border-primary font-medium px-4 bg-white transition-all text-foreground shadow-sm text-sm"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid gap-3">
-                            <Label className="font-bold text-[11px] uppercase tracking-[0.25em] text-muted-foreground px-1">Prioritas</Label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid gap-2.5">
+                            <Label className="font-semibold text-xs text-foreground px-0.5">Prioritas</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {[
                                     { id: 'Low', label: 'Rendah' },
                                     { id: 'Medium', label: 'Sedang' },
@@ -111,8 +163,8 @@ export default function NewTaskPage() {
                                     { id: 'Critical', label: 'Mendesak' }
                                 ].map((p) => (
                                     <label key={p.id} className="cursor-pointer group">
-                                        <input type="radio" name="priority" className="sr-only peer" defaultChecked={p.id === 'Medium'} />
-                                        <div className="flex items-center justify-center p-4 text-[10px] font-bold uppercase border border-border rounded-lg peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white transition-all hover:bg-muted/50 shadow-sm peer-checked:shadow-none">
+                                        <input type="radio" name="priority" value={p.label} className="sr-only peer" defaultChecked={p.id === 'Medium'} />
+                                        <div className="flex items-center justify-center p-3 text-xs font-medium rounded-lg border border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:font-semibold transition-all hover:bg-muted/50 shadow-sm">
                                             {p.label}
                                         </div>
                                     </label>
@@ -120,20 +172,21 @@ export default function NewTaskPage() {
                             </div>
                         </div>
 
-                        <div className="grid gap-3">
-                            <Label htmlFor="description" className="font-bold text-[11px] uppercase tracking-[0.25em] text-muted-foreground px-1">Deskripsi & Catatan</Label>
+                        <div className="grid gap-2.5">
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Deskripsi & Catatan</Label>
                             <Textarea
                                 id="description"
+                                name="description"
                                 placeholder="Tulis catatan atau detail tugas..."
-                                className="min-h-[160px] rounded-lg border border-border focus:border-primary resize-none p-6 font-medium text-base bg-white transition-all text-foreground shadow-sm focus:shadow-sm"
+                                className="min-h-[140px] rounded-lg border border-border focus:border-primary resize-none p-4 font-normal text-sm bg-white transition-all text-foreground shadow-sm focus:shadow-sm"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-10 border-t border-border/40 flex items-center justify-end gap-6">
-                        <Button type="button" variant="outline" onClick={() => router.back()} className="font-bold text-muted-foreground border border-border h-14 px-8 rounded-lg hover:bg-muted transition-all">Batal</Button>
-                        <Button type="submit" className="bg-primary hover:bg-primary text-white font-bold px-12 h-14 rounded-lg shadow-sm active:scale-95 transition-all">
-                            Simpan Tugas
+                    <div className="pt-8 border-t border-border/40 flex items-center justify-end gap-4">
+                        <Button type="button" variant="outline" onClick={() => router.back()} className="font-medium text-muted-foreground border border-border h-11 px-6 rounded-lg hover:bg-muted transition-all text-sm">Batal</Button>
+                        <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm active:scale-95 transition-all text-sm">
+                            {isSubmitting ? "Menyimpan..." : "Simpan Tugas"}
                         </Button>
                     </div>
                 </form>
