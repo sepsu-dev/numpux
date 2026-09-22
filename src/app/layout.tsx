@@ -18,10 +18,10 @@ const fredoka = Fredoka({
 export function generateMetadata(): Metadata {
   return {
     title: {
-      default: "Numpux",
+      default: "Numpux — Modern Project & Task Management",
       template: `%s — Numpux`,
     },
-    description: "Numpux",
+    description: "Streamline workflows, organize projects, and collaborate with your team in real time. Fast, focused, and free.",
   };
 }
 
@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth">
+    <html lang="en" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth">
       <body className="antialiased font-sans min-h-screen bg-background text-foreground">
         <NextTopLoader showSpinner={false} color="#6366f1" />
         <TooltipProvider>

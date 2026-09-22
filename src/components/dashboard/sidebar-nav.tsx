@@ -17,9 +17,8 @@ import {
     ChevronRight,
     Sparkles,
     Settings,
-    MoreHorizontal,
-    Hash,
-    Layers
+    Layers,
+    User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +43,16 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { Project } from "@/lib/types";
 
 export function SidebarNav() {
@@ -54,6 +63,8 @@ export function SidebarNav() {
 
     const [projects, setProjects] = useState<Project[]>([]);
     const [tasksSubOpen, setTasksSubOpen] = useState(true);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
     // Current active projectId from URL query parameter ?projectId=...
     const activeProjectId = searchParams.get("projectId") || "";
@@ -76,25 +87,25 @@ export function SidebarNav() {
     const handleSelectProject = (projectId: string) => {
         if (!projectId) {
             // All projects
-            if (pathname === "/tasks" || pathname === "/tasks/kanban") {
+            if (pathname === "/tasks" || pathname === "/tasks/kanban" || pathname === "/dashboard") {
                 router.push(pathname);
             } else {
                 router.push("/tasks");
             }
-            toast.info("Menampilkan semua proyek");
+            toast.info("Viewing all projects");
         } else {
             const chosen = projects.find((p) => p.id === projectId);
-            if (pathname === "/tasks" || pathname === "/tasks/kanban") {
+            if (pathname === "/tasks" || pathname === "/tasks/kanban" || pathname === "/dashboard") {
                 router.push(`${pathname}?projectId=${projectId}`);
             } else {
                 router.push(`/tasks?projectId=${projectId}`);
             }
-            toast.success(`Beralih ke proyek: ${chosen?.title || "Proyek"}`);
+            toast.success(`Switched to: ${chosen?.title || "Project"}`);
         }
     };
 
     const handleLogout = () => {
-        toast.success("Berhasil keluar!");
+        toast.success("Successfully logged out!");
         router.push("/login");
     };
 
@@ -114,10 +125,10 @@ export function SidebarNav() {
                             </div>
                             <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                                 <p className="text-xs font-bold text-foreground truncate leading-tight">
-                                    {activeProject ? activeProject.title : "Semua Proyek"}
+                                    {activeProject ? activeProject.title : "All Projects"}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground truncate capitalize">
-                                    {activeProject ? (activeProject.category || "Proyek") : "Workspace"}
+                                    {activeProject ? (activeProject.category || "Project") : "Workspace"}
                                 </p>
                             </div>
                             <ChevronsUpDown className="w-4 h-4 text-muted-foreground group-data-[collapsible=icon]:hidden shrink-0" />
@@ -131,7 +142,7 @@ export function SidebarNav() {
                         sideOffset={8}
                     >
                         <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1.5">
-                            Pilih Proyek Aktif
+                            Select Active Project
                         </DropdownMenuLabel>
 
                         <DropdownMenuItem
@@ -145,7 +156,7 @@ export function SidebarNav() {
                                 <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center">
                                     <Layers className="w-3.5 h-3.5 text-muted-foreground" />
                                 </div>
-                                <span>Semua Proyek</span>
+                                <span>All Projects</span>
                             </div>
                             {!activeProjectId && <Check className="w-4 h-4 text-primary" />}
                         </DropdownMenuItem>
@@ -168,7 +179,7 @@ export function SidebarNav() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="truncate">{proj.title}</p>
-                                            <p className="text-[9px] text-muted-foreground">{proj.tasks || 0} Tugas</p>
+                                            <p className="text-[9px] text-muted-foreground">{proj.tasks || 0} Tasks</p>
                                         </div>
                                     </div>
                                     {activeProjectId === proj.id && (
@@ -188,7 +199,7 @@ export function SidebarNav() {
                                 <div className="w-6 h-6 rounded-md border border-dashed border-border flex items-center justify-center">
                                     <Plus className="w-3.5 h-3.5 text-muted-foreground" />
                                 </div>
-                                <span>Tambah Proyek Baru</span>
+                                <span>Create New Project</span>
                             </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -203,42 +214,42 @@ export function SidebarNav() {
                         Platform
                     </SidebarGroupLabel>
                     <SidebarMenu>
-                        {/* Beranda */}
+                        {/* Dashboard */}
                         <SidebarMenuItem>
                             <SidebarMenuButton
                                 asChild
                                 isActive={pathname === "/dashboard"}
-                                tooltip="Beranda"
+                                tooltip="Dashboard"
                                 className={cn(
                                     "h-9 px-3 rounded-xl transition-colors",
                                     pathname === "/dashboard"
                                         ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                                 )}
                             >
-                                <Link href="/dashboard">
+                                <Link href={activeProjectId ? `/dashboard?projectId=${activeProjectId}` : "/dashboard"}>
                                     <LayoutDashboard size={16} />
-                                    <span className="text-[13px]">Beranda</span>
+                                    <span className="text-[13px]">Dashboard</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
 
-                        {/* Tugas (With collapsible sub-links like Playground) */}
+                        {/* Tasks (With collapsible sub-links like Playground) */}
                         <SidebarMenuItem>
                             <SidebarMenuButton
                                 onClick={() => setTasksSubOpen(!tasksSubOpen)}
                                 isActive={pathname.startsWith("/tasks")}
-                                tooltip="Tugas"
+                                tooltip="Tasks"
                                 className={cn(
                                     "h-9 px-3 rounded-xl transition-colors w-full justify-between",
                                     pathname.startsWith("/tasks")
                                         ? "text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                                 )}
                             >
                                 <div className="flex items-center gap-2">
                                     <CheckSquare size={16} />
-                                    <span className="text-[13px]">Tugas</span>
+                                    <span className="text-[13px]">Tasks</span>
                                 </div>
                                 <ChevronRight
                                     size={14}
@@ -257,7 +268,7 @@ export function SidebarNav() {
                                             isActive={pathname === "/tasks" && !activeProjectId}
                                         >
                                             <Link href="/tasks">
-                                                <span>Semua Tugas</span>
+                                                <span>All Tasks</span>
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
@@ -277,7 +288,7 @@ export function SidebarNav() {
                                             isActive={pathname === "/tasks/new"}
                                         >
                                             <Link href={activeProjectId ? `/tasks/new?projectId=${activeProjectId}` : "/tasks/new"}>
-                                                <span>Tambah Tugas</span>
+                                                <span>New Task</span>
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
@@ -285,60 +296,22 @@ export function SidebarNav() {
                             )}
                         </SidebarMenuItem>
 
-                        {/* Proyek */}
+                        {/* Projects */}
                         <SidebarMenuItem>
                             <SidebarMenuButton
                                 asChild
                                 isActive={pathname === "/projects" || pathname.startsWith("/projects/")}
-                                tooltip="Semua Proyek"
+                                tooltip="All Projects"
                                 className={cn(
                                     "h-9 px-3 rounded-xl transition-colors",
                                     pathname === "/projects" || pathname.startsWith("/projects/")
                                         ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                                 )}
                             >
                                 <Link href="/projects">
                                     <FolderKanban size={16} />
-                                    <span className="text-[13px]">Semua Proyek</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
-
-                {/* Projects Section */}
-                <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-                    <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 mb-1">
-                        Projects
-                    </SidebarGroupLabel>
-                    <SidebarMenu>
-                        {projects.slice(0, 5).map((project) => {
-                            const isCurrent = activeProjectId === project.id;
-                            return (
-                                <SidebarMenuItem key={project.id}>
-                                    <SidebarMenuButton
-                                        onClick={() => handleSelectProject(project.id)}
-                                        isActive={isCurrent}
-                                        className={cn(
-                                            "h-8 px-3 rounded-lg text-xs transition-colors",
-                                            isCurrent
-                                                ? "bg-primary/10 text-primary font-semibold"
-                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                        )}
-                                    >
-                                        <Hash size={13} className="shrink-0 text-muted-foreground" />
-                                        <span className="truncate">{project.title}</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            );
-                        })}
-
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild className="h-8 px-3 rounded-lg text-xs text-muted-foreground hover:text-foreground">
-                                <Link href="/projects" className="flex items-center gap-2">
-                                    <MoreHorizontal size={13} />
-                                    <span>Lihat Semua Proyek</span>
+                                    <span className="text-[13px]">Projects</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -351,7 +324,7 @@ export function SidebarNav() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/80 transition-all text-left outline-none group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:justify-center">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-500/30">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 border border-primary/20">
                                 AN
                             </div>
                             <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
@@ -372,23 +345,158 @@ export function SidebarNav() {
                             <p className="text-[10px] text-muted-foreground">admin@numpux.com</p>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator className="my-1 bg-border/60" />
-                        <DropdownMenuItem asChild>
-                            <Link href="/dashboard" className="cursor-pointer text-xs p-2">
-                                <LayoutDashboard className="w-3.5 h-3.5 mr-2" />
-                                Dashboard
-                            </Link>
+                        <DropdownMenuItem
+                            onClick={() => setProfileModalOpen(true)}
+                            className="cursor-pointer text-xs p-2"
+                        >
+                            <User className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                            Profile Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => setSettingsModalOpen(true)}
+                            className="cursor-pointer text-xs p-2"
+                        >
+                            <Settings className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                            Account Settings
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1 bg-border/60" />
                         <DropdownMenuItem
                             onClick={handleLogout}
-                            className="cursor-pointer text-xs p-2 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            className="cursor-pointer text-xs p-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
                         >
                             <LogOut className="w-3.5 h-3.5 mr-2" />
-                            Keluar
+                            Sign Out
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarFooter>
+
+            {/* Profile Dialog */}
+            <Dialog open={profileModalOpen} onOpenChange={setProfileModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg">User Profile</DialogTitle>
+                        <DialogDescription>
+                            Your account information and workspace role.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/40 border border-border">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20">
+                                AN
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-sm text-foreground">Admin Numpux</h4>
+                                <p className="text-xs text-muted-foreground">admin@numpux.com</p>
+                                <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                    Workspace Owner
+                                </span>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-semibold text-foreground">Display Name</label>
+                                <Input defaultValue="Admin Numpux" className="mt-1 text-xs" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-foreground">Email Address</label>
+                                <Input defaultValue="admin@numpux.com" disabled className="mt-1 text-xs bg-muted/50" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-foreground">Organization</label>
+                                <Input defaultValue="Numpux Technologies Inc." className="mt-1 text-xs" />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setProfileModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                toast.success("Profile saved successfully");
+                                setProfileModalOpen(false);
+                            }}
+                        >
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Settings Dialog */}
+            <Dialog open={settingsModalOpen} onOpenChange={setSettingsModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg">Workspace Settings</DialogTitle>
+                        <DialogDescription>
+                            Configure your preferences, notifications, and security.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-card">
+                                <div>
+                                    <p className="text-xs font-semibold text-foreground">Email Notifications</p>
+                                    <p className="text-[11px] text-muted-foreground">Receive daily digest of sprint changes</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    defaultChecked
+                                    className="w-4 h-4 rounded border-border text-primary accent-primary"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-card">
+                                <div>
+                                    <p className="text-xs font-semibold text-foreground">Compact Sidebar</p>
+                                    <p className="text-[11px] text-muted-foreground">Auto collapse sidebar on smaller viewports</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    defaultChecked
+                                    className="w-4 h-4 rounded border-border text-primary accent-primary"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-card">
+                                <div>
+                                    <p className="text-xs font-semibold text-foreground">Telemetry & Analytics</p>
+                                    <p className="text-[11px] text-muted-foreground">Help improve Numpux performance</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    defaultChecked
+                                    className="w-4 h-4 rounded border-border text-primary accent-primary"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSettingsModalOpen(false)}
+                        >
+                            Close
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                toast.success("Settings updated");
+                                setSettingsModalOpen(false);
+                            }}
+                        >
+                            Save Preferences
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -12,8 +12,8 @@ export function VisualShowcase() {
                 {/* Header */}
                 <div className="max-w-xl mx-auto mb-16">
                     <h2 className="text-3xl md:text-[38px] font-bold text-foreground tracking-tight leading-tight mb-4">
-                        Lacak, Tingkatkan, dan<br />
-                        <span className="text-muted-foreground font-medium">Berkembang Setiap Hari</span>
+                        Track, Execute, and<br />
+                        <span className="text-muted-foreground font-medium">Deliver Every Single Day</span>
                     </h2>
                 </div>
 
@@ -28,9 +28,9 @@ export function VisualShowcase() {
                                     <AlertCircle className="w-4.5 h-4.5 text-amber-600" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-bold text-amber-950">Prioritas Cerdas</h4>
+                                    <h4 className="text-xs font-bold text-amber-950">Smart Priorities</h4>
                                     <p className="text-[11px] text-amber-900/80 leading-normal mt-0.5 font-normal">
-                                        Urutkan tugas berdasarkan tenggat waktu terdekat.
+                                        Surface critical deliverables and upcoming deadlines automatically.
                                     </p>
                                 </div>
                             </div>
@@ -43,9 +43,9 @@ export function VisualShowcase() {
                                     <Edit3 className="w-4.5 h-4.5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-bold text-emerald-950">Deskripsi Lengkap</h4>
+                                    <h4 className="text-xs font-bold text-emerald-950">Detailed Briefs</h4>
                                     <p className="text-[11px] text-emerald-900/80 leading-normal mt-0.5 font-normal">
-                                        Tambahkan sub-tugas dan daftar checklist detail.
+                                        Attach rich context, sub-tasks, and checklists to every item.
                                     </p>
                                 </div>
                             </div>
@@ -76,8 +76,8 @@ export function VisualShowcase() {
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-4 mt-1">
                                     <div>
-                                        <p className="text-[9px] text-muted-foreground font-medium">Hai Kristin ⚡</p>
-                                        <p className="text-[11px] font-semibold text-foreground">Selamat Siang!</p>
+                                        <p className="text-[9px] text-muted-foreground font-medium">Hey Kristin ⚡</p>
+                                        <p className="text-[11px] font-semibold text-foreground">Good Afternoon!</p>
                                     </div>
                                     <div className="w-7 h-7 rounded-full bg-stone-200 flex items-center justify-center text-[10px] font-medium text-foreground border border-stone-300">
                                         K
@@ -86,7 +86,7 @@ export function VisualShowcase() {
 
                                 {/* Calendar dots */}
                                 <div className="grid grid-cols-7 gap-1.5 mb-4 border-b border-stone-200/40 pb-3">
-                                    {["S", "S", "R", "K", "J", "S", "M"].map((d, i) => (
+                                    {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
                                          <div key={i} className="flex flex-col items-center gap-0.5">
                                              <span className="text-[7px] font-medium text-muted-foreground/60">{d}</span>
                                              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-semibold ${i === 4 ? 'bg-primary text-primary-foreground' : 'bg-stone-200/50 text-foreground'}`}>
@@ -97,30 +97,30 @@ export function VisualShowcase() {
                                 </div>
 
                                 {/* Main Section Heading */}
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2.5">Perjalanan Proyek</p>
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2.5">Active Sprint</p>
                                 
                                 {/* Yellow & Green Mini Cards Side-by-Side */}
                                 <div className="grid grid-cols-2 gap-2 mb-3">
                                     <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-200/80">
                                         <AlertCircle className="w-3.5 h-3.5 text-amber-700 mb-1" />
-                                        <p className="text-[8px] font-semibold text-amber-950">Tugas Mendesak</p>
+                                        <p className="text-[8px] font-semibold text-amber-950">Urgent Task</p>
                                     </div>
                                     <div className="p-2.5 rounded-xl bg-[#8CE460]/20 border border-[#8CE460]/40">
                                         <Sparkles className="w-3.5 h-3.5 text-green-700 mb-1" />
-                                        <p className="text-[8px] font-semibold text-green-950">Kolaborasi Aktif</p>
+                                        <p className="text-[8px] font-semibold text-green-950">Team Collab</p>
                                     </div>
                                 </div>
 
                                 {/* Explore Gradient Card */}
                                 <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-yellow-400 to-rose-400 text-white flex flex-col justify-between h-[85px] mb-4 shadow-sm">
-                                    <p className="text-[9px] font-bold leading-tight text-foreground">Jelajahi sumber daya pembelajaran kami</p>
+                                    <p className="text-[9px] font-bold leading-tight text-foreground">Explore interactive workflow playbooks</p>
                                     <button className="w-max px-2.5 py-1 rounded bg-stone-950 text-white text-[7px] font-semibold uppercase tracking-wider">
-                                        Sumber Daya ↗
+                                        Resources ↗
                                     </button>
                                 </div>
 
                                 {/* My Habits Checklist */}
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">Tugas Harian</p>
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">Today's Focus</p>
                                 <div className="space-y-2">
                                     <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 flex items-center justify-between shadow-sm">
                                         <div className="flex items-center gap-2">
@@ -128,8 +128,8 @@ export function VisualShowcase() {
                                                 <Check className="w-3 h-3 text-green-700" strokeWidth={2.5} />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-semibold text-foreground">Desain Wireframe</p>
-                                                <p className="text-[7px] text-muted-foreground font-normal">Selesai • 13:00</p>
+                                                <p className="text-[9px] font-semibold text-foreground">Design Wireframe</p>
+                                                <p className="text-[7px] text-muted-foreground font-normal">Completed • 1:00 PM</p>
                                             </div>
                                         </div>
                                     </div>
@@ -139,8 +139,8 @@ export function VisualShowcase() {
                                                 <Check className="w-3 h-3 text-green-700" strokeWidth={2.5} />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-semibold text-foreground">Refactor API Auth</p>
-                                                <p className="text-[7px] text-muted-foreground font-normal">Selesai • 14:15</p>
+                                                <p className="text-[9px] font-semibold text-foreground">Refactor Auth API</p>
+                                                <p className="text-[7px] text-muted-foreground font-normal">Completed • 2:15 PM</p>
                                             </div>
                                         </div>
                                     </div>
@@ -169,9 +169,9 @@ export function VisualShowcase() {
                                     <Sparkles className="w-4.5 h-4.5 text-green-700" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-bold text-green-950">Kolaborasi Tim</h4>
+                                    <h4 className="text-xs font-bold text-green-950">Team Sync</h4>
                                     <p className="text-[11px] text-green-900/80 leading-normal mt-0.5 font-normal">
-                                        Bagikan proyek & delegasikan tugas secara langsung.
+                                        Share project boards and assign owners with zero friction.
                                     </p>
                                 </div>
                             </div>
@@ -184,9 +184,9 @@ export function VisualShowcase() {
                                     <BookOpen className="w-4.5 h-4.5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-bold text-blue-950">Analitik Progres</h4>
+                                    <h4 className="text-xs font-bold text-blue-950">Velocity Insights</h4>
                                     <p className="text-[11px] text-blue-900/80 leading-normal mt-0.5 font-normal">
-                                        Pantau grafik penyelesaian tugas tim mingguan.
+                                        Track team velocity and weekly completion trends effortlessly.
                                     </p>
                                 </div>
                             </div>

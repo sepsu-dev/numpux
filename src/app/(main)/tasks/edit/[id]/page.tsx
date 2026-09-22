@@ -71,12 +71,12 @@ export default function EditTaskPage() {
                     description,
                 }),
             });
-            if (!res.ok) throw new Error("Gagal menyimpan");
-            toast.success("Perubahan tugas berhasil disimpan!");
+            if (!res.ok) throw new Error("Failed to save");
+            toast.success("Task updated successfully!");
             router.push("/tasks");
             router.refresh();
         } catch {
-            toast.error("Gagal menyimpan perubahan tugas.");
+            toast.error("Failed to update task.");
         } finally {
             setIsSaving(false);
         }
@@ -85,7 +85,7 @@ export default function EditTaskPage() {
     if (isLoading) {
         return (
             <div className="py-20 text-center text-muted-foreground text-sm font-medium">
-                Memuat data tugas...
+                Loading task details...
             </div>
         );
     }
@@ -93,12 +93,12 @@ export default function EditTaskPage() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4">
-                <Link href="/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
+                <Link href="/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40 cursor-pointer">
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Tugas</h2>
-                    <p className="text-muted-foreground font-medium text-xs">Perbarui status dan detail rencana Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Task</h2>
+                    <p className="text-muted-foreground font-medium text-xs">Update progress, priority, and implementation notes.</p>
                 </div>
             </div>
 
@@ -106,7 +106,7 @@ export default function EditTaskPage() {
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="title" className="font-semibold text-xs text-foreground">Judul Tugas</Label>
+                            <Label htmlFor="title" className="font-semibold text-xs text-foreground">Task Title</Label>
                             <Input
                                 id="title"
                                 name="title"
@@ -118,17 +118,17 @@ export default function EditTaskPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="grid gap-2">
-                                <Label className="font-semibold text-xs text-foreground">Proyek</Label>
+                                <Label className="font-semibold text-xs text-foreground">Project Workspace</Label>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="h-11 w-full flex items-center justify-between rounded-lg border border-border px-3.5 bg-white hover:border-primary transition-all text-foreground font-medium shadow-sm text-sm"
+                                            className="h-11 w-full flex items-center justify-between rounded-lg border border-border px-3.5 bg-white hover:border-primary transition-all text-foreground font-medium shadow-sm text-sm cursor-pointer"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Briefcase size={14} className={!activeProject ? "text-muted-foreground" : "text-primary"} />
                                                 <span className="text-xs truncate">
-                                                    {activeProject ? activeProject.title : (task?.project || "Pilih Proyek")}
+                                                    {activeProject ? activeProject.title : (task?.project || "Select Project")}
                                                 </span>
                                             </div>
                                             <ChevronDown size={14} className="text-muted-foreground opacity-60" />
@@ -139,7 +139,7 @@ export default function EditTaskPage() {
                                             className="h-9 rounded-lg cursor-pointer hover:bg-muted text-xs font-medium"
                                             onClick={() => setSelectedProjectId("")}
                                         >
-                                            Tanpa Proyek Khusus
+                                            No Project (General)
                                         </DropdownMenuItem>
                                         {projects.map((proj) => (
                                             <DropdownMenuItem
@@ -155,7 +155,7 @@ export default function EditTaskPage() {
                                 </DropdownMenu>
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="date" className="font-semibold text-xs text-foreground">Tenggat Waktu</Label>
+                                <Label htmlFor="date" className="font-semibold text-xs text-foreground">Due Date</Label>
                                 <Input
                                     id="date"
                                     name="date"
@@ -166,19 +166,24 @@ export default function EditTaskPage() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="priority" className="font-semibold text-xs text-foreground">Prioritas</Label>
+                            <Label htmlFor="priority" className="font-semibold text-xs text-foreground">Priority Level</Label>
                             <div className="flex gap-3">
-                                {['Rendah', 'Sedang', 'Tinggi', 'Mendesak'].map((p) => (
-                                    <label key={p} className="flex-1 cursor-pointer">
+                                {[
+                                    { id: 'Low', label: 'Low', value: 'Rendah' },
+                                    { id: 'Medium', label: 'Medium', value: 'Sedang' },
+                                    { id: 'High', label: 'High', value: 'Tinggi' },
+                                    { id: 'Critical', label: 'Urgent', value: 'Mendesak' }
+                                ].map((p) => (
+                                    <label key={p.id} className="flex-1 cursor-pointer">
                                         <input
                                             type="radio"
                                             name="priority"
-                                            value={p}
+                                            value={p.value}
                                             className="sr-only peer"
-                                            defaultChecked={task?.priority === p || (!task?.priority && p === 'Sedang')}
+                                            defaultChecked={task?.priority === p.value || (!task?.priority && p.id === 'Medium')}
                                         />
                                         <div className="flex items-center justify-center p-2.5 text-xs font-medium border border-border/60 rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:font-semibold transition-all">
-                                            {p}
+                                            {p.label}
                                         </div>
                                     </label>
                                 ))}
@@ -186,7 +191,7 @@ export default function EditTaskPage() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="description" className="font-semibold text-xs text-foreground">Deskripsi Tugas</Label>
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground">Task Notes & Description</Label>
                             <Textarea
                                 id="description"
                                 name="description"
@@ -197,9 +202,9 @@ export default function EditTaskPage() {
                     </div>
 
                     <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-3">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm">Batal</Button>
-                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm">
-                            {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm cursor-pointer">Cancel</Button>
+                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm cursor-pointer">
+                            {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>
                 </form>

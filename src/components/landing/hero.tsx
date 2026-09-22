@@ -20,17 +20,17 @@ export function Hero() {
                         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/10 mb-6">
                             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-[11px] font-semibold tracking-wider text-green-900 uppercase">
-                                100% Gratis Selamanya
+                                100% Free Forever
                             </span>
                         </div>
 
                         <h1 className="text-4xl sm:text-5xl lg:text-[48px] font-bold tracking-tight text-foreground leading-[1.15] mb-5">
-                            Kelola Tugas Lebih Rapi,<br />
-                            <span className="text-muted-foreground font-medium">Capai Target Lebih Cepat</span>
+                            Organize Tasks Effortlessly,<br />
+                            <span className="text-muted-foreground font-medium">Deliver Projects Faster</span>
                         </h1>
 
                         <p className="text-base text-muted-foreground leading-relaxed max-w-md mb-8 font-normal">
-                            Platform manajemen tugas dan proyek modern untuk pengembang, desainer, dan tim kreatif. Tanpa batasan proyek, tanpa iklan, dan 100% gratis selamanya.
+                            Modern task and project workspace built for developers, designers, and fast-moving teams. Unlimited boards, zero bloat, and completely free.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -38,7 +38,7 @@ export function Hero() {
                                 href="/register"
                                 className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 rounded-xl lime-glow-button text-primary-foreground font-semibold text-sm transition-transform active:scale-95 cursor-pointer shadow-sm"
                             >
-                                Mulai Daftar Gratis
+                                Start for Free
                             </Link>
                         </div>
                     </div>
@@ -75,8 +75,8 @@ export function Hero() {
                                         </div>
                                         <div className="space-y-1">
                                             {[
-                                                { label: "Papan", icon: Layers, active: true },
-                                                { label: "Tim", icon: Users },
+                                                { label: "Boards", icon: Layers, active: true },
+                                                { label: "Team", icon: Users },
                                             ].map((item, i) => (
                                                 <div
                                                     key={i}
@@ -97,8 +97,8 @@ export function Hero() {
                                         {/* Board Header */}
                                         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
                                             <div>
-                                                <h4 className="text-xs font-semibold text-foreground">Proyek Landing Page</h4>
-                                                <p className="text-[9px] text-muted-foreground">Workspace Utama</p>
+                                                <h4 className="text-xs font-semibold text-foreground">Landing Redesign</h4>
+                                                <p className="text-[9px] text-muted-foreground">Main Workspace</p>
                                             </div>
                                             <Plus className="w-4 h-4 text-primary cursor-pointer" />
                                         </div>
@@ -106,9 +106,9 @@ export function Hero() {
                                         {/* Tasks columns mock */}
                                         <div className="grid grid-cols-3 gap-2 mt-3 flex-1">
                                             {[
-                                                { label: "Belum Mulai", color: "bg-amber-400", tasks: [{ title: "Riset", act: false }] },
-                                                { label: "Dikerjakan", color: "bg-primary", tasks: [{ title: "Coding", act: true }] },
-                                                { label: "Selesai", color: "bg-emerald-400", tasks: [{ title: "Mockup", act: false }] },
+                                                { label: "To Do", color: "bg-amber-400", tasks: [{ title: "User Research", act: false }] },
+                                                { label: "In Progress", color: "bg-primary", tasks: [{ title: "Frontend Build", act: true }] },
+                                                { label: "Done", color: "bg-emerald-400", tasks: [{ title: "Design System", act: false }] },
                                             ].map((col, i) => (
                                                 <div key={i} className="flex flex-col gap-2">
                                                     <div className="flex items-center gap-1.5 px-0.5">

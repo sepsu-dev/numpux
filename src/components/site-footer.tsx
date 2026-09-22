@@ -19,7 +19,7 @@ export function SiteFooter({ author }: SiteFooterProps) {
         {/* No navigation links */}
 
         <p className="text-xs font-normal text-muted-foreground/80">
-          © {new Date().getFullYear()} {author}. Hak cipta dilindungi undang-undang.
+          © {new Date().getFullYear()} {author}. All rights reserved.
         </p>
       </div>
     </footer>

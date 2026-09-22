@@ -46,12 +46,12 @@ export default function EditProjectPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ title, category, status, description }),
             });
-            if (!res.ok) throw new Error("Gagal menyimpan");
-            toast.success(`Proyek "${title}" berhasil diperbarui!`);
+            if (!res.ok) throw new Error("Failed to save");
+            toast.success(`Project "${title}" updated successfully!`);
             router.push("/projects");
             router.refresh();
         } catch {
-            toast.error("Gagal memperbarui proyek.");
+            toast.error("Failed to update project.");
         } finally {
             setIsSaving(false);
         }
@@ -60,7 +60,7 @@ export default function EditProjectPage() {
     if (isLoading) {
         return (
             <div className="py-20 text-center text-muted-foreground text-sm font-medium">
-                Memuat data proyek...
+                Loading project details...
             </div>
         );
     }
@@ -68,12 +68,12 @@ export default function EditProjectPage() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4">
-                <Link href="/projects" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40">
+                <Link href="/projects" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40 cursor-pointer">
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Proyek</h2>
-                    <p className="text-muted-foreground font-medium text-xs">Sesuaikan detail visi proyek Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Project</h2>
+                    <p className="text-muted-foreground font-medium text-xs">Adjust initiative milestones, scope, and objectives.</p>
                 </div>
             </div>
 
@@ -81,7 +81,7 @@ export default function EditProjectPage() {
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="p-title" className="font-semibold text-xs text-foreground">Nama Proyek</Label>
+                            <Label htmlFor="p-title" className="font-semibold text-xs text-foreground">Project Name</Label>
                             <Input
                                 id="p-title"
                                 name="title"
@@ -98,15 +98,15 @@ export default function EditProjectPage() {
                                     id="p-status"
                                     name="status"
                                     defaultValue={project?.status || "Aktif"}
-                                    className="h-11 w-full rounded-lg border border-border bg-transparent px-3 text-sm focus:border-primary focus:outline-none font-medium text-foreground"
+                                    className="h-11 w-full rounded-lg border border-border bg-transparent px-3 text-sm focus:border-primary focus:outline-none font-medium text-foreground cursor-pointer"
                                 >
-                                    <option value="Aktif">Aktif</option>
-                                    <option value="Perencanaan">Perencanaan</option>
-                                    <option value="Selesai">Selesai</option>
+                                    <option value="Aktif">Active</option>
+                                    <option value="Perencanaan">Planning</option>
+                                    <option value="Selesai">Completed</option>
                                 </select>
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="p-category" className="font-semibold text-xs text-foreground">Kategori</Label>
+                                <Label htmlFor="p-category" className="font-semibold text-xs text-foreground">Category</Label>
                                 <Input
                                     id="p-category"
                                     name="category"
@@ -118,7 +118,7 @@ export default function EditProjectPage() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground">Deskripsi Proyek</Label>
+                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground">Description & Objectives</Label>
                             <Textarea
                                 id="p-desc"
                                 name="description"
@@ -129,9 +129,9 @@ export default function EditProjectPage() {
                     </div>
 
                     <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-3">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm">Batal</Button>
-                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm">
-                            {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm cursor-pointer">Cancel</Button>
+                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm cursor-pointer">
+                            {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>
                 </form>

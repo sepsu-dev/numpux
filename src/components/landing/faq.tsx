@@ -4,10 +4,22 @@ import { useState } from "react";
 import { ChevronDown, HelpCircle } from "lucide-react";
 
 const faqs = [
-    { q: "Apakah Numpux benar-benar gratis?", a: "Ya, Numpux 100% gratis digunakan selamanya. Anda dapat membuat tugas, mengelola proyek, dan berkolaborasi tanpa dipungut biaya." },
-    { q: "Bisa digunakan untuk kolaborasi tim?", a: "Tentu saja. Anda dapat mengundang rekan kerja atau anggota tim Anda ke dalam workspace proyek untuk memantau pengerjaan tugas secara real-time." },
-    { q: "Bagaimana Numpux menjaga keamanan data saya?", a: "Semua data proyek dan tugas Anda dienkripsi secara aman menggunakan protokol HTTPS standar industri dan disimpan di server cloud yang andal." },
-    { q: "Apakah Numpux responsif di perangkat mobile?", a: "Ya, Numpux dirancang dengan antarmuka yang sangat responsif, sehingga Anda bisa mengelola tugas Anda dengan nyaman melalui smartphone, tablet, maupun komputer." },
+    {
+        q: "Is Numpux truly free to use?",
+        a: "Yes, Numpux is 100% free with no hidden paywalls. You can create unlimited tasks, manage projects, and collaborate with your team without spending a dime."
+    },
+    {
+        q: "Can I collaborate with team members?",
+        a: "Absolutely. You can organize workspaces, assign owners to tasks, and monitor live progress across Kanban boards with real-time updates."
+    },
+    {
+        q: "How does Numpux protect my data?",
+        a: "All project and task records are encrypted using industry-standard HTTPS protocols, hosted on high-reliability cloud infrastructure with strict access controls."
+    },
+    {
+        q: "Does Numpux work on mobile and tablet devices?",
+        a: "Yes, Numpux is responsive by design. Whether you are on your smartphone, tablet, or desktop workstation, you get a seamless experience."
+    },
 ];
 
 export function FAQ() {
@@ -31,10 +43,10 @@ export function FAQ() {
                             FAQ
                         </span>
                         <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-                            Pertanyaan Umum
+                            Frequently Asked Questions
                         </h2>
                         <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-normal">
-                            Temukan jawaban cepat untuk pertanyaan yang sering diajukan mengenai Numpux.
+                            Find quick answers to common questions about workflows, security, and features in Numpux.
                         </p>
                     </div>
 

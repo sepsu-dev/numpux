@@ -17,9 +17,9 @@ export default function NewProjectPage() {
         toast.promise(
             new Promise((resolve) => setTimeout(resolve, 1000)),
             {
-                loading: 'Sedang membuat proyek...',
-                success: 'Proyek baru berhasil dibuat!',
-                error: 'Gagal membuat proyek.',
+                loading: 'Creating new project...',
+                success: 'Project created successfully!',
+                error: 'Failed to create project.',
             }
         );
         setTimeout(() => router.push("/projects"), 1500);
@@ -32,8 +32,8 @@ export default function NewProjectPage() {
                     <ArrowLeft size={16} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Proyek Baru</h2>
-                    <p className="text-muted-foreground text-sm font-medium mt-1">Mulai rencanakan visi besar Anda.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">New Project</h2>
+                    <p className="text-muted-foreground text-sm font-medium mt-1">Plan and structure your team's next big initiative.</p>
                 </div>
             </div>
 
@@ -41,10 +41,10 @@ export default function NewProjectPage() {
                 <form onSubmit={handleSubmit} className="space-y-10">
                     <div className="space-y-8">
                         <div className="grid gap-2.5">
-                            <Label htmlFor="title" className="font-semibold text-xs text-foreground px-0.5">Nama Proyek</Label>
+                            <Label htmlFor="title" className="font-semibold text-xs text-foreground px-0.5">Project Name</Label>
                             <Input
                                 id="title"
-                                placeholder="Misal: Aplikasi Numpux"
+                                placeholder="e.g. Mobile App Redesign"
                                 className="h-12 text-sm rounded-lg border border-border focus:border-primary font-medium px-4 bg-white transition-all text-foreground shadow-sm"
                                 required
                             />
@@ -52,36 +52,36 @@ export default function NewProjectPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="grid gap-2.5">
-                                <Label htmlFor="category" className="font-semibold text-xs text-foreground px-0.5">Kategori</Label>
+                                <Label htmlFor="category" className="font-semibold text-xs text-foreground px-0.5">Category</Label>
                                 <Input
                                     id="category"
-                                    placeholder="Produk, Desain, dll..."
+                                    placeholder="Product, Design, Engineering..."
                                     className="h-12 rounded-lg border border-border focus:border-primary font-medium px-4 bg-white transition-all text-foreground shadow-sm text-sm"
                                 />
                             </div>
                             <div className="grid gap-2.5">
-                                <Label className="font-semibold text-xs text-foreground px-0.5">Tipe</Label>
+                                <Label className="font-semibold text-xs text-foreground px-0.5">Visibility</Label>
                                 <div className="flex bg-muted/60 border border-border/60 p-1 rounded-lg shadow-sm">
-                                    <button type="button" className="flex-1 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground shadow-sm">Pribadi</button>
-                                    <button type="button" className="flex-1 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground">Publik</button>
+                                    <button type="button" className="flex-1 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground shadow-sm">Private</button>
+                                    <button type="button" className="flex-1 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground">Public</button>
                                 </div>
                             </div>
                         </div>
 
                         <div className="grid gap-2.5">
-                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Deskripsi Proyek</Label>
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Project Overview & Objectives</Label>
                             <Textarea
                                 id="description"
-                                placeholder="Apa tujuan dari proyek ini?"
+                                placeholder="What are the key goals, milestones, and success metrics for this project?"
                                 className="min-h-[140px] rounded-lg border border-border focus:border-primary resize-none p-4 font-normal text-sm bg-white transition-all text-foreground shadow-sm"
                             />
                         </div>
                     </div>
 
                     <div className="pt-8 border-t border-border/40 flex items-center justify-end gap-4">
-                        <Button type="button" variant="outline" onClick={() => router.back()} className="font-medium text-muted-foreground border border-border h-11 px-6 rounded-lg hover:bg-muted transition-all text-sm">Batal</Button>
-                        <Button type="submit" className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm active:scale-95 transition-all text-sm">
-                            Buat Proyek
+                        <Button type="button" variant="outline" onClick={() => router.back()} className="font-medium text-muted-foreground border border-border h-11 px-6 rounded-lg hover:bg-muted transition-all text-sm cursor-pointer">Cancel</Button>
+                        <Button type="submit" className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm active:scale-95 transition-all text-sm cursor-pointer">
+                            Create Project
                         </Button>
                     </div>
                 </form>

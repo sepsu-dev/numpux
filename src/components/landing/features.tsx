@@ -12,13 +12,13 @@ export function Features() {
                 {/* Section Header */}
                 <div className="text-center max-w-xl mx-auto mb-16">
                     <span className="inline-block text-xs font-semibold uppercase tracking-[0.15em] text-primary-foreground bg-primary/20 px-3 py-1 rounded-full mb-4">
-                        Fitur Utama
+                        Core Features
                     </span>
                     <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-                        Kelola Proyek Lebih Terstruktur
+                        Structured Project Management
                     </h2>
                     <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                        Alat manajemen tugas yang dirancang untuk menjaga fokus dan produktivitas tim Anda tetap optimal.
+                        Precision task management tools designed to keep your team focused, aligned, and shipping on schedule.
                     </p>
                 </div>
 
@@ -26,26 +26,26 @@ export function Features() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         {
-                            title: "Papan Kanban",
-                            desc: "Kelola alur kerja secara visual menggunakan fitur drag-and-drop papan Kanban yang intuitif.",
+                            title: "Kanban Boards",
+                            desc: "Visualize workflow stages with an intuitive, drag-and-drop Kanban system built for rapid adjustments.",
                             icon: Layers,
                             color: "bg-rose-100 text-rose-700"
                         },
                         {
-                            title: "Kalender Tim",
-                            desc: "Petakan tenggat waktu tugas, rencana rilis, dan milestone mingguan dalam kalender rapi.",
+                            title: "Team Timelines",
+                            desc: "Map milestones, sprint deadlines, and weekly deliverables across clear, synchronized schedules.",
                             icon: Calendar,
                             color: "bg-blue-100 text-blue-700"
                         },
                         {
-                            title: "Kolaborasi Instan",
-                            desc: "Undang rekan kerja tanpa batasan, delegasikan tugas harian, dan berdiskusi secara real-time.",
+                            title: "Instant Collaboration",
+                            desc: "Invite teammates seamlessly, assign tasks in seconds, and track ownership with absolute transparency.",
                             icon: Users,
                             color: "bg-amber-100 text-amber-700"
                         },
                         {
-                            title: "Analitik Progres",
-                            desc: "Pantau persentase penyelesaian tugas dan performa sprint mingguan dengan grafik ringkas.",
+                            title: "Progress Analytics",
+                            desc: "Gain actionable visibility into sprint velocity, completion rates, and project health at a glance.",
                             icon: BarChart3,
                             color: "bg-emerald-100 text-emerald-700"
                         }

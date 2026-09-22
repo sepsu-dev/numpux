@@ -31,7 +31,7 @@ export function SiteHeader({ name, showMenu = true }: SiteHeaderProps) {
               href="/register"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl lime-glow-button text-primary-foreground font-semibold text-[13px] transition-transform active:scale-95 shadow-sm"
             >
-              Mulai Gratis
+              Get Started Free
             </Link>
           </div>
         )}

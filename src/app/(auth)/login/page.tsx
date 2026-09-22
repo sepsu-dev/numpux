@@ -13,7 +13,7 @@ export default function LoginPage() {
             <div className="absolute top-6 left-6">
                 <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft className="w-4 h-4" />
-                    Kembali
+                    Back to Home
                 </Link>
             </div>
 
@@ -21,30 +21,30 @@ export default function LoginPage() {
                 <div className="w-full max-w-[390px] animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-sans font-bold text-foreground tracking-tight">
-                            Masuk ke <span className="text-primary lowercase font-bold">numpux</span>
+                            Sign in to <span className="text-primary lowercase font-bold">numpux</span>
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-2 font-normal">Lanjutkan produktivitas kerja Anda</p>
+                        <p className="text-sm text-muted-foreground mt-2 font-normal">Continue to your productive workspace</p>
                     </div>
 
                     <div className="bg-white rounded-xl border border-border shadow-sm p-8 crave-shadow">
                         <form action={formAction} className="space-y-5">
                             <div className="space-y-1.5 text-left">
-                                <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Email</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="nama@email.com"
-                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground placeholder:text-muted-foreground/50"
-                                    />
-                                </div>
+                                 <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Address</label>
+                                 <div className="relative">
+                                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                     <input
+                                         type="email"
+                                         name="email"
+                                         placeholder="you@company.com"
+                                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-stone-50/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-foreground placeholder:text-muted-foreground/50"
+                                     />
+                                 </div>
                             </div>
 
                             <div className="space-y-1.5 text-left">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Kata Sandi</label>
-                                    <Link href="#" className="text-xs font-semibold text-primary hover:opacity-85">Lupa?</Link>
+                                    <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Password</label>
+                                    <Link href="#" className="text-xs font-semibold text-primary hover:opacity-85">Forgot?</Link>
                                 </div>
                                 <div className="relative">
                                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -71,19 +71,19 @@ export default function LoginPage() {
                                 {isPending ? (
                                     <>
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                        Memproses...
+                                        Signing in...
                                     </>
                                 ) : (
-                                    "Masuk"
+                                    "Sign In"
                                 )}
                             </button>
                         </form>
                     </div>
 
                     <p className="mt-6 text-center text-sm text-muted-foreground font-medium">
-                        Belum punya akun?{" "}
+                        Don't have an account?{" "}
                         <Link href="/register" className="font-bold text-primary hover:opacity-85">
-                            Daftar gratis
+                            Sign up free
                         </Link>
                     </p>
                 </div>
