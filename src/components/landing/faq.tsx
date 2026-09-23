@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { CaretDown, Question } from "@phosphor-icons/react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const faqs = [
     {
@@ -30,57 +31,60 @@ export function FAQ() {
     };
 
     return (
-        <section className="py-24 relative overflow-hidden bg-background">
-            {/* Soft grid background */}
-            <div className="absolute inset-0 bg-dot-grid pointer-events-none z-0" />
-
+        <section className="py-20 relative overflow-hidden bg-background">
             <div className="container max-w-5xl mx-auto px-6 relative z-10">
-                <div className="flex flex-col lg:flex-row gap-16 items-start">
+                <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-start">
                     {/* Left */}
-                    <div className="lg:w-1/3 lg:sticky lg:top-32">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-primary-foreground bg-primary/20 px-3 py-1 rounded-full mb-4">
-                            <HelpCircle className="w-3.5 h-3.5 text-green-800" />
+                    <div className="lg:w-1/3 lg:sticky lg:top-28">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full mb-3">
+                            <Question className="w-3.5 h-3.5" />
                             FAQ
                         </span>
-                        <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-                            Frequently Asked Questions
+                        <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-3">
+                            Common questions
                         </h2>
-                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-normal">
-                            Find quick answers to common questions about workflows, security, and features in Numpux.
+                        <p className="text-sm text-muted-foreground leading-relaxed font-normal">
+                            Answers to common questions about accounts, workspaces, and privacy in Numpux.
                         </p>
                     </div>
 
                     {/* Right — accordion */}
-                    <div className="flex-1 w-full space-y-3.5">
+                    <div className="flex-1 w-full space-y-3">
                         {faqs.map((item, idx) => {
                             const isOpen = openIndex === idx;
                             return (
                                 <div
                                     key={idx}
-                                    className="rounded-xl border border-border bg-white overflow-hidden transition-all duration-300 hover:border-foreground/20 crave-shadow"
+                                    className="rounded-xl border border-border/80 bg-card overflow-hidden transition-colors hover:border-border shadow-2xs"
                                 >
                                     <button
                                         onClick={() => toggleIndex(idx)}
-                                        className="w-full flex items-center justify-between p-5 text-left font-semibold text-sm text-foreground hover:bg-stone-50 transition-colors cursor-pointer"
+                                        className="w-full flex items-center justify-between p-4.5 text-left font-medium text-sm text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
                                     >
                                         <span>{item.q}</span>
-                                        <ChevronDown
+                                        <CaretDown
                                             size={16}
-                                            className={`text-muted-foreground transition-transform duration-300 ${
+                                            className={`text-muted-foreground transition-transform duration-200 shrink-0 ml-3 ${
                                                 isOpen ? "rotate-180 text-primary" : ""
                                             }`}
                                         />
                                     </button>
 
-                                    <div
-                                        className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                                            isOpen ? "max-h-40 border-t border-stone-100" : "max-h-0"
-                                        }`}
-                                    >
-                                        <div className="p-5 text-left text-xs leading-relaxed text-muted-foreground font-normal">
-                                            {item.a}
-                                        </div>
-                                    </div>
+                                    <AnimatePresence initial={false}>
+                                        {isOpen && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                className="border-t border-border/60 overflow-hidden"
+                                            >
+                                                <div className="p-4.5 text-left text-xs leading-relaxed text-muted-foreground font-normal">
+                                                    {item.a}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                             );
                         })}

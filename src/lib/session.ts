@@ -2,7 +2,7 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secretKey = process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
+const secretKey = process.env.JWT_SECRET || process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
 const encodedKey = new TextEncoder().encode(secretKey);
 const SESSION_COOKIE = "session";
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;

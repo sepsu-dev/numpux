@@ -1,73 +1,151 @@
 import { NextResponse } from "next/server";
 import { listTasks, listProjects } from "@/lib/store";
+import { validatePublicKey, getOptionalAuthUser } from "@/lib/api-auth";
 
 export async function GET(request: Request) {
+  const { isValid } = validatePublicKey(request);
+  if (!isValid) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter.",
+      },
+      { status: 401 }
+    );
+  }
+
+  const authUser = await getOptionalAuthUser(request);
   const { searchParams } = new URL(request.url);
-  const projectId = searchParams.get("projectId") || undefined;
+  const requestedProjectId = searchParams.get("projectId") || undefined;
 
-  const tasks = listTasks(projectId);
-  const projects = listProjects();
-  const currentProject = projectId ? projects.find((p) => p.id === projectId) : null;
+  const projects = await listProjects(authUser?.userId);
+  // If user has only 1 project and no explicit projectId query param, auto-select it
+  const effectiveProjectId = requestedProjectId || (projects.length === 1 ? projects[0].id : undefined);
 
-  const completedTasks = tasks.filter((t) => t.status === "Selesai").length;
-  const inProgressTasks = tasks.filter((t) => t.status === "Proses").length;
-  const reviewTasks = tasks.filter((t) => t.status === "Peninjauan").length;
-  const pendingTasks = tasks.filter((t) => t.status === "Belum Mulai").length;
+  const tasks = await listTasks(authUser?.userId, effectiveProjectId);
+  const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) : null;
+
+  const completedTasks = tasks.filter((t) => t.status === "Done").length;
+  const inProgressTasks = tasks.filter((t) => t.status === "In Progress").length;
+  const reviewTasks = tasks.filter((t) => t.status === "Review").length;
+  const pendingTasks = tasks.filter((t) => t.status === "To Do").length;
   const totalTasks = tasks.length;
-
-  const metrics = projectId && currentProject
-    ? [
-        { label: "Project Status", value: currentProject.status, change: currentProject.category, up: true },
-        { label: "Completed Tasks", value: String(completedTasks), change: `${totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0}% done`, up: true },
-        { label: "In Progress", value: String(inProgressTasks), change: `${reviewTasks} in review`, up: inProgressTasks > 0 },
-        { label: "Backlog / Pending", value: String(pendingTasks), change: `${totalTasks} total`, up: false },
-      ]
-    : [
-        { label: "Active Projects", value: String(projects.length), change: "+2 this mo", up: true },
-        { label: "Completed Tasks", value: String(completedTasks), change: "+18%", up: true },
-        { label: "In Progress", value: String(inProgressTasks), change: `${reviewTasks} reviewing`, up: true },
-        { label: "Team Members", value: "8", change: "+1 active", up: true },
-      ];
-
-  const weeklyActivity = projectId
-    ? [
-        { day: "Mon", commits: Math.max(1, (totalTasks * 2) % 7 + 3) },
-        { day: "Tue", commits: Math.max(2, (totalTasks * 3) % 9 + 4) },
-        { day: "Wed", commits: Math.max(1, (totalTasks * 4) % 6 + 5) },
-        { day: "Thu", commits: Math.max(3, (totalTasks * 5) % 11 + 6) },
-        { day: "Fri", commits: Math.max(2, (totalTasks * 2) % 8 + 4) },
-        { day: "Sat", commits: Math.max(0, (totalTasks) % 4) },
-        { day: "Sun", commits: Math.max(0, (totalTasks) % 3) },
-      ]
-    : [
-        { day: "Mon", commits: 12 },
-        { day: "Tue", commits: 18 },
-        { day: "Wed", commits: 15 },
-        { day: "Thu", commits: 25 },
-        { day: "Fri", commits: 20 },
-        { day: "Sat", commits: 8 },
-        { day: "Sun", commits: 5 },
-      ];
-
-  const priorityTasks = tasks
-    .filter((t) => t.priority === "Mendesak" || t.priority === "Tinggi")
-    .slice(0, 4)
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      project: t.project || currentProject?.title || "General",
-      urgent: t.priority === "Mendesak",
-    }));
-
-  const deadlines = [
-    { title: projectId ? `Deliver ${currentProject?.title || "Milestone"} Beta` : "Deploy to Production Cluster", due: "Tomorrow, 09:00 AM", active: true },
-    { title: projectId ? "Internal QA & Regression Pass" : "Security Audit & PR #402 Review", due: "May 26, 02:00 PM", active: false },
-  ];
-
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+  // Real Metrics based on project context or workspace context
+  const metrics = currentProject
+    ? [
+        {
+          label: "Project Status",
+          value: currentProject.status,
+          change: currentProject.category || "Active",
+          up: currentProject.status === "Active" || currentProject.status === "Completed",
+        },
+        {
+          label: "Completed Tasks",
+          value: String(completedTasks),
+          change: `${completionPercentage}% done`,
+          up: completedTasks > 0,
+        },
+        {
+          label: "In Progress",
+          value: String(inProgressTasks),
+          change: `${reviewTasks} in review`,
+          up: inProgressTasks > 0,
+        },
+        {
+          label: "Pending Backlog",
+          value: String(pendingTasks),
+          change: `${totalTasks} total tasks`,
+          up: pendingTasks === 0,
+        },
+      ]
+    : [
+        {
+          label: "Total Projects",
+          value: String(projects.length),
+          change: projects.length > 0 ? `${projects.filter((p) => p.status === "Active").length} active` : "No projects",
+          up: projects.length > 0,
+        },
+        {
+          label: "Completed Tasks",
+          value: String(completedTasks),
+          change: `${completionPercentage}% done`,
+          up: completedTasks > 0,
+        },
+        {
+          label: "In Progress",
+          value: String(inProgressTasks),
+          change: `${reviewTasks} in review`,
+          up: inProgressTasks > 0,
+        },
+        {
+          label: "Pending Tasks",
+          value: String(pendingTasks),
+          change: `${totalTasks} total tasks`,
+          up: pendingTasks === 0,
+        },
+      ];
+
+  // Calculate REAL weekly activity by day of the week based on created_at or updated tasks
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const activityMap: Record<string, number> = {
+    Mon: 0,
+    Tue: 0,
+    Wed: 0,
+    Thu: 0,
+    Fri: 0,
+    Sat: 0,
+    Sun: 0,
+  };
+
+  tasks.forEach((t) => {
+    if (t.createdAt) {
+      const d = new Date(t.createdAt);
+      const dayName = daysOfWeek[d.getDay()];
+      if (activityMap[dayName] !== undefined) {
+        activityMap[dayName] += 1;
+      }
+    }
+  });
+
+  const weeklyActivity = [
+    { day: "Mon", commits: activityMap.Mon },
+    { day: "Tue", commits: activityMap.Tue },
+    { day: "Wed", commits: activityMap.Wed },
+    { day: "Thu", commits: activityMap.Thu },
+    { day: "Fri", commits: activityMap.Fri },
+    { day: "Sat", commits: activityMap.Sat },
+    { day: "Sun", commits: activityMap.Sun },
+  ];
+
+  // REAL Priority tasks (sorted by urgent/high first, then remaining)
+  const priorityWeight: Record<string, number> = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const pDiff = (priorityWeight[b.priority] || 1) - (priorityWeight[a.priority] || 1);
+    if (pDiff !== 0) return pDiff;
+    return 0;
+  });
+
+  const priorityTasks = sortedTasks.slice(0, 5).map((t) => ({
+    id: t.id,
+    title: t.title,
+    project: t.project,
+    urgent: t.priority === "Urgent" || t.priority === "High",
+  }));
+
+  // REAL upcoming deadlines from tasks with due date
+  const deadlines = tasks
+    .filter((t) => t.status !== "Done" && Boolean(t.date))
+    .slice(0, 5)
+    .map((t) => ({
+      title: t.title,
+      due: t.date as string,
+      active: t.status === "In Progress",
+    }));
+
   const sprintProgress = {
-    sprintName: projectId ? `${currentProject?.title || "Project"} Sprint` : "Sprint #14",
+    sprintName: currentProject ? currentProject.title : (projects.length > 0 ? "All Projects Sprint" : "No Project"),
     percentage: completionPercentage,
     completedCount: completedTasks,
     totalCount: totalTasks,

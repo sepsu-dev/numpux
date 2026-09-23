@@ -175,3 +175,20 @@
 .lime-glow-button:active {
   transform: translateY(0.5px);
 }
+
+/* ─── Kanban Drag Cursor Stability ────────────────────────── */
+body.is-dragging-card,
+body.is-dragging-card * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.kanban-card-draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.kanban-card-draggable:active {
+  cursor: grabbing;
+}

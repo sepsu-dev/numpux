@@ -26,6 +26,7 @@ export function generateMetadata(): Metadata {
 }
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export default function RootLayout({
   children,
@@ -33,13 +34,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth">
+    <html lang="en" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="antialiased font-sans min-h-screen bg-background text-foreground">
         <NextTopLoader showSpinner={false} color="#6366f1" />
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
-        <Toaster position="top-center" richColors />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
+          <Toaster position="top-center" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

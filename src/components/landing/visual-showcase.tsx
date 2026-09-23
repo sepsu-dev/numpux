@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Edit3, Sparkles, BookOpen, Check, ShieldCheck, Zap } from "lucide-react";
+import { WarningCircle, NotePencil, Sparkle, BookOpen, Check, ShieldCheck, Lightning } from "@phosphor-icons/react";
 
 export function VisualShowcase() {
     return (
@@ -25,7 +25,7 @@ export function VisualShowcase() {
                         <div className="p-5 rounded-xl bg-amber-100/80 border border-amber-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <AlertCircle className="w-4.5 h-4.5 text-amber-600" />
+                                    <WarningCircle className="w-4.5 h-4.5 text-amber-600" />
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-bold text-amber-950">Smart Priorities</h4>
@@ -40,7 +40,7 @@ export function VisualShowcase() {
                         <div className="p-5 rounded-xl bg-emerald-100/80 border border-emerald-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <Edit3 className="w-4.5 h-4.5 text-emerald-600" />
+                                    <NotePencil className="w-4.5 h-4.5 text-emerald-600" />
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-bold text-emerald-950">Detailed Briefs</h4>
@@ -102,11 +102,11 @@ export function VisualShowcase() {
                                 {/* Yellow & Green Mini Cards Side-by-Side */}
                                 <div className="grid grid-cols-2 gap-2 mb-3">
                                     <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-200/80">
-                                        <AlertCircle className="w-3.5 h-3.5 text-amber-700 mb-1" />
+                                        <WarningCircle className="w-3.5 h-3.5 text-amber-700 mb-1" />
                                         <p className="text-[8px] font-semibold text-amber-950">Urgent Task</p>
                                     </div>
                                     <div className="p-2.5 rounded-xl bg-[#8CE460]/20 border border-[#8CE460]/40">
-                                        <Sparkles className="w-3.5 h-3.5 text-green-700 mb-1" />
+                                        <Sparkle className="w-3.5 h-3.5 text-green-700 mb-1" />
                                         <p className="text-[8px] font-semibold text-green-950">Team Collab</p>
                                     </div>
                                 </div>
@@ -166,7 +166,7 @@ export function VisualShowcase() {
                         <div className="p-5 rounded-xl bg-[#8CE460]/20 border border-[#8CE460]/40 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <Sparkles className="w-4.5 h-4.5 text-green-700" />
+                                    <Sparkle className="w-4.5 h-4.5 text-green-700" />
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-bold text-green-950">Team Sync</h4>

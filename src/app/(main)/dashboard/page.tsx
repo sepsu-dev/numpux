@@ -3,15 +3,14 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-    CheckCircle2,
-    CalendarDays,
+    CheckCircle,
+    CalendarBlank,
     ArrowUpRight,
     Briefcase,
     Plus,
     Clock,
-    Flame,
-    CheckCircle
-} from "lucide-react";
+    Flame
+} from "@phosphor-icons/react";
 import Link from "next/link";
 import {
     BarChart,
@@ -22,6 +21,8 @@ import {
     Cell,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api-client";
 
 type DashboardData = {
     project: {
@@ -59,7 +60,7 @@ function DashboardContent() {
     useEffect(() => {
         setIsLoading(true);
         const url = projectId ? `/api/dashboard?projectId=${projectId}` : "/api/dashboard";
-        fetch(url)
+        apiFetch(url)
             .then((res) => res.json())
             .then((json) => {
                 if (json.data) {
@@ -72,71 +73,71 @@ function DashboardContent() {
 
     const activeProject = data?.project;
     const metrics = data?.metrics || [
-        { label: "Active Projects", value: "3", change: "+2 this mo", up: true },
-        { label: "Completed Tasks", value: "1", change: "20%", up: true },
-        { label: "In Progress", value: "1", change: "1 in review", up: true },
-        { label: "Team Members", value: "8", change: "+1 active", up: true },
+        { label: "Project Status", value: "-", change: "-", up: true },
+        { label: "Completed Tasks", value: "0", change: "0% done", up: true },
+        { label: "In Progress", value: "0", change: "0 in review", up: true },
+        { label: "Pending Tasks", value: "0", change: "0 total", up: true },
     ];
     const weeklyData = data?.weeklyActivity || [
-        { day: "Mon", commits: 12 },
-        { day: "Tue", commits: 18 },
-        { day: "Wed", commits: 15 },
-        { day: "Thu", commits: 25 },
-        { day: "Fri", commits: 20 },
-        { day: "Sat", commits: 8 },
-        { day: "Sun", commits: 5 },
+        { day: "Mon", commits: 0 },
+        { day: "Tue", commits: 0 },
+        { day: "Wed", commits: 0 },
+        { day: "Thu", commits: 0 },
+        { day: "Fri", commits: 0 },
+        { day: "Sat", commits: 0 },
+        { day: "Sun", commits: 0 },
     ];
     const priorities = data?.priorityTasks || [];
     const deadlines = data?.deadlines || [];
     const sprint = data?.sprintProgress || {
-        sprintName: "Active Sprint",
-        percentage: 50,
-        completedCount: 1,
-        totalCount: 2,
+        sprintName: "Sprint Overview",
+        percentage: 0,
+        completedCount: 0,
+        totalCount: 0,
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+        <div className="space-y-6 pb-20">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">
-                            {activeProject ? activeProject.title : "Dashboard Overview"}
+                        <h2 className="text-xl font-bold text-foreground tracking-tight">
+                            {activeProject ? activeProject.title : "Summary"}
                         </h2>
                         {activeProject ? (
-                            <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-semibold gap-1.5">
+                            <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-medium gap-1.5 rounded-md">
                                 <Briefcase className="w-3 h-3 text-primary" />
                                 {activeProject.category || "Project Scope"}
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="px-2.5 py-0.5 text-xs text-muted-foreground">
-                                Workspace Wide
+                            <Badge variant="outline" className="px-2.5 py-0.5 text-xs text-muted-foreground font-normal rounded-md">
+                                Workspace
                             </Badge>
                         )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         {activeProject
-                            ? activeProject.description || "Filtered real-time metrics and sprint execution for this project."
-                            : "High-level summary of your active engineering projects, metrics, and velocity."}
+                            ? activeProject.description || "Real-time metrics and sprint execution for this project."
+                            : "Summary of engineering velocity, priorities, and upcoming deliverables."}
                     </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     {projectId ? (
                         <Link
                             href={`/tasks/kanban?projectId=${projectId}`}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-2xs"
                         >
-                            Open Project Board
+                            Open Board
                             <ArrowUpRight className="w-3.5 h-3.5" />
                         </Link>
                     ) : (
                         <Link
                             href="/projects"
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline underline-offset-4"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline underline-offset-4"
                         >
-                            View All Projects
-                            <ArrowUpRight className="w-4 h-4" />
+                            View Projects
+                            <ArrowUpRight className="w-3.5 h-3.5" />
                         </Link>
                     )}
                 </div>
@@ -144,15 +145,15 @@ function DashboardContent() {
 
             {/* Metrics cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {metrics.map((m) => (
+                {metrics.map((m, idx) => (
                     <div
                         key={m.label}
-                        className="bg-card border border-border/80 rounded-xl p-4 transition-all hover:border-border"
+                        className="bg-card border border-border/80 rounded-xl p-4 transition-all shadow-2xs"
                     >
-                        <p className="text-xs font-medium text-muted-foreground mb-1">{m.label}</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">{m.label}</p>
                         <div className="flex items-baseline justify-between">
                             <span className="text-2xl font-bold text-foreground tracking-tight">{m.value}</span>
-                            <span className={`text-xs font-semibold ${m.up ? "text-primary" : "text-amber-600 dark:text-amber-400"}`}>
+                            <span className={`text-[11px] font-medium ${m.up ? "text-primary" : "text-amber-600 dark:text-amber-400"}`}>
                                 {m.change}
                             </span>
                         </div>
@@ -161,23 +162,23 @@ function DashboardContent() {
             </div>
 
             {/* Chart + Right sidebar */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Activity chart */}
-                <div className="lg:col-span-2 bg-card border border-border/80 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-6">
+                <div className="lg:col-span-2 bg-card border border-border/80 rounded-xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between mb-5">
                         <div>
                             <h3 className="text-sm font-semibold text-foreground">
                                 {activeProject ? `${activeProject.title} Velocity` : "Weekly Velocity"}
                             </h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">Estimated tasks & commits cadence per day</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Cadence of tasks and commits across the sprint</p>
                         </div>
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
-                            Active Pulse
+                        <span className="text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                            Active
                         </span>
                     </div>
-                    <div className="h-[220px] w-full">
+                    <div className="h-[210px] w-full">
                         {isMounted && (
-                            <ResponsiveContainer width="100%" height={220} minWidth={0} debounce={100}>
+                            <ResponsiveContainer width="100%" height={210} minWidth={0} debounce={100}>
                                 <BarChart data={weeklyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                                     <XAxis
                                         dataKey="day"
@@ -187,17 +188,16 @@ function DashboardContent() {
                                         dy={10}
                                     />
                                     <Tooltip
-                                        cursor={{ fill: "rgba(99,102,241,0.04)" }}
+                                        cursor={{ fill: "rgba(0,0,0,0.02)" }}
                                         contentStyle={{
                                             background: "var(--card)",
                                             border: "1px solid var(--border)",
-                                            borderRadius: "8px",
+                                            borderRadius: "6px",
                                             fontSize: "11px",
-                                            fontWeight: "500",
-                                            padding: "8px 12px",
+                                            padding: "6px 10px",
                                         }}
                                     />
-                                    <Bar dataKey="commits" barSize={28} radius={[4, 4, 0, 0]}>
+                                    <Bar dataKey="commits" barSize={24} radius={[4, 4, 0, 0]}>
                                         {weeklyData.map((_, index) => (
                                             <Cell
                                                 key={`cell-${index}`}
@@ -212,47 +212,45 @@ function DashboardContent() {
                 </div>
 
                 {/* Priority tasks */}
-                <div className="bg-card border border-border/80 rounded-xl p-6 flex flex-col justify-between">
+                <div className="bg-card border border-border/80 rounded-xl p-5 shadow-2xs flex flex-col justify-between">
                     <div>
                         <div className="flex items-center justify-between gap-2 mb-4">
                             <div className="flex items-center gap-2">
-                                <CheckCircle2 size={16} className="text-primary" />
-                                <h3 className="text-sm font-semibold text-foreground">Top Priorities</h3>
+                                <CheckCircle size={15} weight="bold" className="text-primary" />
+                                <h3 className="text-sm font-semibold text-foreground">Priorities</h3>
                             </div>
                             {projectId && (
                                 <Link
-                                    href={`/tasks/new?projectId=${projectId}`}
+                                    href={`/tasks/kanban?projectId=${projectId}`}
                                     className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
                                 >
-                                    <Plus className="w-3 h-3" />
-                                    <span>New</span>
+                                    <span>Board</span>
                                 </Link>
                             )}
                         </div>
 
                         {priorities.length === 0 ? (
-                            <div className="p-6 text-center border border-dashed border-border rounded-xl">
-                                <CheckCircle className="w-7 h-7 text-muted-foreground/50 mx-auto mb-2" />
-                                <p className="text-xs font-semibold text-muted-foreground">No urgent tasks</p>
-                                <p className="text-[11px] text-muted-foreground/70 mt-0.5">All priority items are resolved or on track.</p>
+                            <div className="p-6 text-center border border-dashed border-border rounded-lg">
+                                <CheckCircle className="w-5 h-5 text-muted-foreground/40 mx-auto mb-1.5" />
+                                <p className="text-xs font-medium text-muted-foreground">No urgent tasks</p>
+                                <p className="text-[11px] text-muted-foreground/60 mt-0.5">All priority items are resolved or on schedule.</p>
                             </div>
                         ) : (
-                            <div className="space-y-2.5">
+                            <div className="space-y-2">
                                 {priorities.map((task) => (
                                     <Link
                                         key={task.id}
-                                        href={`/tasks/edit/${task.id}`}
-                                        className="flex items-center justify-between p-3 rounded-lg border border-border/60 hover:border-border hover:bg-muted/40 transition-all cursor-pointer group"
+                                        href={`/tasks?projectId=${projectId || ""}`}
+                                        className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 hover:border-border hover:bg-muted/30 transition-all cursor-pointer group"
                                     >
                                         <div className="min-w-0 pr-2">
-                                            <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                                            <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
                                                 {task.title}
                                             </p>
-                                            <p className="text-[11px] text-muted-foreground">{task.project}</p>
+                                            <p className="text-[10px] text-muted-foreground">{task.project}</p>
                                         </div>
                                         {task.urgent && (
-                                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:border-red-900/40 shrink-0 flex items-center gap-1">
-                                                <Flame className="w-2.5 h-2.5" />
+                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-destructive/10 text-destructive shrink-0">
                                                 Urgent
                                             </span>
                                         )}
@@ -272,22 +270,22 @@ function DashboardContent() {
             </div>
 
             {/* Bottom row — deadlines + progress */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Deadlines */}
-                <div className="bg-card border border-border/80 rounded-xl p-5">
+                <div className="bg-card border border-border/80 rounded-xl p-5 shadow-2xs">
                     <div className="flex items-center gap-2 mb-4">
-                        <CalendarDays size={16} className="text-primary" />
+                        <CalendarBlank size={15} className="text-primary" />
                         <h3 className="text-sm font-semibold text-foreground">Upcoming Milestones</h3>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                         {deadlines.map((d, i) => (
                             <div
                                 key={i}
-                                className={`border-l-2 pl-3 py-0.5 ${d.active ? "border-primary" : "border-muted"}`}
+                                className={`border-l-2 pl-3 py-0.5 ${d.active ? "border-primary" : "border-border"}`}
                             >
-                                <p className="text-xs font-semibold text-foreground">{d.title}</p>
+                                <p className="text-xs font-medium text-foreground">{d.title}</p>
                                 <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-muted-foreground/70" />
+                                    <Clock className="w-3 h-3 text-muted-foreground/60" />
                                     {d.due}
                                 </p>
                             </div>
@@ -296,19 +294,19 @@ function DashboardContent() {
                 </div>
 
                 {/* Progress */}
-                <div className="bg-card border border-border/80 rounded-xl p-5">
+                <div className="bg-card border border-border/80 rounded-xl p-5 shadow-2xs">
                     <div className="flex justify-between items-end mb-3">
                         <div>
                             <p className="text-xs font-semibold text-foreground">{sprint.sprintName}</p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {sprint.completedCount} of {sprint.totalCount} tasks completed
+                                {sprint.completedCount} of {sprint.totalCount} deliverables finished
                             </p>
                         </div>
                         <span className="text-xs font-bold text-primary">{sprint.percentage}%</span>
                     </div>
-                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-primary rounded-full transition-all duration-700"
+                            className="h-full bg-primary rounded-full transition-all duration-500"
                             style={{ width: `${sprint.percentage}%` }}
                         />
                     </div>

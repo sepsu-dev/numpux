@@ -1,49 +1,63 @@
 import { NextResponse } from "next/server";
-import { createSession } from "@/lib/session";
-
-const DEMO_USER = {
-  id: "1",
-  name: "Admin Numpux",
-  email: "admin@numpux.com",
-  password: "admin123",
-};
+import { createSession, encrypt } from "@/lib/session";
+import { initDb } from "@/lib/db";
+import { findUserByEmail, hashPassword } from "@/lib/user-db";
 
 export async function POST(request: Request) {
   try {
+    await initDb();
     const { email, password } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
-        { status: "error", message: "Email dan kata sandi wajib diisi" },
+        { status: "error", message: "Email and password are required" },
         { status: 400 }
       );
     }
 
-    if (email !== DEMO_USER.email || password !== DEMO_USER.password) {
+    const user = await findUserByEmail(email.trim().toLowerCase());
+    if (!user) {
       return NextResponse.json(
-        { status: "error", message: "Email atau kata sandi salah" },
+        { status: "error", message: "Invalid email or password" },
         { status: 401 }
       );
     }
 
+    const hashedInput = hashPassword(password);
+    if (user.password_hash !== hashedInput) {
+      return NextResponse.json(
+        { status: "error", message: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    const token = await encrypt({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+    });
+
     await createSession({
-      userId: DEMO_USER.id,
-      email: DEMO_USER.email,
-      name: DEMO_USER.name,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
     });
 
     return NextResponse.json({
       status: "success",
-      message: "Berhasil masuk",
+      message: "Signed in successfully",
+      token,
       data: {
-        id: DEMO_USER.id,
-        name: DEMO_USER.name,
-        email: DEMO_USER.email,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        token,
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("Login error:", error);
     return NextResponse.json(
-      { status: "error", message: "Gagal memproses login" },
+      { status: "error", message: "Failed to process login" },
       { status: 500 }
     );
   }

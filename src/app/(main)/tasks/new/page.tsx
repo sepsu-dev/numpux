@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronDown, Briefcase } from "lucide-react";
+import { ArrowLeft, CaretDown, Briefcase } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -16,6 +17,8 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import type { Project } from "@/lib/types";
+import { apiFetch } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 
 export default function NewTaskPage() {
     const router = useRouter();
@@ -24,10 +27,11 @@ export default function NewTaskPage() {
 
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>(prefillProjectId);
+    const [dueDate, setDueDate] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        fetch("/api/projects")
+        apiFetch("/api/projects")
             .then((res) => res.json())
             .then((res) => {
                 if (res.data) {
@@ -35,6 +39,8 @@ export default function NewTaskPage() {
                     if (prefillProjectId) {
                         const found = res.data.find((p: Project) => p.id === prefillProjectId);
                         if (found) setSelectedProjectId(found.id);
+                    } else if (res.data.length === 1) {
+                        setSelectedProjectId(res.data[0].id);
                     }
                 }
             })
@@ -48,123 +54,140 @@ export default function NewTaskPage() {
         const formData = new FormData(e.currentTarget);
         const title = formData.get("title") as string;
         const priority = formData.get("priority") as string;
-        const date = formData.get("date") as string;
         const description = formData.get("description") as string;
+
+        if (!title.trim()) {
+            toast.error("Task title is required");
+            return;
+        }
+
+        if (!selectedProjectId) {
+            toast.error("Please select a project for this task");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
-            const res = await fetch("/api/tasks", {
+            const res = await apiFetch("/api/tasks", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    title,
-                    projectId: selectedProjectId || undefined,
-                    project: activeProject ? activeProject.title : "Proyek Utama",
-                    priority: priority || "Sedang",
-                    date: date || "Segera",
-                    description,
+                    title: title.trim(),
+                    projectId: selectedProjectId,
+                    project: activeProject ? activeProject.title : "Project",
+                    priority: priority || "Medium",
+                    date: dueDate ? dueDate : undefined,
+                    description: description.trim() || undefined,
                 }),
             });
 
-            if (!res.ok) throw new Error("Failed to create task");
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || "Failed to create task");
+            }
 
             toast.success("Task created successfully!");
             router.push(selectedProjectId ? `/tasks?projectId=${selectedProjectId}` : "/tasks");
             router.refresh();
-        } catch {
-            toast.error("Failed to save task.");
+        } catch (err: any) {
+            toast.error(err.message || "Failed to save task.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-6">
-                <Link href="/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-foreground transition-all border border-border bg-white active:scale-95 shadow-sm cursor-pointer">
-                    <ArrowLeft size={16} />
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+            <div className="flex items-center gap-3">
+                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs cursor-pointer">
+                    <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">New Task</h2>
-                    <p className="text-muted-foreground text-sm font-medium mt-1">Define scope, priority, and assign to a project.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Create Task</h2>
+                    <p className="text-muted-foreground text-xs mt-0.5">Define task details, priority, and link to a project.</p>
                 </div>
             </div>
 
-            <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm hover:shadow-sm hover:border-primary/20 transition-all max-w-4xl">
-                <form onSubmit={handleSubmit} className="space-y-10">
-                    <div className="space-y-8">
-                        <div className="grid gap-2.5">
-                            <Label htmlFor="title" className="font-semibold text-xs text-foreground px-0.5">Task Title</Label>
+            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-5">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="title" className="font-semibold text-xs text-foreground px-0.5">Task Title *</Label>
                             <Input
                                 id="title"
                                 name="title"
                                 placeholder="e.g. Implement webhook retry queue"
-                                className="h-12 text-sm rounded-lg border border-border focus:border-primary font-medium px-4 bg-white transition-all text-foreground shadow-sm"
+                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium px-3.5 bg-background/50 transition-all text-foreground shadow-2xs"
                                 required
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="grid gap-2.5">
-                                <Label className="font-semibold text-xs text-foreground px-0.5">Project Workspace</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid gap-1.5">
+                                <div className="flex items-center justify-between">
+                                    <Label className="font-semibold text-xs text-foreground px-0.5">Project *</Label>
+                                    {projects.length === 0 && (
+                                        <Link href="/projects/new" className="text-[11px] text-primary hover:underline font-semibold">
+                                            + Create Project First
+                                        </Link>
+                                    )}
+                                </div>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="h-12 w-full flex items-center justify-between rounded-lg border border-border px-4 bg-white hover:border-primary transition-all text-foreground font-medium shadow-sm text-sm cursor-pointer"
+                                            className={cn(
+                                                "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-foreground font-medium shadow-2xs text-xs cursor-pointer",
+                                                !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border"
+                                            )}
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Briefcase size={15} className={!activeProject ? "text-border" : "text-primary"} />
-                                                <span className={!activeProject ? "text-muted-foreground" : "text-foreground font-semibold"}>
-                                                    {activeProject ? activeProject.title : "Select Project (Optional)"}
+                                            <div className="flex items-center gap-2">
+                                                <Briefcase size={14} className={!activeProject ? "text-muted-foreground" : "text-primary"} />
+                                                <span className={!activeProject ? "text-muted-foreground" : "text-foreground font-medium"}>
+                                                    {activeProject ? activeProject.title : (projects.length === 0 ? "No Projects" : "Select Project")}
                                                 </span>
                                             </div>
-                                            <ChevronDown size={14} className="text-muted-foreground opacity-60" />
+                                            <CaretDown size={13} className="text-muted-foreground opacity-60" />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[300px] md:w-[400px] rounded-lg border border-border/60 p-1.5 font-sans shadow-sm">
-                                        <DropdownMenuItem
-                                            className="h-10 rounded-lg cursor-pointer hover:bg-muted transition-colors pl-3 text-xs font-medium"
-                                            onClick={() => setSelectedProjectId("")}
-                                        >
-                                            No Project (General)
-                                        </DropdownMenuItem>
+                                    <DropdownMenuContent align="start" className="w-[280px] p-1 text-xs">
                                         {projects.map((project) => (
                                             <DropdownMenuItem
                                                 key={project.id}
-                                                className="h-10 rounded-lg cursor-pointer hover:bg-muted transition-colors pl-3 text-xs font-medium flex items-center justify-between"
+                                                className="cursor-pointer py-2 px-2.5 rounded-lg flex items-center justify-between"
                                                 onClick={() => setSelectedProjectId(project.id)}
                                             >
-                                                <span className="font-semibold">{project.title}</span>
+                                                <span className="font-medium truncate">{project.title}</span>
                                                 <span className="text-[10px] text-muted-foreground uppercase">{project.category}</span>
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                            <div className="grid gap-2.5">
-                                <Label htmlFor="date" className="font-semibold text-xs text-foreground px-0.5">Due Date</Label>
-                                <Input
-                                    id="date"
-                                    name="date"
-                                    type="date"
-                                    className="h-12 rounded-lg border border-border focus:border-primary font-medium px-4 bg-white transition-all text-foreground shadow-sm text-sm"
+                            <div className="grid gap-1.5">
+                                <Label className="font-semibold text-xs text-foreground px-0.5">
+                                    Due Date <span className="text-muted-foreground text-[10px] font-normal">(Optional)</span>
+                                </Label>
+                                <DatePicker
+                                    value={dueDate}
+                                    onChange={(val) => setDueDate(val)}
+                                    placeholder="Select due date..."
                                 />
                             </div>
                         </div>
 
-                        <div className="grid gap-2.5">
-                            <Label className="font-semibold text-xs text-foreground px-0.5">Priority Level</Label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid gap-1.5">
+                            <Label className="font-semibold text-xs text-foreground px-0.5">Priority</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                 {[
-                                    { id: 'Low', label: 'Low', value: 'Rendah' },
-                                    { id: 'Medium', label: 'Medium', value: 'Sedang' },
-                                    { id: 'High', label: 'High', value: 'Tinggi' },
-                                    { id: 'Critical', label: 'Urgent', value: 'Mendesak' }
+                                    { id: 'Low', label: 'Low', value: 'Low' },
+                                    { id: 'Medium', label: 'Medium', value: 'Medium' },
+                                    { id: 'High', label: 'High', value: 'High' },
+                                    { id: 'Critical', label: 'Urgent', value: 'Urgent' },
                                 ].map((p) => (
                                     <label key={p.id} className="cursor-pointer group">
                                         <input type="radio" name="priority" value={p.value} className="sr-only peer" defaultChecked={p.id === 'Medium'} />
-                                        <div className="flex items-center justify-center p-3 text-xs font-medium rounded-lg border border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:font-semibold transition-all hover:bg-muted/50 shadow-sm">
+                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium rounded-xl border border-border peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-checked:font-semibold transition-all hover:bg-muted/50 shadow-2xs">
                                             {p.label}
                                         </div>
                                     </label>
@@ -172,21 +195,21 @@ export default function NewTaskPage() {
                             </div>
                         </div>
 
-                        <div className="grid gap-2.5">
-                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Task Description & Acceptance Criteria</Label>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description & Acceptance Criteria</Label>
                             <Textarea
                                 id="description"
                                 name="description"
-                                placeholder="Add relevant context, checklists, or steps to complete..."
-                                className="min-h-[140px] rounded-lg border border-border focus:border-primary resize-none p-4 font-normal text-sm bg-white transition-all text-foreground shadow-sm focus:shadow-sm"
+                                placeholder="Add technical background, testing checklist, or steps to complete..."
+                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs bg-background/50 transition-all text-foreground shadow-2xs"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-8 border-t border-border/40 flex items-center justify-end gap-4">
-                        <Button type="button" variant="outline" onClick={() => router.back()} className="font-medium text-muted-foreground border border-border h-11 px-6 rounded-lg hover:bg-muted transition-all text-sm cursor-pointer">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm active:scale-95 transition-all text-sm cursor-pointer">
-                            {isSubmitting ? "Creating Task..." : "Create Task"}
+                    <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSubmitting} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
+                            {isSubmitting ? "Creating..." : "Create Task"}
                         </Button>
                     </div>
                 </form>

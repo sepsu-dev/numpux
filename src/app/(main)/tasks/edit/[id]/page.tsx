@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, ChevronDown, Briefcase } from "lucide-react";
+import { ArrowLeft, CaretDown, Briefcase } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Task, Project } from "@/lib/types";
+import { apiFetch } from "@/lib/api-client";
 
 export default function EditTaskPage() {
     const router = useRouter();
@@ -31,8 +32,8 @@ export default function EditTaskPage() {
     useEffect(() => {
         if (!id) return;
         Promise.all([
-            fetch(`/api/tasks/${id}`).then((r) => r.json()),
-            fetch("/api/projects").then((r) => r.json())
+            apiFetch(`/api/tasks/${id}`).then((r) => r.json()),
+            apiFetch("/api/projects").then((r) => r.json())
         ])
             .then(([taskRes, projectsRes]) => {
                 if (taskRes.data) {
@@ -57,18 +58,28 @@ export default function EditTaskPage() {
         const date = formData.get("date") as string;
         const description = formData.get("description") as string;
 
+        if (!title.trim()) {
+            toast.error("Task title is required");
+            return;
+        }
+
+        if (!selectedProjectId) {
+            toast.error("Please select a project for this task");
+            return;
+        }
+
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/tasks/${id}`, {
+            const res = await apiFetch(`/api/tasks/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    title,
-                    projectId: selectedProjectId || undefined,
-                    project: activeProject ? activeProject.title : (task?.project || "Proyek"),
+                    title: title.trim(),
+                    projectId: selectedProjectId,
+                    project: activeProject ? activeProject.title : (task?.project || "Project"),
                     priority,
-                    date,
-                    description,
+                    date: date ? date : null,
+                    description: description.trim() || undefined,
                 }),
             });
             if (!res.ok) throw new Error("Failed to save");
@@ -91,39 +102,39 @@ export default function EditTaskPage() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-4">
-                <Link href="/tasks" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40 cursor-pointer">
-                    <ArrowLeft size={20} />
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+            <div className="flex items-center gap-3">
+                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs cursor-pointer">
+                    <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Task</h2>
-                    <p className="text-muted-foreground font-medium text-xs">Update progress, priority, and implementation notes.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit Task</h2>
+                    <p className="text-muted-foreground text-xs mt-0.5">Update progress, priority, and implementation notes.</p>
                 </div>
             </div>
 
-            <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm max-w-4xl">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="title" className="font-semibold text-xs text-foreground">Task Title</Label>
+            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-5">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="title" className="font-semibold text-xs text-foreground px-0.5">Task Title *</Label>
                             <Input
                                 id="title"
                                 name="title"
                                 defaultValue={task?.title || ""}
-                                className="h-11 text-sm rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5"
+                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 transition-all shadow-2xs"
                                 required
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="grid gap-2">
-                                <Label className="font-semibold text-xs text-foreground">Project Workspace</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid gap-1.5">
+                                <Label className="font-semibold text-xs text-foreground px-0.5">Project Workspace *</Label>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="h-11 w-full flex items-center justify-between rounded-lg border border-border px-3.5 bg-white hover:border-primary transition-all text-foreground font-medium shadow-sm text-sm cursor-pointer"
+                                            className="h-10 w-full flex items-center justify-between rounded-xl border border-border px-3 bg-background/50 hover:bg-background transition-all text-foreground font-medium shadow-2xs text-xs cursor-pointer"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Briefcase size={14} className={!activeProject ? "text-muted-foreground" : "text-primary"} />
@@ -131,50 +142,47 @@ export default function EditTaskPage() {
                                                     {activeProject ? activeProject.title : (task?.project || "Select Project")}
                                                 </span>
                                             </div>
-                                            <ChevronDown size={14} className="text-muted-foreground opacity-60" />
+                                            <CaretDown size={13} className="text-muted-foreground opacity-60" />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[300px] rounded-lg border border-border p-1.5 font-sans shadow-sm">
-                                        <DropdownMenuItem
-                                            className="h-9 rounded-lg cursor-pointer hover:bg-muted text-xs font-medium"
-                                            onClick={() => setSelectedProjectId("")}
-                                        >
-                                            No Project (General)
-                                        </DropdownMenuItem>
+                                    <DropdownMenuContent align="start" className="w-[280px] rounded-xl border border-border p-1 text-xs shadow-md">
                                         {projects.map((proj) => (
                                             <DropdownMenuItem
                                                 key={proj.id}
-                                                className="h-9 rounded-lg cursor-pointer hover:bg-muted text-xs font-medium flex items-center justify-between"
+                                                className="cursor-pointer py-2 px-2.5 rounded-lg flex items-center justify-between"
                                                 onClick={() => setSelectedProjectId(proj.id)}
                                             >
-                                                <span>{proj.title}</span>
+                                                <span className="font-medium truncate">{proj.title}</span>
                                                 <span className="text-[10px] text-muted-foreground uppercase">{proj.category}</span>
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="date" className="font-semibold text-xs text-foreground">Due Date</Label>
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="date" className="font-semibold text-xs text-foreground px-0.5">
+                                    Due Date <span className="text-muted-foreground text-[10px] font-normal">(Optional)</span>
+                                </Label>
                                 <Input
                                     id="date"
                                     name="date"
+                                    type="date"
                                     defaultValue={task?.date || ""}
-                                    className="h-11 text-sm rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5"
+                                    className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 shadow-2xs"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="priority" className="font-semibold text-xs text-foreground">Priority Level</Label>
-                            <div className="flex gap-3">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="priority" className="font-semibold text-xs text-foreground px-0.5">Priority Level</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                 {[
-                                    { id: 'Low', label: 'Low', value: 'Rendah' },
-                                    { id: 'Medium', label: 'Medium', value: 'Sedang' },
-                                    { id: 'High', label: 'High', value: 'Tinggi' },
-                                    { id: 'Critical', label: 'Urgent', value: 'Mendesak' }
+                                    { id: 'Low', label: 'Low', value: 'Low' },
+                                    { id: 'Medium', label: 'Medium', value: 'Medium' },
+                                    { id: 'High', label: 'High', value: 'High' },
+                                    { id: 'Critical', label: 'Urgent', value: 'Urgent' }
                                 ].map((p) => (
-                                    <label key={p.id} className="flex-1 cursor-pointer">
+                                    <label key={p.id} className="cursor-pointer group">
                                         <input
                                             type="radio"
                                             name="priority"
@@ -182,7 +190,7 @@ export default function EditTaskPage() {
                                             className="sr-only peer"
                                             defaultChecked={task?.priority === p.value || (!task?.priority && p.id === 'Medium')}
                                         />
-                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium border border-border/60 rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:font-semibold transition-all">
+                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium border border-border rounded-xl peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-checked:font-semibold transition-all shadow-2xs hover:bg-muted/50">
                                             {p.label}
                                         </div>
                                     </label>
@@ -190,20 +198,20 @@ export default function EditTaskPage() {
                             </div>
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="description" className="font-semibold text-xs text-foreground">Task Notes & Description</Label>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Task Notes & Description</Label>
                             <Textarea
                                 id="description"
                                 name="description"
                                 defaultValue={task?.description || ""}
-                                className="min-h-[120px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-sm text-foreground"
+                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs text-foreground bg-background/50 shadow-2xs"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-3">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm cursor-pointer">Cancel</Button>
-                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm cursor-pointer">
+                    <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSaving} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
                             {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>

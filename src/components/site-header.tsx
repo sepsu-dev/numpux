@@ -29,7 +29,7 @@ export function SiteHeader({ name, showMenu = true }: SiteHeaderProps) {
           <div className="flex items-center gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl lime-glow-button text-primary-foreground font-semibold text-[13px] transition-transform active:scale-95 shadow-sm"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs transition-all hover:bg-primary/90 active:scale-98 shadow-2xs"
             >
               Get Started Free
             </Link>

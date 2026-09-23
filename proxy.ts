@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const secretKey = process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
+const secretKey = process.env.JWT_SECRET || process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
 const encodedKey = new TextEncoder().encode(secretKey);
 
 const PROTECTED_PREFIXES = ["/dashboard", "/tasks", "/projects"];

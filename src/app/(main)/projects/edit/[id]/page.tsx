@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Project } from "@/lib/types";
+import { apiFetch } from "@/lib/api-client";
 
 export default function EditProjectPage() {
     const router = useRouter();
@@ -22,12 +23,12 @@ export default function EditProjectPage() {
 
     useEffect(() => {
         if (!id) return;
-        fetch(`/api/projects/${id}`)
+        apiFetch(`/api/projects/${id}`)
             .then((res) => res.json())
             .then((res) => {
                 if (res.data) setProject(res.data);
             })
-            .catch(() => {})
+            .catch(() => { })
             .finally(() => setIsLoading(false));
     }, [id]);
 
@@ -36,12 +37,12 @@ export default function EditProjectPage() {
         const formData = new FormData(e.currentTarget);
         const title = formData.get("title") as string;
         const category = formData.get("category") as string;
-        const status = formData.get("status") as "Aktif" | "Perencanaan" | "Selesai";
+        const status = formData.get("status") as "Active" | "Planning" | "Completed";
         const description = formData.get("description") as string;
 
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/projects/${id}`, {
+            const res = await apiFetch(`/api/projects/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ title, category, status, description }),
@@ -66,71 +67,71 @@ export default function EditProjectPage() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-4">
-                <Link href="/projects" className="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors border border-border/40 cursor-pointer">
-                    <ArrowLeft size={20} />
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+            <div className="flex items-center gap-3">
+                <Link href="/projects" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs">
+                    <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tighter">Edit Project</h2>
-                    <p className="text-muted-foreground font-medium text-xs">Adjust initiative milestones, scope, and objectives.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit Project</h2>
+                    <p className="text-muted-foreground text-xs mt-0.5">Adjust initiative milestones, scope, and objectives.</p>
                 </div>
             </div>
 
-            <div className="bg-white border border-border/60 rounded-lg p-10 shadow-sm max-w-4xl">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="p-title" className="font-semibold text-xs text-foreground">Project Name</Label>
+            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-5">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="p-title" className="font-semibold text-xs text-foreground px-0.5">Project Name *</Label>
                             <Input
                                 id="p-title"
                                 name="title"
                                 defaultValue={project?.title || ""}
-                                className="h-11 text-sm rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5"
+                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 shadow-2xs"
                                 required
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="p-status" className="font-semibold text-xs text-foreground">Status</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="p-status" className="font-semibold text-xs text-foreground px-0.5">Status</Label>
                                 <select
                                     id="p-status"
                                     name="status"
-                                    defaultValue={project?.status || "Aktif"}
-                                    className="h-11 w-full rounded-lg border border-border bg-transparent px-3 text-sm focus:border-primary focus:outline-none font-medium text-foreground cursor-pointer"
+                                    defaultValue={project?.status || "Active"}
+                                    className="h-10 w-full rounded-xl border border-border bg-background/50 px-3 text-xs focus:border-primary focus:outline-none font-medium text-foreground cursor-pointer shadow-2xs"
                                 >
-                                    <option value="Aktif">Active</option>
-                                    <option value="Perencanaan">Planning</option>
-                                    <option value="Selesai">Completed</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Planning">Planning</option>
+                                    <option value="Completed">Completed</option>
                                 </select>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="p-category" className="font-semibold text-xs text-foreground">Category</Label>
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="p-category" className="font-semibold text-xs text-foreground px-0.5">Category</Label>
                                 <Input
                                     id="p-category"
                                     name="category"
                                     defaultValue={project?.category || ""}
-                                    className="h-11 text-sm rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5"
+                                    className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 shadow-2xs"
                                     required
                                 />
                             </div>
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground">Description & Objectives</Label>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground px-0.5">Description & Objectives</Label>
                             <Textarea
                                 id="p-desc"
                                 name="description"
                                 defaultValue={project?.description || ""}
-                                className="min-h-[120px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-sm text-foreground"
+                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs text-foreground bg-background/50 shadow-2xs"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6 border-t border-border/60 flex items-center justify-end gap-3">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="font-medium text-muted-foreground text-sm cursor-pointer">Cancel</Button>
-                        <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary text-primary-foreground font-semibold px-8 h-11 rounded-lg shadow-sm hover:shadow-none transition-all text-sm cursor-pointer">
+                    <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSaving} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
                             {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>

@@ -125,7 +125,20 @@ const landingData: LandingData = {
   ],
 };
 
-export async function GET() {
+import { validatePublicKey } from "@/lib/api-auth";
+
+export async function GET(request: Request) {
+  const { isValid } = validatePublicKey(request);
+  if (!isValid) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter.",
+      },
+      { status: 401 }
+    );
+  }
+
   return NextResponse.json({
     status: "success",
     data: landingData,
