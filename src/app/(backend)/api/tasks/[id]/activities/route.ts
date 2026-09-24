@@ -1,6 +1,11 @@
-import { NextResponse } from "next/server";
-import { listTaskActivities, getTask } from "@/lib/store";
 import { validateAdminAuth } from "@/lib/api-auth";
+import {
+  errorResponse,
+  internalServerErrorResponse,
+  notFoundResponse,
+  paginatedResponse,
+} from "@/lib/response";
+import { findTaskById, findTaskActivities } from "@/app/(backend)/api/tasks/query";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -9,32 +14,19 @@ interface Props {
 export async function GET(request: Request, { params }: Props) {
   const auth = await validateAdminAuth(request);
   if (!auth.isValid) {
-    return NextResponse.json(
-      { status: "error", message: auth.error },
-      { status: auth.statusCode || 401 }
-    );
+    return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
   const { id: taskId } = await params;
   try {
-    const task = await getTask(taskId, auth.user?.userId);
+    const task = await findTaskById(taskId, auth.user?.userId);
     if (!task) {
-      return NextResponse.json(
-        { status: "error", message: "Task not found or unauthorized" },
-        { status: 404 }
-      );
+      return notFoundResponse("Task not found or unauthorized");
     }
 
-    const activities = await listTaskActivities(taskId);
-    return NextResponse.json({
-      status: "success",
-      total: activities.length,
-      data: activities,
-    });
+    const activities = await findTaskActivities(taskId);
+    return paginatedResponse(activities, { total: activities.length });
   } catch (error: any) {
-    return NextResponse.json(
-      { status: "error", message: error?.message || "Failed to fetch activities" },
-      { status: 500 }
-    );
+    return internalServerErrorResponse(error?.message || "Failed to fetch activities");
   }
 }

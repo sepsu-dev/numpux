@@ -1,6 +1,14 @@
-import { NextResponse } from "next/server";
-import { getTask, updateTask, deleteTask } from "@/lib/store";
 import { validatePublicKey, validateAdminAuth, getOptionalAuthUser } from "@/lib/api-auth";
+import {
+  badRequestResponse,
+  errorResponse,
+  internalServerErrorResponse,
+  notFoundResponse,
+  successResponse,
+  unauthorizedResponse,
+} from "@/lib/response";
+import { updateTaskSchema } from "../schema";
+import { findTaskById, updateTaskById, deleteTaskById } from "../query";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -9,94 +17,69 @@ interface Props {
 export async function GET(request: Request, { params }: Props) {
   const { isValid } = validatePublicKey(request);
   if (!isValid) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter.",
-      },
-      { status: 401 }
+    return unauthorizedResponse(
+      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
     );
   }
 
   const authUser = await getOptionalAuthUser(request);
   const { id } = await params;
-  const task = await getTask(id, authUser?.userId);
+  const task = await findTaskById(id, authUser?.userId);
 
   if (!task) {
-    return NextResponse.json(
-      { status: "error", message: `Task #${id} not found` },
-      { status: 404 }
-    );
+    return notFoundResponse(`Task #${id} not found`);
   }
 
-  return NextResponse.json({
-    status: "success",
-    data: task,
-  });
+  return successResponse(task);
 }
 
 export async function PUT(request: Request, { params }: Props) {
   const auth = await validateAdminAuth(request);
   if (!auth.isValid) {
-    return NextResponse.json(
-      { status: "error", message: auth.error },
-      { status: auth.statusCode || 401 }
-    );
+    return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
   const { id } = await params;
   try {
     const body = await request.json();
-    const updated = await updateTask(id, body, auth.user?.userId);
+    const parsed = updateTaskSchema.safeParse(body);
 
-    if (!updated) {
-      return NextResponse.json(
-        { status: "error", message: `Task #${id} not found or unauthorized` },
-        { status: 404 }
+    if (!parsed.success) {
+      return badRequestResponse(
+        parsed.error.issues[0]?.message || "Invalid task update data",
+        parsed.error.flatten().fieldErrors
       );
     }
 
-    return NextResponse.json({
-      status: "success",
-      message: "Task updated successfully",
-      data: updated,
-    });
-  } catch {
-    return NextResponse.json(
-      { status: "error", message: "Failed to update task" },
-      { status: 500 }
-    );
+    const updated = await updateTaskById(id, parsed.data, auth.user?.userId);
+
+    if (!updated) {
+      return notFoundResponse(`Task #${id} not found or unauthorized`);
+    }
+
+    return successResponse(updated, "Task updated successfully");
+  } catch (error) {
+    console.error(`PUT /api/tasks/${id} error:`, error);
+    return internalServerErrorResponse("Failed to update task");
   }
 }
 
 export async function DELETE(request: Request, { params }: Props) {
   const auth = await validateAdminAuth(request);
   if (!auth.isValid) {
-    return NextResponse.json(
-      { status: "error", message: auth.error },
-      { status: auth.statusCode || 401 }
-    );
+    return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
   const { id } = await params;
   try {
-    const existing = await getTask(id, auth.user?.userId);
-    if (!existing) {
-      return NextResponse.json(
-        { status: "error", message: `Task #${id} not found or unauthorized` },
-        { status: 404 }
-      );
+    const deleted = await deleteTaskById(id, auth.user?.userId);
+    if (!deleted) {
+      return notFoundResponse(`Task #${id} not found or unauthorized`);
     }
 
-    await deleteTask(id, auth.user?.userId);
-    return NextResponse.json({
-      status: "success",
-      message: `Task #${id} deleted successfully`,
-    });
-  } catch {
-    return NextResponse.json(
-      { status: "error", message: "Failed to delete task" },
-      { status: 500 }
-    );
+    return successResponse({ id }, `Task #${id} deleted successfully`);
+  } catch (error) {
+    console.error(`DELETE /api/tasks/${id} error:`, error);
+    return internalServerErrorResponse("Failed to delete task");
   }
 }

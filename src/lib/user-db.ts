@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
-import { pool } from "./db";
-import type { User } from "./types";
+import { pool } from "@/db";
+import type { User } from "@/types";
 
 export function hashPassword(password: string): string {
   return createHash("sha256").update(password).digest("hex");
@@ -8,7 +8,7 @@ export function hashPassword(password: string): string {
 
 export async function findUserByEmail(email: string): Promise<(User & { password_hash: string }) | null> {
   const res = await pool.query(
-    "SELECT id, name, email, password_hash, created_at FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1",
+    "SELECT id, name, email, role, password_hash, created_at FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1",
     [email]
   );
   if (res.rows.length === 0) return null;
@@ -17,6 +17,7 @@ export async function findUserByEmail(email: string): Promise<(User & { password
     id: row.id,
     name: row.name,
     email: row.email,
+    role: row.role || "user",
     password_hash: row.password_hash,
     createdAt: row.created_at,
   };
@@ -24,7 +25,7 @@ export async function findUserByEmail(email: string): Promise<(User & { password
 
 export async function findUserById(id: string): Promise<User | null> {
   const res = await pool.query(
-    "SELECT id, name, email, created_at FROM users WHERE id = $1 LIMIT 1",
+    "SELECT id, name, email, role, created_at FROM users WHERE id = $1 LIMIT 1",
     [id]
   );
   if (res.rows.length === 0) return null;
@@ -33,19 +34,25 @@ export async function findUserById(id: string): Promise<User | null> {
     id: row.id,
     name: row.name,
     email: row.email,
+    role: row.role || "user",
     createdAt: row.created_at,
   };
 }
 
-export async function createUser(name: string, email: string, passwordPlain: string): Promise<User> {
+export async function createUser(
+  name: string,
+  email: string,
+  passwordPlain: string,
+  role: "admin" | "user" = "user"
+): Promise<User> {
   const id = crypto.randomUUID();
   const passwordHash = hashPassword(passwordPlain);
 
   const res = await pool.query(
-    `INSERT INTO users (id, name, email, password_hash)
-     VALUES ($1, $2, LOWER($3), $4)
-     RETURNING id, name, email, created_at`,
-    [id, name, email, passwordHash]
+    `INSERT INTO users (id, name, email, password_hash, role)
+     VALUES ($1, $2, LOWER($3), $4, $5)
+     RETURNING id, name, email, role, created_at`,
+    [id, name, email, passwordHash, role]
   );
 
   const row = res.rows[0];
@@ -53,6 +60,7 @@ export async function createUser(name: string, email: string, passwordPlain: str
     id: row.id,
     name: row.name,
     email: row.email,
+    role: row.role || "user",
     createdAt: row.created_at,
   };
 }

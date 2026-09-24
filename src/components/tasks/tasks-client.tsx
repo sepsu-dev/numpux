@@ -49,10 +49,17 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { deleteTaskAction, updateTaskStatusAction } from "@/lib/actions";
-import type { Task, Project, TaskStatus, TaskActivity } from "@/lib/types";
+import type { Task, Project, TaskStatus, TaskActivity } from "@/types";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { TaskFormModal } from "./task-form-modal";
@@ -345,30 +352,27 @@ export function TasksClient({
 
                     <div className="h-4 w-px bg-border/60 mx-1 hidden sm:block" />
 
-                    <span className="text-[11px] font-medium text-muted-foreground mr-1 hidden sm:inline">Status:</span>
-                    {[
-                        { key: "All", label: "All" },
-                        { key: "To Do", label: "To Do" },
-                        { key: "In Progress", label: "In Progress" },
-                        { key: "Review", label: "In Review" },
-                        { key: "Done", label: "Done" },
-                    ].map((s) => {
-                        const active = statusFilter === s.key;
-                        return (
-                            <button
-                                key={s.key}
-                                onClick={() => setStatusFilter(s.key)}
-                                className={cn(
-                                    "px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all cursor-pointer whitespace-nowrap",
-                                    active
-                                        ? "bg-foreground text-background border-foreground font-semibold shadow-xs"
-                                        : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted/50"
-                                )}
-                            >
-                                {s.label}
-                            </button>
-                        );
-                    })}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Status:</span>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="h-8 w-[130px] text-xs rounded-xl bg-card border-border/80">
+                                <SelectValue placeholder="All Status" />
+                            </SelectTrigger>
+                            <SelectContent className="text-xs">
+                                {[
+                                    { key: "All", label: "All Status" },
+                                    { key: "To Do", label: "To Do" },
+                                    { key: "In Progress", label: "In Progress" },
+                                    { key: "Review", label: "In Review" },
+                                    { key: "Done", label: "Done" },
+                                ].map((s) => (
+                                    <SelectItem key={s.key} value={s.key} className="text-xs cursor-pointer">
+                                        {s.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
 

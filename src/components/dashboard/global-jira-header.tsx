@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
 import { SettingsModal } from "@/components/dashboard/settings-modal";
@@ -35,25 +35,6 @@ export function GlobalJiraHeader() {
     useEffect(() => {
         fetchProjects();
     }, [pathname]);
-
-    // Keyboard shortcut 'c' to open Create Task modal (Jira signature shortcut)
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (
-                e.key.toLowerCase() === "c" &&
-                !["input", "textarea", "select"].includes(
-                    (e.target as HTMLElement)?.tagName?.toLowerCase()
-                ) &&
-                !(e.target as HTMLElement)?.isContentEditable
-            ) {
-                e.preventDefault();
-                setCreateModalOpen(true);
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, []);
 
     return (
         <>

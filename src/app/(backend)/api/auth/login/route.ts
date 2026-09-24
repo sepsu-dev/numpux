@@ -1,46 +1,47 @@
 import { NextResponse } from "next/server";
 import { createSession, encrypt } from "@/lib/session";
-import { initDb } from "@/lib/db";
-import { findUserByEmail, hashPassword } from "@/lib/user-db";
+import { initDb } from "@/db";
+import { hashPassword } from "@/lib/user-db";
+import { badRequestResponse, internalServerErrorResponse, unauthorizedResponse } from "@/lib/response";
+import { loginSchema } from "./schema";
+import { findUserForLogin } from "./query";
 
 export async function POST(request: Request) {
   try {
     await initDb();
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const parsed = loginSchema.safeParse(body);
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { status: "error", message: "Email and password are required" },
-        { status: 400 }
+    if (!parsed.success) {
+      return badRequestResponse(
+        parsed.error.issues[0]?.message || "Invalid input data",
+        parsed.error.flatten().fieldErrors
       );
     }
 
-    const user = await findUserByEmail(email.trim().toLowerCase());
+    const { email, password } = parsed.data;
+    const user = await findUserForLogin(email.trim().toLowerCase());
     if (!user) {
-      return NextResponse.json(
-        { status: "error", message: "Invalid email or password" },
-        { status: 401 }
-      );
+      return unauthorizedResponse("Invalid email or password");
     }
 
     const hashedInput = hashPassword(password);
     if (user.password_hash !== hashedInput) {
-      return NextResponse.json(
-        { status: "error", message: "Invalid email or password" },
-        { status: 401 }
-      );
+      return unauthorizedResponse("Invalid email or password");
     }
 
     const token = await encrypt({
       userId: user.id,
       email: user.email,
       name: user.name,
+      role: user.role || "user",
     });
 
     await createSession({
       userId: user.id,
       email: user.email,
       name: user.name,
+      role: user.role || "user",
     });
 
     return NextResponse.json({
@@ -51,14 +52,12 @@ export async function POST(request: Request) {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role || "user",
         token,
       },
     });
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { status: "error", message: "Failed to process login" },
-      { status: 500 }
-    );
+    return internalServerErrorResponse("Failed to process login");
   }
 }

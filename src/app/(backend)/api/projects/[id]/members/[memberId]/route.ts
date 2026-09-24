@@ -1,6 +1,13 @@
-import { NextResponse } from "next/server";
-import { removeProjectMember, getProject } from "@/lib/store";
 import { validateAdminAuth } from "@/lib/api-auth";
+import { findProjectById } from "@/app/(backend)/api/projects/query";
+import {
+  badRequestResponse,
+  errorResponse,
+  internalServerErrorResponse,
+  notFoundResponse,
+  successResponse,
+} from "@/lib/response";
+import { deleteProjectMember } from "../query";
 
 interface Props {
   params: Promise<{ id: string; memberId: string }>;
@@ -9,38 +16,23 @@ interface Props {
 export async function DELETE(request: Request, { params }: Props) {
   const auth = await validateAdminAuth(request);
   if (!auth.isValid) {
-    return NextResponse.json(
-      { status: "error", message: auth.error },
-      { status: auth.statusCode || 401 }
-    );
+    return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
   const { id: projectId, memberId } = await params;
   try {
-    const project = await getProject(projectId, auth.user?.userId);
+    const project = await findProjectById(projectId, auth.user?.userId);
     if (!project) {
-      return NextResponse.json(
-        { status: "error", message: "Project not found or unauthorized" },
-        { status: 404 }
-      );
+      return notFoundResponse("Project not found or unauthorized");
     }
 
-    const removed = await removeProjectMember(projectId, memberId);
+    const removed = await deleteProjectMember(projectId, memberId);
     if (!removed) {
-      return NextResponse.json(
-        { status: "error", message: "Cannot remove project owner or member not found" },
-        { status: 400 }
-      );
+      return badRequestResponse("Cannot remove project owner or member not found");
     }
 
-    return NextResponse.json({
-      status: "success",
-      message: "Member removed from project",
-    });
+    return successResponse({ memberId }, "Member removed from project");
   } catch (error: any) {
-    return NextResponse.json(
-      { status: "error", message: error?.message || "Failed to remove member" },
-      { status: 500 }
-    );
+    return internalServerErrorResponse(error?.message || "Failed to remove member");
   }
 }

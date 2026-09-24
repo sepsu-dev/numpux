@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { initDb } from "@/lib/db";
+import { initDb } from "@/db";
 import { findOrCreateOAuthUser } from "@/lib/user-db";
 import { createSession } from "@/lib/session";
 

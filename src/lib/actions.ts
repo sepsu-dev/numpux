@@ -4,10 +4,10 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSession, deleteSession, getSession } from "@/lib/session";
-import { initDb } from "@/lib/db";
+import { initDb } from "@/db";
 import { findUserByEmail, createUser, hashPassword } from "@/lib/user-db";
 import { createTask, createProject, deleteTask, deleteProject, updateTask } from "@/lib/store";
-import type { TaskStatus } from "@/lib/types";
+import type { TaskStatus } from "@/types";
 
 export type AuthState = { errors?: Record<string, string[]>; message?: string } | undefined;
 
@@ -31,7 +31,12 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
     return { message: "Invalid email or password" };
   }
 
-  await createSession({ userId: user.id, email: user.email, name: user.name });
+  await createSession({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || "user",
+  });
   redirect("/dashboard");
 }
 
@@ -57,7 +62,12 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   }
 
   const newUser = await createUser(name.trim(), email.trim().toLowerCase(), password);
-  await createSession({ userId: newUser.id, email: newUser.email, name: newUser.name });
+  await createSession({
+    userId: newUser.id,
+    email: newUser.email,
+    name: newUser.name,
+    role: newUser.role || "user",
+  });
   redirect("/dashboard");
 }
 

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Users, UserPlus, Trash, Shield, Crown, Eye, User as UserIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import type { Project, ProjectMember, ProjectMemberRole } from "@/lib/types";
+import type { Project, ProjectMember, ProjectMemberRole } from "@/types";
 import {
     DropdownMenu,
     DropdownMenuContent,

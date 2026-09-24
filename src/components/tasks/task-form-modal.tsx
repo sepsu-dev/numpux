@@ -22,7 +22,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { Task, Project, Priority, TaskStatus, ProjectMember, IssueType } from "@/lib/types";
+import type { Task, Project, Priority, TaskStatus, ProjectMember, IssueType } from "@/types";
 import { apiFetch } from "@/lib/api-client";
 import {
     getMasterIssueTypes,
@@ -270,51 +270,59 @@ export function TaskFormModal({
                             />
                         </div>
 
-                        {/* Project, Assignee & Due Date */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-foreground">
-                                    Project Workspace <span className="text-primary">*</span>
-                                </Label>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className={cn(
-                                                "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-xs font-medium cursor-pointer shadow-2xs",
-                                                !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border text-foreground"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-2 truncate">
-                                                <Briefcase size={13} className={activeProject ? "text-primary" : "text-muted-foreground"} />
-                                                <span className="truncate">
-                                                    {activeProject ? activeProject.title : "Select Project"}
-                                                </span>
-                                            </div>
-                                            <CaretDown size={13} className="text-muted-foreground opacity-70 shrink-0" />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-56 p-1 text-xs">
-                                        {projects.length === 0 ? (
-                                            <div className="p-2 text-center text-muted-foreground text-[11px]">
-                                                No projects found
-                                            </div>
-                                        ) : (
-                                            projects.map((p) => (
-                                                <DropdownMenuItem
-                                                    key={p.id}
-                                                    onClick={() => setSelectedProjectId(p.id)}
-                                                    className="flex items-center justify-between cursor-pointer py-2 px-2.5 rounded-lg"
-                                                >
-                                                    <span className="font-medium truncate">{p.title}</span>
-                                                    {selectedProjectId === p.id && <Check size={13} className="text-primary shrink-0" />}
-                                                </DropdownMenuItem>
-                                            ))
+                        {/* Project Workspace (Full Width) */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-foreground">
+                                Project Workspace <span className="text-primary">*</span>
+                            </Label>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-xs font-medium cursor-pointer shadow-2xs",
+                                            !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border text-foreground"
                                         )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
+                                    >
+                                        <div className="flex items-center gap-2 truncate">
+                                            <Briefcase size={14} className={activeProject ? "text-primary shrink-0" : "text-muted-foreground shrink-0"} />
+                                            <span className="truncate">
+                                                {activeProject ? activeProject.title : "Select Project"}
+                                            </span>
+                                        </div>
+                                        <CaretDown size={13} className="text-muted-foreground opacity-70 shrink-0 ml-2" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[280px] max-h-60 overflow-y-auto p-1 text-xs">
+                                    {projects.length === 0 ? (
+                                        <div className="p-2 text-center text-muted-foreground text-[11px]">
+                                            No projects found
+                                        </div>
+                                    ) : (
+                                        projects.map((p) => (
+                                            <DropdownMenuItem
+                                                key={p.id}
+                                                onClick={() => setSelectedProjectId(p.id)}
+                                                className="flex items-center justify-between cursor-pointer py-2 px-2.5 rounded-lg"
+                                            >
+                                                <div className="flex items-center gap-2 truncate pr-2">
+                                                    <span className="font-medium text-foreground">{p.title}</span>
+                                                    {p.category && (
+                                                        <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded border border-border/40 shrink-0">
+                                                            {p.category}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {selectedProjectId === p.id && <Check size={13} className="text-primary shrink-0" />}
+                                            </DropdownMenuItem>
+                                        ))
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
 
+                        {/* Assignee & Due Date (Side by side on sm) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                             {/* Assignee */}
                             <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">

@@ -1,5 +1,5 @@
-import type { Task, Project } from "@/lib/types";
-import { pool, initDb } from "@/lib/db";
+import type { Task, Project } from "@/types";
+import { pool, initDb } from "@/db";
 
 // Helper mapper from DB row to Project type
 function mapProjectRow(row: any): Project {
@@ -387,7 +387,7 @@ export async function deleteProject(id: string, userId?: string): Promise<void> 
 
 // ==================== PROJECT MEMBERS MANAGEMENT ====================
 
-import type { ProjectMember, ProjectMemberRole } from "@/lib/types";
+import type { ProjectMember, ProjectMemberRole } from "@/types";
 
 export async function listProjectMembers(projectId: string): Promise<ProjectMember[]> {
   await initDb();
@@ -464,7 +464,7 @@ export async function removeProjectMember(projectId: string, memberId: string): 
 
 // ==================== TASK AUDIT ACTIVITIES (HISTORY) ====================
 
-import type { TaskActivity } from "@/lib/types";
+import type { TaskActivity } from "@/types";
 
 export async function logTaskActivity(
   taskId: string,

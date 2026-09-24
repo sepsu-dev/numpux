@@ -17,6 +17,14 @@ import {
     User,
     ChartLineUp,
     SlidersHorizontal,
+    ListNumbers,
+    ShieldCheck,
+    UsersThree,
+    Tag,
+    CheckSquare,
+    Flag,
+    CaretRight,
+    Rows,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,8 +36,16 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubItem,
+    SidebarMenuSubButton,
     useSidebar,
 } from "@/components/ui/sidebar";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -38,11 +54,42 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Project } from "@/lib/types";
+import type { Project, MasterMenu } from "@/types";
 import { apiFetch } from "@/lib/api-client";
+import { useNavigationStore } from "@/stores/navigation-store";
 import { ProfileModal } from "./profile-modal";
 import { SettingsModal } from "./settings-modal";
 import { MasterDataModal } from "@/components/settings/master-data-modal";
+
+const MENU_ICONS: Record<string, any> = {
+    SquaresFour,
+    ListDashes,
+    ChartLineUp,
+    FolderSimple,
+    SlidersHorizontal,
+    Gear,
+    User,
+    Stack,
+    ListNumbers,
+    ShieldCheck,
+    UsersThree,
+    Tag,
+    CheckSquare,
+    Flag,
+    Rows,
+    board: SquaresFour,
+    backlog: ListDashes,
+    summary: ChartLineUp,
+    projects: FolderSimple,
+    master_menus: ListNumbers,
+    user_privileges: ShieldCheck,
+    project_privileges: UsersThree,
+    categories: Tag,
+    issue_types: CheckSquare,
+    priorities: Flag,
+    master_sections: Rows,
+    settings: SlidersHorizontal,
+};
 
 export function SidebarNav() {
     const pathname = usePathname();
@@ -51,10 +98,12 @@ export function SidebarNav() {
     const { isMobile } = useSidebar();
 
     const [projects, setProjects] = useState<Project[]>([]);
-    const [currentUser, setCurrentUser] = useState<{ name: string; email: string }>({
+    const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: "admin" | "user" }>({
         name: "User",
         email: "user@numpux.com",
+        role: "user",
     });
+    const { menus: dynamicMenus, sections: dynamicSections, fetchMenus } = useNavigationStore();
     const [profileModalOpen, setProfileModalOpen] = useState(false);
     const [settingsModalOpen, setSettingsModalOpen] = useState(false);
     const [projectSettingsModalOpen, setProjectSettingsModalOpen] = useState(false);
@@ -71,12 +120,15 @@ export function SidebarNav() {
             .catch(() => { });
     };
 
-    const fetchUser = () => {
+    const fetchUserAndPrivileges = () => {
+        fetchMenus();
         apiFetch("/api/auth/me")
             .then((res) => res.json())
             .then((res) => {
                 if (res.data && res.data.name) {
-                    setCurrentUser({ name: res.data.name, email: res.data.email });
+                    const role = res.data.role || "user";
+                    setCurrentUser({ name: res.data.name, email: res.data.email, role });
+                    fetchMenus();
                 }
             })
             .catch(() => { });
@@ -84,7 +136,14 @@ export function SidebarNav() {
 
     useEffect(() => {
         fetchProjects();
-        fetchUser();
+        fetchUserAndPrivileges();
+
+        const handleMasterUpdate = () => {
+            fetchProjects();
+            fetchUserAndPrivileges();
+        };
+        window.addEventListener("numpux_master_data_updated", handleMasterUpdate);
+        return () => window.removeEventListener("numpux_master_data_updated", handleMasterUpdate);
     }, [pathname]);
 
     // If user has only 1 project, auto-select it as effective project
@@ -232,121 +291,166 @@ export function SidebarNav() {
                 </DropdownMenu>
             </SidebarHeader>
 
-            {/* Jira-style Navigation Links */}
+            {/* Dynamic Navigation Links from Database */}
             <SidebarContent className="py-2 px-2 group-data-[collapsible=icon]:px-0 space-y-4 bg-card">
-                {/* PLANNING Section */}
-                <SidebarGroup>
-                    <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-3 mb-1 group-data-[collapsible=icon]:hidden">
-                        Planning
-                    </SidebarGroupLabel>
-                    <SidebarMenu>
-                        {/* 1. Active Kanban Board */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={isBoardActive}
-                                tooltip="Board"
-                                className={cn(
-                                    "h-9 px-3 rounded-xl transition-colors",
-                                    isBoardActive
-                                        ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                                )}
-                            >
-                                <Link href={boardHref}>
-                                    <SquaresFour size={16} weight={isBoardActive ? "bold" : "regular"} />
-                                    <span className="text-[13px]">Board</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                {dynamicSections.map((sectionName) => {
+                    const sectionMenus = dynamicMenus.filter(
+                        (m) => (m.section || "Planning").toLowerCase() === sectionName.toLowerCase()
+                    );
+                    if (sectionMenus.length === 0) return null;
 
-                        {/* 2. Backlog / Issue List */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={isBacklogActive}
-                                tooltip="Backlog"
-                                className={cn(
-                                    "h-9 px-3 rounded-xl transition-colors",
-                                    isBacklogActive
-                                        ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                                )}
-                            >
-                                <Link href={backlogHref}>
-                                    <ListDashes size={16} weight={isBacklogActive ? "bold" : "regular"} />
-                                    <span className="text-[13px]">Backlog</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                    // Separate top-level items and submenus
+                    const topLevelMenus = sectionMenus.filter((m) => !m.parentId);
+                    const subMenuMap = new Map<string, MasterMenu[]>();
+                    sectionMenus
+                        .filter((m) => !!m.parentId)
+                        .forEach((m) => {
+                            const list = subMenuMap.get(m.parentId!) || [];
+                            list.push(m);
+                            subMenuMap.set(m.parentId!, list);
+                        });
 
-                        {/* 3. Summary / Dashboard */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={isSummaryActive}
-                                tooltip="Summary"
-                                className={cn(
-                                    "h-9 px-3 rounded-xl transition-colors",
-                                    isSummaryActive
-                                        ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                                )}
-                            >
-                                <Link href={summaryHref}>
-                                    <ChartLineUp size={16} weight={isSummaryActive ? "bold" : "regular"} />
-                                    <span className="text-[13px]">Summary</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
+                    return (
+                        <SidebarGroup key={sectionName}>
+                            <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-3 mb-1 group-data-[collapsible=icon]:hidden">
+                                {sectionName}
+                            </SidebarGroupLabel>
+                            <SidebarMenu>
+                                {topLevelMenus.map((item) => {
+                                    const subItems = subMenuMap.get(item.id) || [];
+                                    const hasSubItems = subItems.length > 0;
 
-                {/* WORKSPACE Section */}
-                <SidebarGroup>
-                    <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-3 mb-1 group-data-[collapsible=icon]:hidden">
-                        Workspace
-                    </SidebarGroupLabel>
-                    <SidebarMenu>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={isProjectsActive}
-                                tooltip="Projects"
-                                className={cn(
-                                    "h-9 px-3 rounded-xl transition-colors",
-                                    isProjectsActive
-                                        ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                                )}
-                            >
-                                <Link href="/projects">
-                                    <FolderSimple size={16} weight={isProjectsActive ? "bold" : "regular"} />
-                                    <span className="text-[13px]">Projects</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                                    // Parse item path and query params for active state detection
+                                    const [itemPath, itemQuery] = item.path.split("?");
+                                    const currentTab = searchParams.get("tab");
+                                    const itemTab = itemQuery ? new URLSearchParams(itemQuery).get("tab") : null;
 
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={isSettingsActive}
-                                tooltip="Project Settings"
-                                className={cn(
-                                    "h-9 px-3 rounded-xl transition-colors",
-                                    isSettingsActive
-                                        ? "bg-primary/10 text-primary font-semibold"
-                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                                )}
-                            >
-                                <Link href="/master">
-                                    <SlidersHorizontal size={16} weight={isSettingsActive ? "bold" : "regular"} />
-                                    <span className="text-[13px]">Project Settings</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
+                                    let isItemActive = false;
+                                    if (itemTab) {
+                                        isItemActive = pathname === itemPath && (currentTab === itemTab || (!currentTab && itemTab === "menus"));
+                                    } else {
+                                        isItemActive =
+                                            pathname === itemPath ||
+                                            (itemPath !== "/" && pathname.startsWith(itemPath) && itemPath !== "/tasks");
+                                    }
+
+                                    const isSubActive = subItems.some((sub) => {
+                                        const [subPath] = sub.path.split("?");
+                                        return pathname === subPath || (subPath !== "/" && pathname.startsWith(subPath));
+                                    });
+
+                                    // Build dynamic href preserving project context for planning items
+                                    let href = item.path;
+                                    if (
+                                        effectiveProjectId &&
+                                        (item.path === "/tasks/kanban" || item.path === "/tasks" || item.path === "/dashboard")
+                                    ) {
+                                        href = `${item.path}?projectId=${effectiveProjectId}`;
+                                    }
+
+                                    // Resolve icon
+                                    const IconComponent = MENU_ICONS[item.icon || ""] || MENU_ICONS[item.code] || SquaresFour;
+
+                                    if (hasSubItems) {
+                                        return (
+                                            <Collapsible
+                                                key={item.id || item.code}
+                                                asChild
+                                                defaultOpen={isItemActive || isSubActive}
+                                                className="group/collapsible"
+                                            >
+                                                <SidebarMenuItem>
+                                                    <CollapsibleTrigger asChild>
+                                                        <SidebarMenuButton
+                                                            tooltip={item.name}
+                                                            className={cn(
+                                                                "h-9 px-3 rounded-xl transition-colors cursor-pointer w-full justify-between",
+                                                                (isItemActive || isSubActive)
+                                                                    ? "bg-primary/10 text-primary font-semibold"
+                                                                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <IconComponent size={16} weight={isItemActive || isSubActive ? "bold" : "regular"} />
+                                                                <span className="text-[13px]">{item.name}</span>
+                                                            </div>
+                                                            <CaretRight
+                                                                size={13}
+                                                                className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-muted-foreground/70"
+                                                            />
+                                                        </SidebarMenuButton>
+                                                    </CollapsibleTrigger>
+                                                    <CollapsibleContent>
+                                                        <SidebarMenuSub className="my-1 ml-4 border-l border-border/60 pl-2 space-y-0.5">
+                                                            {subItems.map((sub) => {
+                                                                const [subPath, subQuery] = sub.path.split("?");
+                                                                let subIsActive = false;
+                                                                if (subQuery) {
+                                                                    const subTab = new URLSearchParams(subQuery).get("tab");
+                                                                    subIsActive = pathname === subPath && currentTab === subTab;
+                                                                } else {
+                                                                    subIsActive = pathname === subPath || (subPath !== "/" && pathname.startsWith(subPath));
+                                                                }
+
+                                                                let subHref = sub.path;
+                                                                if (
+                                                                    effectiveProjectId &&
+                                                                    (sub.path === "/tasks/kanban" || sub.path === "/tasks" || sub.path === "/dashboard")
+                                                                ) {
+                                                                    subHref = `${sub.path}?projectId=${effectiveProjectId}`;
+                                                                }
+
+                                                                return (
+                                                                    <SidebarMenuSubItem key={sub.id || sub.code}>
+                                                                        <SidebarMenuSubButton
+                                                                            asChild
+                                                                            isActive={subIsActive}
+                                                                            className={cn(
+                                                                                "h-8 px-2.5 rounded-lg text-xs transition-colors",
+                                                                                subIsActive
+                                                                                    ? "bg-primary/15 text-primary font-semibold"
+                                                                                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                                                                            )}
+                                                                        >
+                                                                            <Link href={subHref}>
+                                                                                <span>{sub.name}</span>
+                                                                            </Link>
+                                                                        </SidebarMenuSubButton>
+                                                                    </SidebarMenuSubItem>
+                                                                );
+                                                            })}
+                                                        </SidebarMenuSub>
+                                                    </CollapsibleContent>
+                                                </SidebarMenuItem>
+                                            </Collapsible>
+                                        );
+                                    }
+
+                                    return (
+                                        <SidebarMenuItem key={item.id || item.code}>
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={isItemActive}
+                                                tooltip={item.name}
+                                                className={cn(
+                                                    "h-9 px-3 rounded-xl transition-colors",
+                                                    isItemActive
+                                                        ? "bg-primary/10 text-primary font-semibold"
+                                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Link href={href}>
+                                                    <IconComponent size={16} weight={isItemActive ? "bold" : "regular"} />
+                                                    <span className="text-[13px]">{item.name}</span>
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    );
+                                })}
+                            </SidebarMenu>
+                        </SidebarGroup>
+                    );
+                })}
             </SidebarContent>
 
             {/* Footer: User Profile */}
@@ -385,12 +489,12 @@ export function SidebarNav() {
                             Profile Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                            onClick={() => setProjectSettingsModalOpen(true)}
+                            onClick={() => router.push("/master/menus")}
                             className="cursor-pointer text-xs p-2 flex items-center justify-between"
                         >
                             <div className="flex items-center">
                                 <SlidersHorizontal className="w-3.5 h-3.5 mr-2 text-primary" />
-                                <span>Project Settings</span>
+                                <span>Master Settings</span>
                             </div>
                             <span className="text-[9px] uppercase tracking-wider font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
                                 Settings

@@ -11,6 +11,7 @@ export type SessionPayload = {
   userId: string;
   email: string;
   name: string;
+  role?: "admin" | "user";
 };
 
 export async function encrypt(payload: SessionPayload) {

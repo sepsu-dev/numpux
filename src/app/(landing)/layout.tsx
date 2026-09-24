@@ -1,5 +1,5 @@
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { Navbar } from "@/components/common/navbar";
+import { Footer } from "@/components/common/footer";
 
 export default function LandingLayout({
     children,
@@ -8,11 +8,11 @@ export default function LandingLayout({
 }) {
     return (
         <div className="flex flex-col min-h-screen bg-background text-foreground">
-            <SiteHeader name="Numpux" />
+            <Navbar name="Numpux" />
             <main className="flex-1">
                 {children}
             </main>
-            <SiteFooter author="Numpux Team" />
+            <Footer author="Numpux Team" />
         </div>
     );
 }

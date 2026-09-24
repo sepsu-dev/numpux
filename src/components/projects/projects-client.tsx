@@ -18,9 +18,16 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { deleteProjectAction } from "@/lib/actions";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/types";
 import { motion } from "framer-motion";
 import { ProjectFormModal } from "./project-form-modal";
 import { MasterDataModal } from "@/components/settings/master-data-modal";
@@ -159,28 +166,26 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                     )}
                 </div>
 
-                {categories.length > 2 && (
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                        <span className="text-[11px] font-medium text-muted-foreground mr-1 hidden sm:inline">Category:</span>
-                        {categories.map((cat) => {
-                            const active = selectedCategory === cat;
-                            return (
-                                <button
-                                    key={cat}
-                                    onClick={() => setSelectedCategory(cat)}
-                                    className={cn(
-                                        "px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all cursor-pointer whitespace-nowrap",
-                                        active
-                                            ? "bg-foreground text-background border-foreground font-semibold shadow-xs"
-                                            : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted/50"
-                                    )}
-                                >
-                                    {cat}
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Category:</span>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="h-8 w-[150px] text-xs rounded-xl bg-card border-border/80">
+                            <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent className="text-xs">
+                            <SelectItem value="All" className="text-xs cursor-pointer">
+                                All Categories
+                            </SelectItem>
+                            {categories
+                                .filter((c) => c !== "All")
+                                .map((cat) => (
+                                    <SelectItem key={cat} value={cat} className="text-xs cursor-pointer">
+                                        {cat}
+                                    </SelectItem>
+                                ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {/* Grid */}
@@ -199,6 +204,15 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                     <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
                                         {project.category || "General"}
                                     </span>
+                                    {project.userRole && (
+                                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                                            project.userRole === "Owner"
+                                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                                : "bg-muted text-muted-foreground border-border/60"
+                                        }`}>
+                                            {project.userRole}
+                                        </span>
+                                    )}
                                     {project.membersCount !== undefined && project.membersCount > 0 && (
                                         <button
                                             onClick={() => setMembersProject(project)}

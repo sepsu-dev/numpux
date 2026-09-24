@@ -1,26 +1,36 @@
-import { NextResponse } from "next/server";
-import { listProjects, createProject } from "@/lib/store";
 import { validatePublicKey, validateAdminAuth, getOptionalAuthUser } from "@/lib/api-auth";
+import {
+  badRequestResponse,
+  errorResponse,
+  internalServerErrorResponse,
+  paginatedResponse,
+  successResponse,
+  unauthorizedResponse,
+} from "@/lib/response";
+import { createProjectSchema, listProjectsQuerySchema } from "./schema";
+import { findProjects, insertProject } from "./query";
 
 export async function GET(request: Request) {
   const { isValid } = validatePublicKey(request);
   if (!isValid) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter.",
-      },
-      { status: 401 }
+    return unauthorizedResponse(
+      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
     );
   }
 
   const authUser = await getOptionalAuthUser(request);
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const category = searchParams.get("category");
+  const parsed = listProjectsQuerySchema.safeParse({
+    status: searchParams.get("status") || undefined,
+    category: searchParams.get("category") || undefined,
+  });
 
-  // Filter projects by authenticated user if logged in
-  let projects = await listProjects(authUser?.userId);
+  if (!parsed.success) {
+    return badRequestResponse("Invalid query parameters", parsed.error.flatten().fieldErrors);
+  }
+
+  const { status, category } = parsed.data;
+  let projects = await findProjects(authUser?.userId);
 
   if (status) {
     projects = projects.filter((p) => p.status.toLowerCase() === status.toLowerCase());
@@ -29,52 +39,30 @@ export async function GET(request: Request) {
     projects = projects.filter((p) => p.category.toLowerCase() === category.toLowerCase());
   }
 
-  return NextResponse.json({
-    status: "success",
-    total: projects.length,
-    data: projects,
-  });
+  return paginatedResponse(projects, { total: projects.length });
 }
 
 export async function POST(request: Request) {
   const auth = await validateAdminAuth(request);
   if (!auth.isValid) {
-    return NextResponse.json(
-      { status: "error", message: auth.error },
-      { status: auth.statusCode || 401 }
-    );
+    return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
   try {
     const body = await request.json();
+    const parsed = createProjectSchema.safeParse(body);
 
-    if (!body.title || !body.category) {
-      return NextResponse.json(
-        { status: "error", message: "Project title and category are required" },
-        { status: 400 }
+    if (!parsed.success) {
+      return badRequestResponse(
+        parsed.error.issues[0]?.message || "Invalid project input",
+        parsed.error.flatten().fieldErrors
       );
     }
 
-    const newProject = await createProject(
-      {
-        title: body.title,
-        category: body.category,
-        description: body.description || "",
-        status: body.status || "Planning",
-        tasks: 0,
-        progress: 0,
-      },
-      auth.user?.userId
-    );
-
-    return NextResponse.json(
-      { status: "success", message: "Project created successfully", data: newProject },
-      { status: 201 }
-    );
-  } catch {
-    return NextResponse.json(
-      { status: "error", message: "Failed to process project data" },
-      { status: 500 }
-    );
+    const newProject = await insertProject(parsed.data, auth.user?.userId);
+    return successResponse(newProject, "Project created successfully", { status: 201 });
+  } catch (error) {
+    console.error("POST /api/projects error:", error);
+    return internalServerErrorResponse("Failed to process project data");
   }
 }
