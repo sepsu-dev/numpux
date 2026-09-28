@@ -39,19 +39,22 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<ProjectMemberRole>("Member");
     const [isLoading, setIsLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchMembers = async () => {
         if (!project) return;
         setIsLoading(true);
+        setLoadError(null);
         try {
             const res = await apiFetch(`/api/projects/${project.id}/members`);
+            if (!res.ok) throw new Error("Member request failed");
             const data = await res.json();
             if (data.data) {
                 setMembers(data.data);
             }
         } catch {
-            toast.error("Failed to load members");
+            setLoadError("Members could not be loaded.");
         } finally {
             setIsLoading(false);
         }
@@ -172,6 +175,11 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                     <Skeleton className="h-12 w-full rounded-xl" />
                                     <Skeleton className="h-12 w-full rounded-xl" />
                                     <Skeleton className="h-12 w-full rounded-xl" />
+                                </div>
+                            ) : loadError ? (
+                                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-7 text-center text-xs text-muted-foreground">
+                                    <p>{loadError}</p>
+                                    <button type="button" onClick={fetchMembers} className="mt-2 font-medium text-primary hover:underline">Try again</button>
                                 </div>
                             ) : members.length === 0 ? (
                                 <div className="py-8 text-center text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-xl">

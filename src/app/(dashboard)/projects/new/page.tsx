@@ -63,7 +63,7 @@ export default function NewProjectPage() {
                 </Link>
                 <div>
                     <h2 className="text-2xl font-bold text-foreground tracking-tight">Create Project</h2>
-                    <p className="text-muted-foreground text-xs mt-0.5">Plan and organize your team's initiatives and sprints.</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">Give your work a clear place to start.</p>
                 </div>
             </div>
 
@@ -92,11 +92,11 @@ export default function NewProjectPage() {
                         </div>
 
                         <div className="grid gap-1.5">
-                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description & Objectives</Label>
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description</Label>
                             <Textarea
                                 id="description"
                                 name="description"
-                                placeholder="Key goals, deliverables, and milestones for this project..."
+                                placeholder="What is this project about?"
                                 className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs bg-background/50 transition-all text-foreground shadow-2xs"
                             />
                         </div>

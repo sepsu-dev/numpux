@@ -1,9 +1,46 @@
-import { createHash } from "crypto";
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "crypto";
 import { pool } from "@/db";
 import type { User } from "@/types";
 
 export function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
+  const salt = randomBytes(16);
+  const derivedKey = scryptSync(password, salt, 64);
+  return `scrypt$${salt.toString("hex")}$${derivedKey.toString("hex")}`;
+}
+
+export function verifyPassword(password: string, storedHash: string): boolean {
+  try {
+    if (storedHash.startsWith("scrypt$")) {
+      const [, saltHex, keyHex] = storedHash.split("$");
+      if (!saltHex || !keyHex) return false;
+      const expected = Buffer.from(keyHex, "hex");
+      const actual = scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
+      return expected.length === actual.length && timingSafeEqual(expected, actual);
+    }
+
+    // Backward compatibility for legacy, unsalted SHA-256 hashes.
+    const legacy = Buffer.from(createHash("sha256").update(password).digest("hex"), "utf8");
+    const expected = Buffer.from(storedHash, "utf8");
+    return legacy.length === expected.length && timingSafeEqual(legacy, expected);
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyAndUpgradePassword(
+  userId: string,
+  password: string,
+  storedHash: string
+): Promise<boolean> {
+  if (!verifyPassword(password, storedHash)) return false;
+
+  if (!storedHash.startsWith("scrypt$")) {
+    await pool.query(
+      "UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 AND password_hash = $3",
+      [hashPassword(password), userId, storedHash]
+    );
+  }
+  return true;
 }
 
 export async function findUserByEmail(email: string): Promise<(User & { password_hash: string }) | null> {
@@ -45,7 +82,7 @@ export async function createUser(
   passwordPlain: string,
   role: "admin" | "user" = "user"
 ): Promise<User> {
-  const id = crypto.randomUUID();
+  const id = randomUUID();
   const passwordHash = hashPassword(passwordPlain);
 
   const res = await pool.query(
@@ -73,12 +110,13 @@ export async function findOrCreateOAuthUser(name: string, email: string): Promis
       id: existing.id,
       name: existing.name,
       email: existing.email,
+      role: existing.role || "user",
       createdAt: existing.createdAt,
     };
   }
 
   // Generate secure random placeholder password hash for OAuth user
-  const randomPass = crypto.randomUUID() + "-" + Date.now();
+  const randomPass = randomUUID() + "-" + Date.now();
   return createUser(name || email.split("@")[0], normalizedEmail, randomPass);
 }
 
@@ -87,7 +125,7 @@ export async function updateUserProfile(id: string, name: string): Promise<User 
     `UPDATE users
      SET name = $1
      WHERE id = $2
-     RETURNING id, name, email, created_at`,
+     RETURNING id, name, email, role, created_at`,
     [name, id]
   );
   if (res.rows.length === 0) return null;
@@ -96,6 +134,7 @@ export async function updateUserProfile(id: string, name: string): Promise<User 
     id: row.id,
     name: row.name,
     email: row.email,
+    role: row.role || "user",
     createdAt: row.created_at,
   };
 }

@@ -6,8 +6,10 @@ import {
     Shield,
     Fire,
     Rocket,
-    Tag,
+    type Icon,
 } from "@phosphor-icons/react";
+
+export type IssueTypeIconName = "CheckSquare" | "Bug" | "BookmarkSimple" | "Lightning" | "Shield" | "Fire" | "Rocket";
 
 export interface MasterCategoryItem {
     id: string;
@@ -19,7 +21,7 @@ export interface MasterIssueTypeItem {
     id: string;
     name: string;
     description?: string;
-    iconName: "CheckSquare" | "Bug" | "BookmarkSimple" | "Lightning" | "Shield" | "Fire" | "Rocket";
+    iconName: IssueTypeIconName;
     colorClass: string; // e.g. "text-blue-500 bg-blue-500/10"
     isDefault?: boolean;
 }
@@ -48,7 +50,7 @@ export const DEFAULT_MASTER_MENU_ITEMS: MasterMenuItem[] = [
     { id: "master", label: "Project Settings", path: "/master", enabled: true, order: 4 },
 ];
 
-export const ISSUE_TYPE_ICONS: Record<string, any> = {
+export const ISSUE_TYPE_ICONS: Record<IssueTypeIconName, Icon> = {
     CheckSquare,
     Bug,
     BookmarkSimple,
@@ -143,13 +145,54 @@ const STORAGE_KEYS = {
     MENUS: "numpux_master_menus",
 };
 
+function reportStorageError(operation: string, error: unknown): void {
+    if (process.env.NODE_ENV !== "production") {
+        console.warn(`[master-data] ${operation} failed`, error);
+    }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+function isMenuItem(value: unknown): value is MasterMenuItem {
+    if (!isRecord(value)) return false;
+    return ["dashboard", "tasks", "projects", "master"].includes(String(value.id))
+        && typeof value.label === "string"
+        && typeof value.path === "string"
+        && typeof value.enabled === "boolean"
+        && typeof value.order === "number";
+}
+
+function isIssueTypeItem(value: unknown): value is MasterIssueTypeItem {
+    if (!isRecord(value)) return false;
+    return typeof value.id === "string"
+        && typeof value.name === "string"
+        && (value.description === undefined || typeof value.description === "string")
+        && typeof value.iconName === "string"
+        && value.iconName in ISSUE_TYPE_ICONS
+        && typeof value.colorClass === "string"
+        && (value.isDefault === undefined || typeof value.isDefault === "boolean");
+}
+
+function isPriorityItem(value: unknown): value is MasterPriorityItem {
+    if (!isRecord(value)) return false;
+    return typeof value.id === "string"
+        && typeof value.name === "string"
+        && typeof value.level === "number"
+        && Number.isFinite(value.level)
+        && typeof value.dotColor === "string"
+        && typeof value.badgeClass === "string"
+        && (value.isDefault === undefined || typeof value.isDefault === "boolean");
+}
+
 export function getMasterMenuItems(): MasterMenuItem[] {
     if (typeof window === "undefined") return DEFAULT_MASTER_MENU_ITEMS;
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.MENUS);
         if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
+            const parsed: unknown = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isMenuItem)) {
                 // Merge any newly introduced default menu items (e.g. "master") if not present
                 const existingIds = new Set(parsed.map((item: MasterMenuItem) => item.id));
                 const missingDefaults = DEFAULT_MASTER_MENU_ITEMS.filter((item) => !existingIds.has(item.id));
@@ -167,16 +210,22 @@ export function getMasterMenuItems(): MasterMenuItem[] {
                 return parsed;
             }
         }
-    } catch {}
+    } catch (error) {
+        reportStorageError("load menus", error);
+    }
     return DEFAULT_MASTER_MENU_ITEMS;
 }
 
-export function saveMasterMenuItems(items: MasterMenuItem[]): void {
-    if (typeof window === "undefined") return;
+export function saveMasterMenuItems(items: MasterMenuItem[]): boolean {
+    if (typeof window === "undefined") return false;
     try {
         localStorage.setItem(STORAGE_KEYS.MENUS, JSON.stringify(items));
         window.dispatchEvent(new Event("numpux_master_data_updated"));
-    } catch {}
+        return true;
+    } catch (error) {
+        reportStorageError("save menus", error);
+        return false;
+    }
 }
 
 export function getMasterCategories(): string[] {
@@ -184,22 +233,33 @@ export function getMasterCategories(): string[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
         if (raw) {
-            const parsed = JSON.parse(raw);
+            const parsed: unknown = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
                 // Support both array of strings and array of objects
-                return parsed.map((item) => (typeof item === "string" ? item : item.name));
+                const categories = parsed.map((item) => {
+                    if (typeof item === "string") return item;
+                    if (isRecord(item) && typeof item.name === "string") return item.name;
+                    return null;
+                });
+                if (categories.every((item): item is string => item !== null)) return categories;
             }
         }
-    } catch {}
+    } catch (error) {
+        reportStorageError("load categories", error);
+    }
     return DEFAULT_MASTER_CATEGORIES.map((c) => c.name);
 }
 
-export function saveMasterCategories(categories: string[]): void {
-    if (typeof window === "undefined") return;
+export function saveMasterCategories(categories: string[]): boolean {
+    if (typeof window === "undefined") return false;
     try {
         localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
         window.dispatchEvent(new Event("numpux_master_data_updated"));
-    } catch {}
+        return true;
+    } catch (error) {
+        reportStorageError("save categories", error);
+        return false;
+    }
 }
 
 export function getMasterIssueTypes(): MasterIssueTypeItem[] {
@@ -207,19 +267,25 @@ export function getMasterIssueTypes(): MasterIssueTypeItem[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.ISSUE_TYPES);
         if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            const parsed: unknown = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isIssueTypeItem)) return parsed;
         }
-    } catch {}
+    } catch (error) {
+        reportStorageError("load issue types", error);
+    }
     return DEFAULT_MASTER_ISSUE_TYPES;
 }
 
-export function saveMasterIssueTypes(items: MasterIssueTypeItem[]): void {
-    if (typeof window === "undefined") return;
+export function saveMasterIssueTypes(items: MasterIssueTypeItem[]): boolean {
+    if (typeof window === "undefined") return false;
     try {
         localStorage.setItem(STORAGE_KEYS.ISSUE_TYPES, JSON.stringify(items));
         window.dispatchEvent(new Event("numpux_master_data_updated"));
-    } catch {}
+        return true;
+    } catch (error) {
+        reportStorageError("save issue types", error);
+        return false;
+    }
 }
 
 export function getMasterPriorities(): MasterPriorityItem[] {
@@ -227,22 +293,28 @@ export function getMasterPriorities(): MasterPriorityItem[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.PRIORITIES);
         if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            const parsed: unknown = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isPriorityItem)) return parsed;
         }
-    } catch {}
+    } catch (error) {
+        reportStorageError("load priorities", error);
+    }
     return DEFAULT_MASTER_PRIORITIES;
 }
 
-export function saveMasterPriorities(items: MasterPriorityItem[]): void {
-    if (typeof window === "undefined") return;
+export function saveMasterPriorities(items: MasterPriorityItem[]): boolean {
+    if (typeof window === "undefined") return false;
     try {
         localStorage.setItem(STORAGE_KEYS.PRIORITIES, JSON.stringify(items));
         window.dispatchEvent(new Event("numpux_master_data_updated"));
-    } catch {}
+        return true;
+    } catch (error) {
+        reportStorageError("save priorities", error);
+        return false;
+    }
 }
 
-export function getIssueTypeConfig(typeId?: string): { icon: any; colorClass: string; name: string } {
+export function getIssueTypeConfig(typeId?: string): { icon: Icon; colorClass: string; name: string } {
     const types = getMasterIssueTypes();
     const found = types.find((t) => t.id.toLowerCase() === (typeId || "task").toLowerCase());
     if (found) {

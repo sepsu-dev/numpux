@@ -19,6 +19,7 @@ import {
 import type { Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function NewTaskPage() {
     const router = useRouter();
@@ -26,13 +27,21 @@ export default function NewTaskPage() {
     const prefillProjectId = searchParams.get("projectId") || "";
 
     const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+    const [projectsLoadError, setProjectsLoadError] = useState<string | null>(null);
+    const [projectsReloadKey, setProjectsReloadKey] = useState(0);
     const [selectedProjectId, setSelectedProjectId] = useState<string>(prefillProjectId);
     const [dueDate, setDueDate] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
+        setIsLoadingProjects(true);
+        setProjectsLoadError(null);
         apiFetch("/api/projects")
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) throw new Error("Project request failed");
+                return res.json();
+            })
             .then((res) => {
                 if (res.data) {
                     setProjects(res.data);
@@ -44,8 +53,12 @@ export default function NewTaskPage() {
                     }
                 }
             })
-            .catch(() => {});
-    }, [prefillProjectId]);
+            .catch(() => {
+                setProjects([]);
+                setProjectsLoadError("Projects could not be loaded.");
+            })
+            .finally(() => setIsLoadingProjects(false));
+    }, [prefillProjectId, projectsReloadKey]);
 
     const activeProject = projects.find((p) => p.id === selectedProjectId);
 
@@ -126,7 +139,7 @@ export default function NewTaskPage() {
                             <div className="grid gap-1.5">
                                 <div className="flex items-center justify-between">
                                     <Label className="font-semibold text-xs text-foreground px-0.5">Project *</Label>
-                                    {projects.length === 0 && (
+                                    {!isLoadingProjects && !projectsLoadError && projects.length === 0 && (
                                         <Link href="/projects/new" className="text-[11px] text-primary hover:underline font-semibold">
                                             + Create Project First
                                         </Link>
@@ -138,20 +151,34 @@ export default function NewTaskPage() {
                                             type="button"
                                             className={cn(
                                                 "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-foreground font-medium shadow-2xs text-xs cursor-pointer",
-                                                !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border"
+                                                isLoadingProjects || projectsLoadError
+                                                    ? "border-border text-muted-foreground"
+                                                    : !selectedProjectId
+                                                        ? "border-amber-300 text-muted-foreground"
+                                                        : "border-border"
                                             )}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Briefcase size={14} className={!activeProject ? "text-muted-foreground" : "text-primary"} />
                                                 <span className={!activeProject ? "text-muted-foreground" : "text-foreground font-medium"}>
-                                                    {activeProject ? activeProject.title : (projects.length === 0 ? "No Projects" : "Select Project")}
+                                                    {isLoadingProjects ? "Loading projects…" : projectsLoadError ? "Unable to load projects" : activeProject ? activeProject.title : (projects.length === 0 ? "No Projects" : "Select Project")}
                                                 </span>
                                             </div>
                                             <CaretDown size={13} className="text-muted-foreground opacity-60" />
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-[280px] p-1 text-xs">
-                                        {projects.map((project) => (
+                                        {isLoadingProjects ? (
+                                            <div className="space-y-2 p-2">
+                                                <Skeleton className="h-8 w-full" />
+                                                <Skeleton className="h-8 w-full" />
+                                            </div>
+                                        ) : projectsLoadError ? (
+                                            <div className="p-3 text-center text-[11px] text-muted-foreground">
+                                                <p>{projectsLoadError}</p>
+                                                <button type="button" onClick={() => setProjectsReloadKey((key) => key + 1)} className="mt-2 font-medium text-primary hover:underline">Try again</button>
+                                            </div>
+                                        ) : projects.map((project) => (
                                             <DropdownMenuItem
                                                 key={project.id}
                                                 className="cursor-pointer py-2 px-2.5 rounded-lg flex items-center justify-between"
@@ -208,8 +235,8 @@ export default function NewTaskPage() {
 
                     <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
                         <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSubmitting} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
-                            {isSubmitting ? "Creating..." : "Create Task"}
+                        <Button type="submit" size="sm" disabled={isSubmitting || isLoadingProjects || !!projectsLoadError} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
+                            {isLoadingProjects ? "Loading…" : isSubmitting ? "Creating..." : "Create Task"}
                         </Button>
                     </div>
                 </form>

@@ -14,13 +14,16 @@ interface NavigationState {
 export const useNavigationStore = create<NavigationState>((set, get) => ({
   menus: [],
   sections: [],
-  isLoading: false,
+  // The first render has no data yet, so it must be treated as loading rather
+  // than as a genuinely empty navigation.
+  isLoading: true,
   error: null,
 
   fetchMenus: async () => {
     set({ isLoading: true, error: null });
     try {
       const res = await apiFetch("/api/privileges?mode=my-menus");
+      if (!res.ok) throw new Error("Failed to fetch menus");
       const json = await res.json();
       if (json.data) {
         let menus: MasterMenu[] = [];
@@ -45,7 +48,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
         set({ menus, sections, isLoading: false });
       } else {
-        set({ isLoading: false });
+        set({ menus: [], sections: [], isLoading: false });
       }
     } catch (err: any) {
       set({ error: err.message || "Failed to fetch menus", isLoading: false });

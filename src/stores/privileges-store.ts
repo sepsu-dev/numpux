@@ -35,7 +35,9 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
   userPrivileges: [],
   projectGroups: [],
   projectPrivileges: [],
-  isLoading: false,
+  // Privilege pages render client-side. Start in loading state to avoid
+  // briefly showing an empty table before the first request begins.
+  isLoading: true,
   error: null,
 
   loadAllPrivileges: async () => {

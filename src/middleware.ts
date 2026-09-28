@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { getEncodedSessionSecret } from "@/lib/session-secret";
 
-const secretKey = process.env.JWT_SECRET || process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
-const encodedKey = new TextEncoder().encode(secretKey);
+const encodedKey = getEncodedSessionSecret();
 
 const PROTECTED_ROUTES = ["/dashboard", "/projects", "/tasks", "/master", "/profile"];
 const AUTH_ROUTES = ["/login", "/register"];

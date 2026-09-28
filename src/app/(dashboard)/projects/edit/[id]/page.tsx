@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import type { Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     Select,
     SelectContent,
@@ -26,18 +27,22 @@ export default function EditProjectPage() {
 
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [reloadKey, setReloadKey] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (!id) return;
+        setIsLoading(true);
+        setLoadError(null);
         apiFetch(`/api/projects/${id}`)
-            .then((res) => res.json())
+            .then((res) => { if (!res.ok) throw new Error("Project request failed"); return res.json(); })
             .then((res) => {
                 if (res.data) setProject(res.data);
             })
-            .catch(() => { })
+            .catch(() => setLoadError("Project details could not be loaded."))
             .finally(() => setIsLoading(false));
-    }, [id]);
+    }, [id, reloadKey]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -67,10 +72,19 @@ export default function EditProjectPage() {
 
     if (isLoading) {
         return (
-            <div className="py-20 text-center text-muted-foreground text-sm font-medium">
-                Loading project details...
+            <div className="max-w-3xl space-y-6" aria-label="Loading project details">
+                <div className="space-y-2"><Skeleton className="h-7 w-40" /><Skeleton className="h-3.5 w-72" /></div>
+                <div className="space-y-5 rounded-xl border border-border/60 bg-white p-6 sm:p-8">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-28 w-full" />
+                    <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+                </div>
             </div>
         );
+    }
+
+    if (loadError || !project) {
+        return <LoadFailure message={loadError || "Project not found."} onRetry={() => setReloadKey((key) => key + 1)} />;
     }
 
     return (
@@ -150,4 +164,8 @@ export default function EditProjectPage() {
             </div>
         </div>
     );
+}
+
+function LoadFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
+    return <div className="flex min-h-64 max-w-3xl items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center"><div><p className="text-sm font-medium text-foreground">{message}</p><p className="mt-1 text-xs text-muted-foreground">Check the project or try loading it again.</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Try again</button></div></div>;
 }

@@ -86,6 +86,7 @@ export async function GET(request: Request) {
       userId: user.id,
       email: user.email,
       name: user.name,
+      role: user.role || "user",
     });
 
     // 5. Redirect successfully to dashboard

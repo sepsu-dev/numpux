@@ -5,12 +5,12 @@ import { UsersThree, ArrowClockwise, MagnifyingGlass, X, Plus, Trash } from "@ph
 import { cn } from "@/lib/utils";
 import { usePrivilegesStore } from "@/stores/privileges-store";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -270,71 +270,83 @@ export default function ProjectPrivilegesPage() {
                 </table>
             </div>
 
-            {/* Create Project Role Modal */}
-            <Dialog open={isCreateRoleModalOpen} onOpenChange={setIsCreateRoleModalOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold text-foreground">
-                            Add Project Role
-                        </DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateRole} className="space-y-4 pt-2">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground">
-                                Role Code / Name
-                            </label>
-                            <input
-                                type="text"
-                                value={newRoleName}
-                                onChange={(e) => setNewRoleName(e.target.value)}
-                                placeholder="e.g. viewer, contributor, reviewer..."
-                                autoFocus
-                                required
-                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
+            {/* Create Project Role Sheet */}
+            <Sheet open={isCreateRoleModalOpen} onOpenChange={setIsCreateRoleModalOpen}>
+                <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+                    <form onSubmit={handleCreateRole} className="flex flex-col h-full">
+                        {/* Header */}
+                        <div className="px-6 py-5 border-b border-border/60">
+                            <SheetHeader className="p-0">
+                                <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
+                                    Add Project Role
+                                </SheetTitle>
+                                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
+                                    Define a new role for project-level access control and permissions.
+                                </SheetDescription>
+                            </SheetHeader>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground">
-                                Display Label
-                            </label>
-                            <input
-                                type="text"
-                                value={newRoleDisplayName}
-                                onChange={(e) => setNewRoleDisplayName(e.target.value)}
-                                placeholder="e.g. Project Viewer, External Auditor..."
-                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
+
+                        {/* Body */}
+                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-foreground">
+                                    Role Code / Name <span className="text-primary">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newRoleName}
+                                    onChange={(e) => setNewRoleName(e.target.value)}
+                                    placeholder="e.g. viewer, contributor, reviewer..."
+                                    autoFocus
+                                    required
+                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-foreground">
+                                    Display Label
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newRoleDisplayName}
+                                    onChange={(e) => setNewRoleDisplayName(e.target.value)}
+                                    placeholder="e.g. Project Viewer, External Auditor..."
+                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-foreground">
+                                    Description
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newRoleDescription}
+                                    onChange={(e) => setNewRoleDescription(e.target.value)}
+                                    placeholder="Brief description of member role scope..."
+                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground">
-                                Description
-                            </label>
-                            <input
-                                type="text"
-                                value={newRoleDescription}
-                                onChange={(e) => setNewRoleDescription(e.target.value)}
-                                placeholder="Brief description of member role scope..."
-                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                        <DialogFooter className="gap-2 pt-2">
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateRoleModalOpen(false)}
-                                className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-all"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+                                className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:scale-98 cursor-pointer transition-all shadow-xs"
                             >
                                 Save Role
                             </button>
-                        </DialogFooter>
+                        </div>
                     </form>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

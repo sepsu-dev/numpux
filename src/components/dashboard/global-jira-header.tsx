@@ -1,87 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-    Bell,
-    Gear,
-} from "@phosphor-icons/react";
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Bell, Gear, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import type { Project } from "@/types";
-import { apiFetch } from "@/lib/api-client";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
 import { SettingsModal } from "@/components/dashboard/settings-modal";
 
 export function GlobalJiraHeader() {
-    const pathname = usePathname();
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const activeProjectId = searchParams.get("projectId") || "";
+  const router = useRouter();
+  const activeProjectId = useSearchParams().get("projectId") || "";
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [createModalOpen, setCreateModalOpen] = useState(false);
-    const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  return (
+    <>
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border/70 bg-white px-4 sm:px-6">
+        <div className="flex items-center">
+          <SidebarTrigger className="cursor-pointer rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted" />
+        </div>
 
-    const fetchProjects = () => {
-        apiFetch("/api/projects")
-            .then((r) => r.json())
-            .then((res) => {
-                if (res.data) setProjects(res.data);
-            })
-            .catch(() => {});
-    };
+        <div className="flex items-center gap-1.5">
+          <button type="button" title="Notifications" onClick={() => toast.info("No unread notifications", { description: "Your workspace is up to date." })} className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Bell size={17} /></button>
+          <button type="button" title="Settings" onClick={() => setSettingsModalOpen(true)} className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Gear size={17} /></button>
+          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <button type="button" onClick={() => setCreateModalOpen(true)} className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-medium text-white transition-colors hover:bg-[#067a4b]"><Plus size={14} /><span className="hidden sm:inline">New task</span></button>
+        </div>
+      </header>
 
-    useEffect(() => {
-        fetchProjects();
-    }, [pathname]);
-
-    return (
-        <>
-            <header className="h-14 border-b border-border bg-card/95 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-30 gap-3">
-                {/* Left: Sidebar trigger */}
-                <div className="flex items-center gap-2">
-                    <SidebarTrigger className="text-muted-foreground hover:bg-muted transition-colors rounded-lg p-1.5 cursor-pointer" />
-                </div>
-
-                {/* Right: Notifications, Settings */}
-                <div className="flex items-center gap-2">
-                    <button
-                        title="Notifications"
-                        onClick={() =>
-                            toast.info("No unread notifications", {
-                                description: "You are all caught up across your sprint deliverables.",
-                            })
-                        }
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                    >
-                        <Bell size={16} />
-                    </button>
-
-                    <button
-                        title="Settings"
-                        onClick={() => setSettingsModalOpen(true)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                    >
-                        <Gear size={16} />
-                    </button>
-                </div>
-            </header>
-
-            {/* Global Task Creation Modal */}
-            <TaskFormModal
-                open={createModalOpen}
-                onOpenChange={setCreateModalOpen}
-                defaultProjectId={activeProjectId}
-                onSuccess={(newTask) => {
-                    toast.success(`Created ${newTask.key || "issue"} successfully!`);
-                    setCreateModalOpen(false);
-                    router.refresh();
-                }}
-            />
-
-            {/* Account Settings Modal */}
-            <SettingsModal open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
-        </>
-    );
+      <TaskFormModal open={createModalOpen} onOpenChange={setCreateModalOpen} defaultProjectId={activeProjectId} onSuccess={(newTask) => { toast.success(`Created ${newTask.key || "task"} successfully`); setCreateModalOpen(false); router.refresh(); }} />
+      <SettingsModal open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
+    </>
+  );
 }

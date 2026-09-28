@@ -112,8 +112,8 @@ export function VisualShowcase() {
                                 </div>
 
                                 {/* Explore Gradient Card */}
-                                <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-yellow-400 to-rose-400 text-white flex flex-col justify-between h-[85px] mb-4 shadow-sm">
-                                    <p className="text-[9px] font-bold leading-tight text-foreground">Explore interactive workflow playbooks</p>
+                                <div className="p-3.5 rounded-xl bg-[#eaf3ff] border border-[#b8d5ff] flex flex-col justify-between h-[85px] mb-4">
+                                    <p className="text-[9px] font-bold leading-tight text-[#153e70]">Explore interactive workflow playbooks</p>
                                     <button className="w-max px-2.5 py-1 rounded bg-stone-950 text-white text-[7px] font-semibold uppercase tracking-wider">
                                         Resources ↗
                                     </button>

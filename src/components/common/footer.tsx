@@ -1,24 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
 
-interface FooterProps {
-  author?: string;
-}
+interface FooterProps { author?: string }
 
 export function Footer({ author = "Numpux Team" }: FooterProps) {
   return (
-    <footer className="py-12 bg-background border-t border-border/60">
-      <div className="container max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo-v2.png" alt="Numpux Logo" width={28} height={28} />
-          <span className="text-sm font-bold tracking-tight text-foreground lowercase">
-            {author.replace(" Team", "").toLowerCase()}
-          </span>
-        </Link>
+    <footer className="border-t border-border/70 bg-[#f7f8f3]">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-7 sm:flex-row sm:px-8 lg:px-10">
+        <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo-v2.png" alt="Numpux" width={24} height={24} />
+            <span className="font-heading text-sm font-medium text-foreground">numpux</span>
+          </Link>
+          <span className="text-border">·</span>
+          <p className="text-[11px] text-muted-foreground">© {new Date().getFullYear()} {author}</p>
+        </div>
 
-        <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {author}. All rights reserved.
-        </p>
+        <div className="flex items-center gap-5 text-[11px] text-muted-foreground">
+          <Link href="/login" className="transition-colors hover:text-foreground">Sign in</Link>
+          <Link href="/register" className="transition-colors hover:text-foreground">Get started</Link>
+        </div>
       </div>
     </footer>
   );

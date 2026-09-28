@@ -253,7 +253,7 @@ export function TasksClient({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h2 className="text-xl font-bold tracking-tight text-foreground">Backlog</h2>
+                        <h2 className="text-xl font-bold tracking-tight text-foreground">Tasks</h2>
 
                         <span className="text-xs font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"}
@@ -261,8 +261,8 @@ export function TasksClient({
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
                         {activeProjectTitle
-                            ? `${activeProjectTitle} backlog issues`
-                            : "Prioritize, refine, and plan sprint deliverables."}
+                            ? `Tasks in ${activeProjectTitle}`
+                            : "Keep track of what needs to be done next."}
                     </p>
                 </div>
 

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import type { Task, Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EditTaskPage() {
     const router = useRouter();
@@ -27,13 +28,17 @@ export default function EditTaskPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [reloadKey, setReloadKey] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (!id) return;
+        setIsLoading(true);
+        setLoadError(null);
         Promise.all([
-            apiFetch(`/api/tasks/${id}`).then((r) => r.json()),
-            apiFetch("/api/projects").then((r) => r.json())
+            apiFetch(`/api/tasks/${id}`).then((r) => { if (!r.ok) throw new Error("Task request failed"); return r.json(); }),
+            apiFetch("/api/projects").then((r) => { if (!r.ok) throw new Error("Project request failed"); return r.json(); })
         ])
             .then(([taskRes, projectsRes]) => {
                 if (taskRes.data) {
@@ -44,9 +49,9 @@ export default function EditTaskPage() {
                     setProjects(projectsRes.data);
                 }
             })
-            .catch(() => {})
+            .catch(() => setLoadError("Task details could not be loaded."))
             .finally(() => setIsLoading(false));
-    }, [id]);
+    }, [id, reloadKey]);
 
     const activeProject = projects.find((p) => p.id === selectedProjectId);
 
@@ -95,10 +100,19 @@ export default function EditTaskPage() {
 
     if (isLoading) {
         return (
-            <div className="py-20 text-center text-muted-foreground text-sm font-medium">
-                Loading task details...
+            <div className="max-w-3xl space-y-6" aria-label="Loading task details">
+                <div className="space-y-2"><Skeleton className="h-7 w-36" /><Skeleton className="h-3.5 w-72" /></div>
+                <div className="space-y-5 rounded-xl border border-border/60 bg-white p-6 sm:p-8">
+                    <Skeleton className="h-10 w-full" />
+                    <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+                    <Skeleton className="h-28 w-full" />
+                </div>
             </div>
         );
+    }
+
+    if (loadError || !task) {
+        return <LoadFailure message={loadError || "Task not found."} onRetry={() => setReloadKey((key) => key + 1)} />;
     }
 
     return (
@@ -228,4 +242,8 @@ export default function EditTaskPage() {
             </div>
         </div>
     );
+}
+
+function LoadFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
+    return <div className="flex min-h-64 max-w-3xl items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center"><div><p className="text-sm font-medium text-foreground">{message}</p><p className="mt-1 text-xs text-muted-foreground">Check the task or try loading it again.</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Try again</button></div></div>;
 }

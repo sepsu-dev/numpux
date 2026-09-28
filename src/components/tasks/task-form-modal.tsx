@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Task, Project, Priority, TaskStatus, ProjectMember, IssueType } from "@/types";
 import { apiFetch } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     getMasterIssueTypes,
     getMasterPriorities,
@@ -55,8 +56,12 @@ export function TaskFormModal({
     const [masterPriorities, setMasterPriorities] = useState<MasterPriorityItem[]>([]);
 
     const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+    const [projectsLoadError, setProjectsLoadError] = useState<string | null>(null);
+    const [projectsReloadKey, setProjectsReloadKey] = useState(0);
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
     const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
     const [assigneeId, setAssigneeId] = useState<string>("");
     const [issueType, setIssueType] = useState<string>("Task");
@@ -77,6 +82,8 @@ export function TaskFormModal({
     // Fetch projects and current user when opened
     useEffect(() => {
         if (!open) return;
+        setIsLoadingProjects(true);
+        setProjectsLoadError(null);
         apiFetch("/api/auth/me")
             .then((r) => r.json())
             .then((res) => {
@@ -91,7 +98,10 @@ export function TaskFormModal({
             .catch(() => {});
 
         apiFetch("/api/projects")
-            .then((r) => r.json())
+            .then((r) => {
+                if (!r.ok) throw new Error("Project request failed");
+                return r.json();
+            })
             .then((res) => {
                 if (res.data) {
                     setProjects(res.data);
@@ -104,15 +114,22 @@ export function TaskFormModal({
                     }
                 }
             })
-            .catch(() => {});
-    }, [open, defaultProjectId, task]);
+            .catch(() => {
+                setProjects([]);
+                setProjectsLoadError("Projects could not be loaded.");
+            })
+            .finally(() => setIsLoadingProjects(false));
+    }, [open, defaultProjectId, task, projectsReloadKey]);
 
     // Fetch members whenever project changes
     useEffect(() => {
         if (!selectedProjectId) {
             setProjectMembers([]);
+            setIsLoadingMembers(false);
             return;
         }
+        setIsLoadingMembers(true);
+        setProjectMembers([]);
         apiFetch(`/api/projects/${selectedProjectId}/members`)
             .then((r) => r.json())
             .then((res) => {
@@ -120,7 +137,8 @@ export function TaskFormModal({
                     setProjectMembers(res.data);
                 }
             })
-            .catch(() => setProjectMembers([]));
+            .catch(() => setProjectMembers([]))
+            .finally(() => setIsLoadingMembers(false));
     }, [selectedProjectId]);
 
     // Populate fields when task changes
@@ -220,7 +238,7 @@ export function TaskFormModal({
                             <SheetDescription className="text-xs text-muted-foreground mt-0.5">
                                 {isEdit
                                     ? "Update task details, schedule, or project assignment."
-                                    : "Add a new task to your workspace sprint backlog."}
+                                    : "Add something you want to plan, track, or finish."}
                             </SheetDescription>
                         </SheetHeader>
                     </div>
@@ -273,7 +291,7 @@ export function TaskFormModal({
                         {/* Project Workspace (Full Width) */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-foreground">
-                                Project Workspace <span className="text-primary">*</span>
+                                Project <span className="text-primary">*</span>
                             </Label>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -281,20 +299,34 @@ export function TaskFormModal({
                                         type="button"
                                         className={cn(
                                             "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-xs font-medium cursor-pointer shadow-2xs",
-                                            !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border text-foreground"
+                                            isLoadingProjects || projectsLoadError
+                                                ? "border-border text-muted-foreground"
+                                                : !selectedProjectId
+                                                    ? "border-amber-300 text-muted-foreground"
+                                                    : "border-border text-foreground"
                                         )}
                                     >
                                         <div className="flex items-center gap-2 truncate">
                                             <Briefcase size={14} className={activeProject ? "text-primary shrink-0" : "text-muted-foreground shrink-0"} />
                                             <span className="truncate">
-                                                {activeProject ? activeProject.title : "Select Project"}
+                                                {isLoadingProjects ? "Loading projects…" : projectsLoadError ? "Unable to load projects" : activeProject ? activeProject.title : "Select Project"}
                                             </span>
                                         </div>
                                         <CaretDown size={13} className="text-muted-foreground opacity-70 shrink-0 ml-2" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[280px] max-h-60 overflow-y-auto p-1 text-xs">
-                                    {projects.length === 0 ? (
+                                    {isLoadingProjects ? (
+                                        <div className="space-y-2 p-2">
+                                            <Skeleton className="h-8 w-full" />
+                                            <Skeleton className="h-8 w-full" />
+                                        </div>
+                                    ) : projectsLoadError ? (
+                                        <div className="p-3 text-center text-[11px] text-muted-foreground">
+                                            <p>{projectsLoadError}</p>
+                                            <button type="button" onClick={() => setProjectsReloadKey((key) => key + 1)} className="mt-2 font-medium text-primary hover:underline">Try again</button>
+                                        </div>
+                                    ) : projects.length === 0 ? (
                                         <div className="p-2 text-center text-muted-foreground text-[11px]">
                                             No projects found
                                         </div>
@@ -347,16 +379,24 @@ export function TaskFormModal({
                                         >
                                             <div className="flex items-center gap-2 truncate">
                                                 <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-                                                    {activeAssignee ? activeAssignee.name.charAt(0).toUpperCase() : <UserIcon size={12} />}
+                                                    {isLoadingMembers ? <span className="h-2 w-2 animate-pulse rounded-full bg-primary/50" /> : activeAssignee ? activeAssignee.name.charAt(0).toUpperCase() : <UserIcon size={12} />}
                                                 </div>
                                                 <span className="truncate">
-                                                    {activeAssignee ? activeAssignee.name : "Unassigned"}
+                                                    {isLoadingMembers ? "Loading members…" : activeAssignee ? activeAssignee.name : "Unassigned"}
                                                 </span>
                                             </div>
                                             <CaretDown size={13} className="text-muted-foreground opacity-70 shrink-0" />
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-56 p-1 text-xs">
+                                        {isLoadingMembers && (
+                                            <div className="space-y-2 p-2">
+                                                <Skeleton className="h-9 w-full" />
+                                                <Skeleton className="h-9 w-full" />
+                                            </div>
+                                        )}
+                                        {!isLoadingMembers && (
+                                            <>
                                         <DropdownMenuItem
                                             onClick={() => setAssigneeId("")}
                                             className="flex items-center justify-between cursor-pointer py-2 px-2.5 rounded-lg text-muted-foreground"
@@ -405,6 +445,8 @@ export function TaskFormModal({
                                                     {assigneeId === m.userId && <Check size={13} className="text-primary shrink-0" />}
                                                 </DropdownMenuItem>
                                             ))}
+                                            </>
+                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -477,10 +519,10 @@ export function TaskFormModal({
                         <Button
                             type="submit"
                             size="sm"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isLoadingProjects || !!projectsLoadError}
                             className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs"
                         >
-                            {isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create Task"}
+                            {isLoadingProjects ? "Loading…" : isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create Task"}
                         </Button>
                     </div>
                 </form>

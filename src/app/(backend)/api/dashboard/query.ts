@@ -36,7 +36,7 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
           up: inProgressTasks > 0,
         },
         {
-          label: "Pending Backlog",
+          label: "To Do",
           value: String(pendingTasks),
           change: `${totalTasks} total tasks`,
           up: pendingTasks === 0,
@@ -124,7 +124,7 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
     }));
 
   const sprintProgress = {
-    sprintName: currentProject ? currentProject.title : (projects.length > 0 ? "All Projects Sprint" : "No Project"),
+    sprintName: currentProject ? currentProject.title : (projects.length > 0 ? "All projects" : "Overall progress"),
     percentage: completionPercentage,
     completedCount: completedTasks,
     totalCount: totalTasks,

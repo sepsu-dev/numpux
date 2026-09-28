@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { User, Lock, FloppyDisk, SpinnerGap, CheckCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
   const [name, setName] = useState("");
@@ -13,28 +14,32 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
+      setIsLoading(true);
+      setLoadError(null);
       try {
         const res = await apiFetch("/api/auth/me");
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data) {
-            setName(json.data.name || "");
-            setEmail(json.data.email || "");
-            setRole(json.data.role || "user");
-          }
+        if (!res.ok) throw new Error("Profile request failed");
+        const json = await res.json();
+        if (json.data) {
+          setName(json.data.name || "");
+          setEmail(json.data.email || "");
+          setRole(json.data.role || "user");
         }
       } catch (err) {
         console.error("Failed to load profile", err);
+        setLoadError("Your profile could not be loaded.");
       } finally {
         setIsLoading(false);
       }
     }
     loadProfile();
-  }, []);
+  }, [reloadKey]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,10 +94,20 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <SpinnerGap className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="mx-auto max-w-2xl space-y-6" aria-label="Loading profile">
+        <div className="space-y-2"><Skeleton className="h-7 w-40" /><Skeleton className="h-4 w-72" /></div>
+        <div className="space-y-5 rounded-xl border border-border/60 bg-white p-6">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-32" />
+        </div>
       </div>
     );
+  }
+
+  if (loadError) {
+    return <LoadFailure message={loadError} onRetry={() => setReloadKey((key) => key + 1)} />;
   }
 
   return (
@@ -210,4 +225,8 @@ export default function ProfilePage() {
       </div>
     </div>
   );
+}
+
+function LoadFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return <div className="mx-auto flex min-h-64 max-w-2xl items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center"><div><p className="text-sm font-medium text-foreground">{message}</p><p className="mt-1 text-xs text-muted-foreground">Check your connection and try again.</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Try again</button></div></div>;
 }

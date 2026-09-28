@@ -60,6 +60,7 @@ import { useNavigationStore } from "@/stores/navigation-store";
 import { ProfileModal } from "./profile-modal";
 import { SettingsModal } from "./settings-modal";
 import { MasterDataModal } from "@/components/settings/master-data-modal";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MENU_ICONS: Record<string, any> = {
     SquaresFour,
@@ -98,12 +99,20 @@ export function SidebarNav() {
     const { isMobile } = useSidebar();
 
     const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+    const [isLoadingUser, setIsLoadingUser] = useState(true);
     const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: "admin" | "user" }>({
         name: "User",
         email: "user@numpux.com",
         role: "user",
     });
-    const { menus: dynamicMenus, sections: dynamicSections, fetchMenus } = useNavigationStore();
+    const {
+        menus: dynamicMenus,
+        sections: dynamicSections,
+        isLoading: isLoadingNavigation,
+        error: navigationError,
+        fetchMenus,
+    } = useNavigationStore();
     const [profileModalOpen, setProfileModalOpen] = useState(false);
     const [settingsModalOpen, setSettingsModalOpen] = useState(false);
     const [projectSettingsModalOpen, setProjectSettingsModalOpen] = useState(false);
@@ -112,26 +121,29 @@ export function SidebarNav() {
     const activeProjectId = searchParams.get("projectId") || "";
 
     const fetchProjects = () => {
+        setIsLoadingProjects(true);
         apiFetch("/api/projects")
             .then((res) => res.json())
             .then((res) => {
                 if (res.data) setProjects(res.data);
             })
-            .catch(() => { });
+            .catch(() => setProjects([]))
+            .finally(() => setIsLoadingProjects(false));
     };
 
     const fetchUserAndPrivileges = () => {
         fetchMenus();
+        setIsLoadingUser(true);
         apiFetch("/api/auth/me")
             .then((res) => res.json())
             .then((res) => {
                 if (res.data && res.data.name) {
                     const role = res.data.role || "user";
                     setCurrentUser({ name: res.data.name, email: res.data.email, role });
-                    fetchMenus();
                 }
             })
-            .catch(() => { });
+            .catch(() => { })
+            .finally(() => setIsLoadingUser(false));
     };
 
     useEffect(() => {
@@ -144,7 +156,7 @@ export function SidebarNav() {
         };
         window.addEventListener("numpux_master_data_updated", handleMasterUpdate);
         return () => window.removeEventListener("numpux_master_data_updated", handleMasterUpdate);
-    }, [pathname]);
+    }, []);
 
     // If user has only 1 project, auto-select it as effective project
     const hasSingleProject = projects.length === 1;
@@ -194,36 +206,40 @@ export function SidebarNav() {
     return (
         <>
             {/* Header: Project Context Switcher (Jira Project sidebar header) */}
-            <SidebarHeader className="h-14 border-b border-border bg-card px-3 py-0 flex flex-row items-center justify-between">
+            <SidebarHeader className="flex h-16 flex-row items-center justify-between border-b border-border bg-[#fbfcf9] px-3 py-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-muted/80 transition-all text-left outline-none border border-transparent hover:border-border/50 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:justify-center">
-                            <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs font-bold text-xs">
-                                {activeProject ? (
-                                    activeProject.title.slice(0, 1).toUpperCase()
-                                ) : (
-                                    <Stack className="w-4 h-4 text-primary-foreground" />
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                                <p className="text-xs font-bold text-foreground truncate leading-tight">
-                                    {activeProject ? activeProject.title : "All Projects"}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-semibold">
-                                    {activeProject ? (activeProject.category || "Software Project") : "Workspace"}
-                                </p>
-                            </div>
-                            <CaretUpDown className="w-3.5 h-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden shrink-0" />
+                        <button disabled={isLoadingProjects} className="flex w-full items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 text-left outline-none transition-colors hover:border-border hover:bg-white disabled:cursor-wait group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
+                            {isLoadingProjects ? (
+                                <>
+                                    <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
+                                    <div className="min-w-0 flex-1 space-y-1.5 group-data-[collapsible=icon]:hidden">
+                                        <Skeleton className="h-3 w-24" />
+                                        <Skeleton className="h-2.5 w-16" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-medium text-white">
+                                        {activeProject ? activeProject.title.slice(0, 1).toUpperCase() : <Stack className="h-4 w-4 text-primary-foreground" />}
+                                    </div>
+                                    <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                                        <p className="truncate text-xs font-medium leading-tight text-foreground">{activeProject ? activeProject.title : "All Projects"}</p>
+                                        <p className="truncate text-[10px] text-muted-foreground">{activeProject ? (activeProject.category || "Software Project") : "Workspace"}</p>
+                                    </div>
+                                    <CaretUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                                </>
+                            )}
                         </button>
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent
-                        className="w-64 p-1.5 rounded-xl border border-border shadow-lg bg-card"
+                        className="w-64 rounded-md border border-border bg-white p-1.5 shadow-sm"
                         align="start"
                         side={isMobile ? "bottom" : "right"}
                         sideOffset={8}
                     >
-                        <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1.5">
+                        <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium text-muted-foreground">
                             Recent Projects
                         </DropdownMenuLabel>
 
@@ -259,7 +275,7 @@ export function SidebarNav() {
                                     )}
                                 >
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="w-6 h-6 rounded-md bg-primary/15 text-primary flex items-center justify-center font-bold text-[11px] shrink-0">
+                                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-medium text-primary">
                                             {proj.title.slice(0, 1).toUpperCase()}
                                         </div>
                                         <div className="min-w-0">
@@ -292,8 +308,27 @@ export function SidebarNav() {
             </SidebarHeader>
 
             {/* Dynamic Navigation Links from Database */}
-            <SidebarContent className="py-2 px-2 group-data-[collapsible=icon]:px-0 space-y-4 bg-card">
-                {dynamicSections.map((sectionName) => {
+            <SidebarContent className="space-y-4 bg-[#fbfcf9] px-2 py-3 group-data-[collapsible=icon]:px-0">
+                {isLoadingNavigation && dynamicMenus.length === 0 ? (
+                    <div className="space-y-5 px-2 py-1 group-data-[collapsible=icon]:px-1">
+                        {[0, 1].map((group) => (
+                            <div key={group} className="space-y-2.5">
+                                <Skeleton className="ml-1 h-2.5 w-16 group-data-[collapsible=icon]:hidden" />
+                                {[0, 1, 2].map((item) => (
+                                    <div key={item} className="flex h-9 items-center gap-2.5 px-2">
+                                        <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                                        <Skeleton className="h-3 flex-1 group-data-[collapsible=icon]:hidden" />
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                ) : navigationError && dynamicMenus.length === 0 ? (
+                    <div className="mx-2 rounded-lg border border-dashed border-border px-3 py-4 text-center group-data-[collapsible=icon]:hidden">
+                        <p className="text-[11px] text-muted-foreground">Navigation could not be loaded.</p>
+                        <button type="button" onClick={() => fetchMenus()} className="mt-2 text-[11px] font-medium text-primary hover:underline">Try again</button>
+                    </div>
+                ) : dynamicSections.map((sectionName) => {
                     const sectionMenus = dynamicMenus.filter(
                         (m) => (m.section || "Planning").toLowerCase() === sectionName.toLowerCase()
                     );
@@ -312,7 +347,7 @@ export function SidebarNav() {
 
                     return (
                         <SidebarGroup key={sectionName}>
-                            <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-3 mb-1 group-data-[collapsible=icon]:hidden">
+                            <SidebarGroupLabel className="mb-1 px-3 text-[10px] font-medium text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
                                 {sectionName}
                             </SidebarGroupLabel>
                             <SidebarMenu>
@@ -364,10 +399,10 @@ export function SidebarNav() {
                                                         <SidebarMenuButton
                                                             tooltip={item.name}
                                                             className={cn(
-                                                                "h-9 px-3 rounded-xl transition-colors cursor-pointer w-full justify-between",
+                                                                "h-9 w-full justify-between rounded-md px-3 transition-colors cursor-pointer",
                                                                 (isItemActive || isSubActive)
-                                                                    ? "bg-primary/10 text-primary font-semibold"
-                                                                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                                                    ? "bg-[#dff5e9] text-[#076b43] font-semibold"
+                                                                    : "text-muted-foreground hover:bg-white hover:text-foreground"
                                                             )}
                                                         >
                                                             <div className="flex items-center gap-2">
@@ -406,10 +441,10 @@ export function SidebarNav() {
                                                                             asChild
                                                                             isActive={subIsActive}
                                                                             className={cn(
-                                                                                "h-8 px-2.5 rounded-lg text-xs transition-colors",
+                                                                                "h-8 rounded-md px-2.5 text-xs transition-colors",
                                                                                 subIsActive
-                                                                                    ? "bg-primary/15 text-primary font-semibold"
-                                                                                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                                                                                    ? "bg-[#dff5e9] text-[#076b43] font-semibold"
+                                                                                    : "text-muted-foreground hover:bg-white hover:text-foreground"
                                                                             )}
                                                                         >
                                                                             <Link href={subHref}>
@@ -433,10 +468,10 @@ export function SidebarNav() {
                                                 isActive={isItemActive}
                                                 tooltip={item.name}
                                                 className={cn(
-                                                    "h-9 px-3 rounded-xl transition-colors",
+                                                    "h-9 rounded-md px-3 transition-colors",
                                                     isItemActive
-                                                        ? "bg-primary/10 text-primary font-semibold"
-                                                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                                        ? "bg-[#dff5e9] text-[#076b43] font-semibold"
+                                                        : "text-muted-foreground hover:bg-white hover:text-foreground"
                                                 )}
                                             >
                                                 <Link href={href}>
@@ -454,24 +489,34 @@ export function SidebarNav() {
             </SidebarContent>
 
             {/* Footer: User Profile */}
-            <SidebarFooter className="p-2 border-t border-border bg-card">
+            <SidebarFooter className="border-t border-border bg-[#fbfcf9] p-2">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/80 transition-all text-left outline-none group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:justify-center">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 border border-primary/20">
-                                {currentUser.name
-                                    ? currentUser.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-                                    : "U"}
-                            </div>
-                            <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                                <p className="text-xs font-semibold text-foreground truncate leading-tight">{currentUser.name}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">{currentUser.email}</p>
-                            </div>
-                            <CaretUpDown className="w-4 h-4 text-muted-foreground group-data-[collapsible=icon]:hidden shrink-0" />
+                        <button disabled={isLoadingUser} className="flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-white disabled:cursor-wait group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
+                            {isLoadingUser ? (
+                                <>
+                                    <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
+                                    <div className="min-w-0 flex-1 space-y-1.5 group-data-[collapsible=icon]:hidden">
+                                        <Skeleton className="h-3 w-24" />
+                                        <Skeleton className="h-2.5 w-32" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#d7e4f5] bg-[#f1f6fc] text-xs font-medium text-[#4e78aa]">
+                                        {currentUser.name ? currentUser.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() : "U"}
+                                    </div>
+                                    <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                                        <p className="truncate text-xs font-semibold leading-tight text-foreground">{currentUser.name}</p>
+                                        <p className="truncate text-[10px] text-muted-foreground">{currentUser.email}</p>
+                                    </div>
+                                    <CaretUpDown className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                                </>
+                            )}
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        className="w-56 p-1.5 rounded-xl border border-border shadow-lg bg-card"
+                        className="w-56 rounded-md border border-border bg-white p-1.5 shadow-sm"
                         align="start"
                         side={isMobile ? "top" : "right"}
                         sideOffset={8}
@@ -496,7 +541,7 @@ export function SidebarNav() {
                                 <SlidersHorizontal className="w-3.5 h-3.5 mr-2 text-primary" />
                                 <span>Master Settings</span>
                             </div>
-                            <span className="text-[9px] uppercase tracking-wider font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
+                            <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[9px] font-medium text-primary">
                                 Settings
                             </span>
                         </DropdownMenuItem>
@@ -510,7 +555,7 @@ export function SidebarNav() {
                         <DropdownMenuSeparator className="my-1 bg-border/60" />
                         <DropdownMenuItem
                             onClick={handleLogout}
-                            className="cursor-pointer text-xs p-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                            className="cursor-pointer p-2 text-xs text-red-500 hover:bg-red-50 hover:text-red-600"
                         >
                             <SignOut className="w-3.5 h-3.5 mr-2" />
                             Sign Out

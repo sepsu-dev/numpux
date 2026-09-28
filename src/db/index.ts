@@ -402,13 +402,21 @@ export async function initDb() {
     // Seed default Admin User (admin@numpux.com / admin123)
     const ADMIN_USER_ID = "00000000-0000-0000-0000-000000000001";
     // SHA-256 for 'admin123'
-    const ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa82280f1a30e1ea6";
+    const ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+    const INVALID_LEGACY_ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa82280f1a30e1ea6";
 
     await client.query(`
       INSERT INTO users (id, name, email, password_hash, role)
       VALUES ('${ADMIN_USER_ID}', 'Admin Numpux', 'admin@numpux.com', '${ADMIN_PASS_HASH}', 'admin')
-      ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = 'admin';
+      ON CONFLICT (email) DO UPDATE SET role = 'admin';
     `);
+
+    // Repair only the invalid hash shipped by older versions. A successful login
+    // will transparently migrate this legacy SHA-256 value to scrypt.
+    await client.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2 AND password_hash = $3",
+      [ADMIN_PASS_HASH, ADMIN_USER_ID, INVALID_LEGACY_ADMIN_PASS_HASH]
+    );
 
     // Backfill any existing projects/tasks without user_id to Admin
     await client.query(`

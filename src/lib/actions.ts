@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { initDb } from "@/db";
-import { findUserByEmail, createUser, hashPassword } from "@/lib/user-db";
+import { findUserByEmail, createUser, verifyAndUpgradePassword } from "@/lib/user-db";
 import { createTask, createProject, deleteTask, deleteProject, updateTask } from "@/lib/store";
 import type { TaskStatus } from "@/types";
 
@@ -27,7 +27,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   const { email, password } = validated.data;
   const user = await findUserByEmail(email.trim().toLowerCase());
 
-  if (!user || user.password_hash !== hashPassword(password)) {
+  if (!user || !(await verifyAndUpgradePassword(user.id, password, user.password_hash))) {
     return { message: "Invalid email or password" };
   }
 

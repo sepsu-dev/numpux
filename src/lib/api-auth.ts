@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { getEncodedSessionSecret } from "@/lib/session-secret";
 
 // Dynamic resolver to read environment variables at runtime
 export function getValidPublicKeys(): Set<string> {
@@ -9,9 +10,6 @@ export function getValidPublicKeys(): Set<string> {
 
 // Deprecated alias for backward-compatibility
 export const getAdminPublicKeys = getValidPublicKeys;
-
-const getSecretKey = () => process.env.JWT_SECRET || process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
-const getEncodedKey = () => new TextEncoder().encode(getSecretKey());
 
 export type AuthResult =
   | {
@@ -87,7 +85,7 @@ export async function getOptionalAuthUser(request: Request | NextRequest): Promi
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getEncodedKey(), {
+    const { payload } = await jwtVerify(token, getEncodedSessionSecret(), {
       algorithms: ["HS256"],
     });
 

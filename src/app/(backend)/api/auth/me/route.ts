@@ -7,7 +7,7 @@ import {
   successResponse,
   unauthorizedResponse,
 } from "@/lib/response";
-import { hashPassword } from "@/lib/user-db";
+import { verifyAndUpgradePassword } from "@/lib/user-db";
 import { updateProfileSchema } from "./schema";
 import {
   findUserWithPassword,
@@ -61,7 +61,7 @@ export async function PUT(request: Request) {
       }
 
       const existingUser = await findUserWithPassword(user.email);
-      if (!existingUser || existingUser.password_hash !== hashPassword(currentPassword)) {
+      if (!existingUser || !(await verifyAndUpgradePassword(existingUser.id, currentPassword, existingUser.password_hash))) {
         return badRequestResponse("Current password is incorrect.");
       }
 

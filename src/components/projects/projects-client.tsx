@@ -122,7 +122,7 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Manage your team projects, boards, and deliverables.
+                        Keep personal and shared work organized in one place.
                     </p>
                 </div>
 
@@ -306,7 +306,7 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                         <Plus size={16} className="stroke-[2.5]" />
                     </div>
                     <h4 className="text-xs font-semibold text-foreground">Create New Project</h4>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Add a new initiative workspace.</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Give your work a clear place to start.</p>
                 </button>
             </div>
 
@@ -351,7 +351,7 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                         </div>
                         <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete Project?</DialogTitle>
                         <DialogDescription className="text-xs text-muted-foreground">
-                            All tasks and deliverables associated with this project will be deleted. This action cannot be undone.
+                            All tasks in this project will also be deleted. This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-4 flex gap-2">

@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Fredoka } from "next/font/google";
+import { Fredoka, Inter } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
 import "@/app/globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const fredoka = Fredoka({
   subsets: ["latin"],
   variable: "--font-fredoka",
@@ -18,34 +16,20 @@ const fredoka = Fredoka({
 export function generateMetadata(): Metadata {
   return {
     title: {
-      default: "Numpux — Modern Project & Task Management",
-      template: `%s — Numpux`,
+      default: "Numpux — Simple project tracking",
+      template: "%s — Numpux",
     },
-    description: "Streamline workflows, organize projects, and collaborate with your team in real time. Fast, focused, and free.",
+    description: "A simple place to organize projects and tasks, made for personal use and small teams.",
   };
 }
 
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/theme-provider";
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className="antialiased font-sans min-h-screen bg-background text-foreground">
-        <NextTopLoader showSpinner={false} color="#6366f1" />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <NextTopLoader showSpinner={false} color="#15803d" />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+          <TooltipProvider>{children}</TooltipProvider>
           <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>

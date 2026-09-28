@@ -47,7 +47,10 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
       return false;
     }
     const updated = [...current, trimmed];
-    saveMasterCategories(updated);
+    if (!saveMasterCategories(updated)) {
+      toast.error("Kategori gagal disimpan");
+      return false;
+    }
     set({ categories: updated });
     toast.success(`Kategori "${trimmed}" berhasil ditambahkan`);
     return true;
@@ -55,9 +58,18 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
   updateCategory: (idx: number, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    const updated = [...get().categories];
+    const current = get().categories;
+    if (idx < 0 || idx >= current.length) return;
+    if (current.some((category, categoryIdx) => categoryIdx !== idx && category.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Nama kategori sudah ada");
+      return;
+    }
+    const updated = [...current];
     updated[idx] = trimmed;
-    saveMasterCategories(updated);
+    if (!saveMasterCategories(updated)) {
+      toast.error("Kategori gagal disimpan");
+      return;
+    }
     set({ categories: updated });
     toast.success("Kategori berhasil diperbarui");
   },
@@ -68,7 +80,10 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
       return false;
     }
     const updated = current.filter((c) => c !== cat);
-    saveMasterCategories(updated);
+    if (!saveMasterCategories(updated)) {
+      toast.error("Kategori gagal dihapus");
+      return false;
+    }
     set({ categories: updated });
     toast.success(`Kategori "${cat}" berhasil dihapus`);
     return true;
@@ -86,7 +101,10 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
       return false;
     }
     const updated = [...current, item];
-    saveMasterIssueTypes(updated);
+    if (!saveMasterIssueTypes(updated)) {
+      toast.error("Issue type could not be saved");
+      return false;
+    }
     set({ issueTypes: updated });
     toast.success(`Issue type "${item.name}" created`);
     return true;
@@ -98,7 +116,10 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
       return false;
     }
     const updated = current.filter((t) => t.id !== id);
-    saveMasterIssueTypes(updated);
+    if (!saveMasterIssueTypes(updated)) {
+      toast.error("Issue type could not be removed");
+      return false;
+    }
     set({ issueTypes: updated });
     toast.success("Issue type removed");
     return true;
@@ -116,7 +137,10 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
       return false;
     }
     const updated = [...current, item];
-    saveMasterPriorities(updated);
+    if (!saveMasterPriorities(updated)) {
+      toast.error("Priority could not be saved");
+      return false;
+    }
     set({ priorities: updated });
     toast.success(`Priority "${item.name}" created`);
     return true;
@@ -128,7 +152,10 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
       return false;
     }
     const updated = current.filter((p) => p.id !== id);
-    saveMasterPriorities(updated);
+    if (!saveMasterPriorities(updated)) {
+      toast.error("Priority could not be removed");
+      return false;
+    }
     set({ priorities: updated });
     toast.success("Priority removed");
     return true;

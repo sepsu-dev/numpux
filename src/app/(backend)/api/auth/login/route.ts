@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSession, encrypt } from "@/lib/session";
 import { initDb } from "@/db";
-import { hashPassword } from "@/lib/user-db";
+import { verifyAndUpgradePassword } from "@/lib/user-db";
 import { badRequestResponse, internalServerErrorResponse, unauthorizedResponse } from "@/lib/response";
 import { loginSchema } from "./schema";
 import { findUserForLogin } from "./query";
@@ -25,8 +25,7 @@ export async function POST(request: Request) {
       return unauthorizedResponse("Invalid email or password");
     }
 
-    const hashedInput = hashPassword(password);
-    if (user.password_hash !== hashedInput) {
+    if (!(await verifyAndUpgradePassword(user.id, password, user.password_hash))) {
       return unauthorizedResponse("Invalid email or password");
     }
 

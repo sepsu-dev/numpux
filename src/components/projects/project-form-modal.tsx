@@ -122,8 +122,8 @@ export function ProjectFormModal({
                             </SheetTitle>
                             <SheetDescription className="text-xs text-muted-foreground mt-0.5">
                                 {isEdit
-                                    ? "Update workspace title, category, and description."
-                                    : "Create a new project workspace for your team deliverables."}
+                                    ? "Update the name, category, or project description."
+                                    : "Create a project for personal work or your small team."}
                             </SheetDescription>
                         </SheetHeader>
                     </div>
@@ -205,11 +205,11 @@ export function ProjectFormModal({
 
                         <div className="space-y-1.5">
                             <Label htmlFor="proj-modal-desc" className="text-xs font-semibold text-foreground">
-                                Scope & Description
+                                Description
                             </Label>
                             <Textarea
                                 id="proj-modal-desc"
-                                placeholder="Short summary about key deliverables and objectives..."
+                                placeholder="What is this project about?"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 className="min-h-[90px] text-xs rounded-xl bg-background/50 border-border focus:border-primary transition-all font-normal resize-none"

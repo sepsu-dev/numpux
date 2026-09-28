@@ -14,12 +14,12 @@ import {
 import { toast } from "sonner";
 import { usePrivilegesStore } from "@/stores/privileges-store";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MasterSectionsPage() {
@@ -259,34 +259,42 @@ export default function MasterSectionsPage() {
                 </table>
             </div>
 
-            {/* Create Section Dialog */}
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogContent className="sm:max-w-[400px] rounded-2xl bg-card border border-border p-6 shadow-xl">
-                    <DialogHeader className="space-y-1">
-                        <DialogTitle className="text-lg font-bold text-foreground tracking-tight">
-                            Add Master Section
-                        </DialogTitle>
-                        <p className="text-xs text-muted-foreground">
-                            Tambah section baru untuk mengelompokkan menu pada sidebar.
-                        </p>
-                    </DialogHeader>
-
-                    <form onSubmit={handleCreateSection} className="space-y-4 pt-3">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-foreground">
-                                Section Name <span className="text-destructive">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="e.g. Analytics, Management, System"
-                                value={newSectionName}
-                                onChange={(e) => setNewSectionName(e.target.value)}
-                                required
-                                className="w-full px-3 py-2 text-xs bg-muted/30 border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
-                            />
+            {/* Create Section Sheet */}
+            <Sheet open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+                    <form onSubmit={handleCreateSection} className="flex flex-col h-full">
+                        {/* Header */}
+                        <div className="px-6 py-5 border-b border-border/60">
+                            <SheetHeader className="p-0">
+                                <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
+                                    Add Master Section
+                                </SheetTitle>
+                                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
+                                    Tambah section baru untuk mengelompokkan menu pada sidebar.
+                                </SheetDescription>
+                            </SheetHeader>
                         </div>
 
-                        <DialogFooter className="pt-3 flex items-center justify-end gap-2">
+                        {/* Body */}
+                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-foreground">
+                                    Section Name <span className="text-primary">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Analytics, Management, System"
+                                    value={newSectionName}
+                                    onChange={(e) => setNewSectionName(e.target.value)}
+                                    required
+                                    autoFocus
+                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all text-foreground font-medium"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateModalOpen(false)}
@@ -297,14 +305,14 @@ export default function MasterSectionsPage() {
                             <button
                                 type="submit"
                                 disabled={!newSectionName.trim()}
-                                className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                                className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 active:scale-98 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
                             >
                                 Create Section
                             </button>
-                        </DialogFooter>
+                        </div>
                     </form>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

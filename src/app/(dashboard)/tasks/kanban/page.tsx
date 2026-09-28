@@ -26,6 +26,7 @@ import {
     CheckSquare,
     BookmarkSimple,
     ClockCounterClockwise,
+    ArrowClockwise,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,13 +37,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog";
 import {
     Sheet,
     SheetContent,
@@ -85,7 +79,7 @@ const STATUS_COLUMNS: ColumnConfig[] = [
     {
         id: "To Do",
         title: "To Do",
-        description: "Backlog & scheduled deliverables",
+        description: "Tasks that are ready to start",
         dotColor: "bg-slate-400",
         badgeStyle: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
         headerBorder: "border-slate-200/80 dark:border-slate-800",
@@ -94,7 +88,7 @@ const STATUS_COLUMNS: ColumnConfig[] = [
     {
         id: "In Progress",
         title: "In Progress",
-        description: "Currently under active development",
+        description: "Work that is moving now",
         dotColor: "bg-blue-500",
         badgeStyle: "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300",
         headerBorder: "border-blue-200/80 dark:border-blue-800",
@@ -103,7 +97,7 @@ const STATUS_COLUMNS: ColumnConfig[] = [
     {
         id: "Review",
         title: "In Review",
-        description: "Awaiting QA, code review, or approval",
+        description: "Waiting for a final check",
         dotColor: "bg-amber-500",
         badgeStyle: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
         headerBorder: "border-amber-200/80 dark:border-amber-800",
@@ -112,7 +106,7 @@ const STATUS_COLUMNS: ColumnConfig[] = [
     {
         id: "Done",
         title: "Done",
-        description: "Verified and shipped to production",
+        description: "Finished tasks",
         dotColor: "bg-emerald-500",
         badgeStyle: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
         headerBorder: "border-emerald-200/80 dark:border-emerald-800",
@@ -148,6 +142,8 @@ export default function KanbanPage() {
     const projectId = searchParams.get("projectId") || "";
 
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [isLoadingBoard, setIsLoadingBoard] = useState(true);
+    const [boardLoadError, setBoardLoadError] = useState<string | null>(null);
     const [isMounted, setIsMounted] = useState(false);
     const [projectName, setProjectName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState("");
@@ -220,39 +216,39 @@ export default function KanbanPage() {
         }
     };
 
-    const loadTasks = () => {
-        apiFetch(`/api/projects`)
-            .then((res) => res.json())
-            .then((res) => {
-                if (res.data) {
-                    setAvailableProjects(res.data);
-                    const effectiveProjId = projectId || (res.data.length === 1 ? res.data[0].id : "");
-                    if (effectiveProjId) {
-                        const found = res.data.find((p: any) => p.id === effectiveProjId);
-                        if (found) setProjectName(found.title);
-                    } else if (res.data.length > 0) {
-                        setProjectName("All Projects");
-                    }
+    const loadTasks = async () => {
+        setIsLoadingBoard(true);
+        setBoardLoadError(null);
+        try {
+            let projectRows: Array<{ id: string; title: string }> = [];
+            try {
+                const projectResponse = await apiFetch("/api/projects");
+                if (!projectResponse.ok) throw new Error("Project request failed");
+                const projectJson = await projectResponse.json();
+                projectRows = Array.isArray(projectJson.data) ? projectJson.data : [];
+                setAvailableProjects(projectRows);
+            } catch {
+                setAvailableProjects([]);
+            }
 
-                    // Fetch tasks with effective project id
-                    const url = effectiveProjId ? `/api/tasks?projectId=${effectiveProjId}` : "/api/tasks";
-                    apiFetch(url)
-                        .then((tRes) => tRes.json())
-                        .then((tRes) => {
-                            if (tRes.data) setTasks(tRes.data);
-                        })
-                        .catch(() => {});
-                }
-            })
-            .catch(() => {
-                const url = projectId ? `/api/tasks?projectId=${projectId}` : "/api/tasks";
-                apiFetch(url)
-                    .then((res) => res.json())
-                    .then((res) => {
-                        if (res.data) setTasks(res.data);
-                    })
-                    .catch(() => {});
-            });
+            const effectiveProjId = projectId || (projectRows.length === 1 ? projectRows[0].id : "");
+            if (effectiveProjId) {
+                setProjectName(projectRows.find((project) => project.id === effectiveProjId)?.title || "");
+            } else {
+                setProjectName(projectRows.length > 0 ? "All Projects" : "");
+            }
+
+            const taskUrl = effectiveProjId ? `/api/tasks?projectId=${effectiveProjId}` : "/api/tasks";
+            const taskResponse = await apiFetch(taskUrl);
+            if (!taskResponse.ok) throw new Error("Task request failed");
+            const taskJson = await taskResponse.json();
+            setTasks(Array.isArray(taskJson.data) ? taskJson.data : []);
+        } catch {
+            setTasks([]);
+            setBoardLoadError("The board could not be loaded.");
+        } finally {
+            setIsLoadingBoard(false);
+        }
     };
 
     useEffect(() => {
@@ -437,6 +433,42 @@ export default function KanbanPage() {
 
     const listHref = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
 
+    if (isLoadingBoard) {
+        return (
+            <div className="space-y-5 pb-16" aria-label="Loading board">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-2"><Skeleton className="h-6 w-28" /><Skeleton className="h-3 w-52" /></div>
+                    <Skeleton className="h-9 w-28 rounded-lg" />
+                </div>
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <div className="grid gap-4 lg:grid-cols-4">
+                    {[0, 1, 2, 3].map((column) => (
+                        <div key={column} className="space-y-3 rounded-xl border border-border/60 bg-white p-3">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-24 w-full rounded-lg" />
+                            <Skeleton className="h-20 w-full rounded-lg" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (boardLoadError) {
+        return (
+            <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center">
+                <div>
+                    <WarningCircle className="mx-auto h-6 w-6 text-[#b87624]" />
+                    <p className="mt-3 text-sm font-medium text-foreground">{boardLoadError}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Check your connection and try again.</p>
+                    <button type="button" onClick={loadTasks} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-muted">
+                        <ArrowClockwise className="h-3.5 w-3.5" /> Try again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-500 pb-16">
             {/* Header Section */}
@@ -453,8 +485,8 @@ export default function KanbanPage() {
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
                         {projectName
-                            ? `${projectName} sprint board`
-                            : "Track and manage tasks across workflow stages."}
+                            ? `Board for ${projectName}`
+                            : "Move tasks from to do to done."}
                     </p>
                 </div>
 

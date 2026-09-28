@@ -1,337 +1,166 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-    CheckCircle,
-    CalendarBlank,
-    ArrowUpRight,
-    Briefcase,
-    Plus,
-    Clock,
-    Flame
-} from "@phosphor-icons/react";
 import Link from "next/link";
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    Tooltip,
-    ResponsiveContainer,
-    Cell,
-} from "recharts";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
+import { ArrowClockwise, ArrowRight, ArrowUpRight, Briefcase, CalendarBlank, CheckCircle, Clock, Flag, WarningCircle } from "@phosphor-icons/react";
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { apiFetch } from "@/lib/api-client";
 
 type DashboardData = {
-    project: {
-        id: string;
-        title: string;
-        description: string;
-        category: string;
-        status: string;
-        progress: number;
-    } | null;
-    metrics: Array<{ label: string; value: string; change: string; up: boolean }>;
-    weeklyActivity: Array<{ day: string; commits: number }>;
-    priorityTasks: Array<{ id: string; title: string; project: string; urgent: boolean }>;
-    deadlines: Array<{ title: string; due: string; active: boolean }>;
-    sprintProgress: {
-        sprintName: string;
-        percentage: number;
-        completedCount: number;
-        totalCount: number;
-    };
+  project: { id: string; title: string; description: string; category: string; status: string; progress: number } | null;
+  metrics: Array<{ label: string; value: string; change: string; up: boolean }>;
+  weeklyActivity: Array<{ day: string; commits: number }>;
+  priorityTasks: Array<{ id: string; title: string; project: string; urgent: boolean }>;
+  deadlines: Array<{ title: string; due: string; active: boolean }>;
+  sprintProgress: { sprintName: string; percentage: number; completedCount: number; totalCount: number };
 };
 
+const metricColors = ["#078a55", "#1677ff", "#ffb000", "#ff6b4a"];
+
 function DashboardContent() {
-    const searchParams = useSearchParams();
-    const projectId = searchParams.get("projectId") || "";
+  const projectId = useSearchParams().get("projectId") || "";
+  const [isMounted, setIsMounted] = useState(false);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-    const [isMounted, setIsMounted] = useState(false);
-    const [data, setData] = useState<DashboardData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    let isCurrent = true;
+    setIsLoading(true);
+    setData(null);
+    setLoadError(null);
+    const url = projectId ? `/api/dashboard?projectId=${projectId}` : "/api/dashboard";
+    apiFetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Dashboard request failed");
+        return res.json();
+      })
+      .then((json) => { if (isCurrent && json.data) setData(json.data); })
+      .catch((error) => {
+        console.error("Failed to load dashboard data", error);
+        if (isCurrent) setLoadError("Dashboard data could not be loaded.");
+      })
+      .finally(() => { if (isCurrent) setIsLoading(false); });
+    return () => { isCurrent = false; };
+  }, [projectId, reloadKey]);
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+  const activeProject = data?.project;
+  const metrics = data?.metrics || [
+    { label: "Project status", value: "–", change: "No data", up: true },
+    { label: "Completed tasks", value: "0", change: "0% done", up: true },
+    { label: "In progress", value: "0", change: "0 in review", up: true },
+    { label: "Pending tasks", value: "0", change: "0 total", up: true },
+  ];
+  const weeklyData = data?.weeklyActivity || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({ day, commits: 0 }));
+  const priorities = data?.priorityTasks || [];
+  const deadlines = data?.deadlines || [];
+  const sprint = data?.sprintProgress || { sprintName: "Overall progress", percentage: 0, completedCount: 0, totalCount: 0 };
 
-    useEffect(() => {
-        setIsLoading(true);
-        const url = projectId ? `/api/dashboard?projectId=${projectId}` : "/api/dashboard";
-        apiFetch(url)
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.data) {
-                    setData(json.data);
-                }
-            })
-            .catch((err) => console.error("Failed to load dashboard data", err))
-            .finally(() => setIsLoading(false));
-    }, [projectId]);
+  if (isLoading && !data) return <DashboardLoading />;
+  if (loadError && !data) {
+    return <DataLoadError message={loadError} onRetry={() => setReloadKey((key) => key + 1)} />;
+  }
 
-    const activeProject = data?.project;
-    const metrics = data?.metrics || [
-        { label: "Project Status", value: "-", change: "-", up: true },
-        { label: "Completed Tasks", value: "0", change: "0% done", up: true },
-        { label: "In Progress", value: "0", change: "0 in review", up: true },
-        { label: "Pending Tasks", value: "0", change: "0 total", up: true },
-    ];
-    const weeklyData = data?.weeklyActivity || [
-        { day: "Mon", commits: 0 },
-        { day: "Tue", commits: 0 },
-        { day: "Wed", commits: 0 },
-        { day: "Thu", commits: 0 },
-        { day: "Fri", commits: 0 },
-        { day: "Sat", commits: 0 },
-        { day: "Sun", commits: 0 },
-    ];
-    const priorities = data?.priorityTasks || [];
-    const deadlines = data?.deadlines || [];
-    const sprint = data?.sprintProgress || {
-        sprintName: "Sprint Overview",
-        percentage: 0,
-        completedCount: 0,
-        totalCount: 0,
-    };
-
-    return (
-        <div className="space-y-6 pb-20">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                        <h2 className="text-xl font-bold text-foreground tracking-tight">
-                            {activeProject ? activeProject.title : "Summary"}
-                        </h2>
-                        {activeProject ? (
-                            <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-medium gap-1.5 rounded-md">
-                                <Briefcase className="w-3 h-3 text-primary" />
-                                {activeProject.category || "Project Scope"}
-                            </Badge>
-                        ) : (
-                            <Badge variant="outline" className="px-2.5 py-0.5 text-xs text-muted-foreground font-normal rounded-md">
-                                Workspace
-                            </Badge>
-                        )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {activeProject
-                            ? activeProject.description || "Real-time metrics and sprint execution for this project."
-                            : "Summary of engineering velocity, priorities, and upcoming deliverables."}
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    {projectId ? (
-                        <Link
-                            href={`/tasks/kanban?projectId=${projectId}`}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-2xs"
-                        >
-                            Open Board
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                        </Link>
-                    ) : (
-                        <Link
-                            href="/projects"
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline underline-offset-4"
-                        >
-                            View Projects
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                        </Link>
-                    )}
-                </div>
-            </div>
-
-            {/* Metrics cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {metrics.map((m, idx) => (
-                    <div
-                        key={m.label}
-                        className="bg-card border border-border/80 rounded-xl p-4 transition-all shadow-2xs"
-                    >
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5">{m.label}</p>
-                        <div className="flex items-baseline justify-between">
-                            <span className="text-2xl font-bold text-foreground tracking-tight">{m.value}</span>
-                            <span className={`text-[11px] font-medium ${m.up ? "text-primary" : "text-amber-600 dark:text-amber-400"}`}>
-                                {m.change}
-                            </span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Chart + Right sidebar */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {/* Activity chart */}
-                <div className="lg:col-span-2 bg-card border border-border/80 rounded-xl p-5 shadow-2xs">
-                    <div className="flex items-center justify-between mb-5">
-                        <div>
-                            <h3 className="text-sm font-semibold text-foreground">
-                                {activeProject ? `${activeProject.title} Velocity` : "Weekly Velocity"}
-                            </h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">Cadence of tasks and commits across the sprint</p>
-                        </div>
-                        <span className="text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                            Active
-                        </span>
-                    </div>
-                    <div className="h-[210px] w-full">
-                        {isMounted && (
-                            <ResponsiveContainer width="100%" height={210} minWidth={0} debounce={100}>
-                                <BarChart data={weeklyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                                    <XAxis
-                                        dataKey="day"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: "var(--muted-foreground)", fontWeight: "500", fontSize: 11 }}
-                                        dy={10}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: "rgba(0,0,0,0.02)" }}
-                                        contentStyle={{
-                                            background: "var(--card)",
-                                            border: "1px solid var(--border)",
-                                            borderRadius: "6px",
-                                            fontSize: "11px",
-                                            padding: "6px 10px",
-                                        }}
-                                    />
-                                    <Bar dataKey="commits" barSize={24} radius={[4, 4, 0, 0]}>
-                                        {weeklyData.map((_, index) => (
-                                            <Cell
-                                                key={`cell-${index}`}
-                                                fill={index === 3 || index === 4 ? "var(--primary)" : "var(--border)"}
-                                            />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        )}
-                    </div>
-                </div>
-
-                {/* Priority tasks */}
-                <div className="bg-card border border-border/80 rounded-xl p-5 shadow-2xs flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center justify-between gap-2 mb-4">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle size={15} weight="bold" className="text-primary" />
-                                <h3 className="text-sm font-semibold text-foreground">Priorities</h3>
-                            </div>
-                            {projectId && (
-                                <Link
-                                    href={`/tasks/kanban?projectId=${projectId}`}
-                                    className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-                                >
-                                    <span>Board</span>
-                                </Link>
-                            )}
-                        </div>
-
-                        {priorities.length === 0 ? (
-                            <div className="p-6 text-center border border-dashed border-border rounded-lg">
-                                <CheckCircle className="w-5 h-5 text-muted-foreground/40 mx-auto mb-1.5" />
-                                <p className="text-xs font-medium text-muted-foreground">No urgent tasks</p>
-                                <p className="text-[11px] text-muted-foreground/60 mt-0.5">All priority items are resolved or on schedule.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {priorities.map((task) => (
-                                    <Link
-                                        key={task.id}
-                                        href={`/tasks?projectId=${projectId || ""}`}
-                                        className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 hover:border-border hover:bg-muted/30 transition-all cursor-pointer group"
-                                    >
-                                        <div className="min-w-0 pr-2">
-                                            <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                                                {task.title}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground">{task.project}</p>
-                                        </div>
-                                        {task.urgent && (
-                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-destructive/10 text-destructive shrink-0">
-                                                Urgent
-                                            </span>
-                                        )}
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <Link
-                        href={projectId ? `/tasks?projectId=${projectId}` : "/tasks"}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-4"
-                    >
-                        View all tasks →
-                    </Link>
-                </div>
-            </div>
-
-            {/* Bottom row — deadlines + progress */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Deadlines */}
-                <div className="bg-card border border-border/80 rounded-xl p-5 shadow-2xs">
-                    <div className="flex items-center gap-2 mb-4">
-                        <CalendarBlank size={15} className="text-primary" />
-                        <h3 className="text-sm font-semibold text-foreground">Upcoming Milestones</h3>
-                    </div>
-                    <div className="space-y-2.5">
-                        {deadlines.map((d, i) => (
-                            <div
-                                key={i}
-                                className={`border-l-2 pl-3 py-0.5 ${d.active ? "border-primary" : "border-border"}`}
-                            >
-                                <p className="text-xs font-medium text-foreground">{d.title}</p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-muted-foreground/60" />
-                                    {d.due}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Progress */}
-                <div className="bg-card border border-border/80 rounded-xl p-5 shadow-2xs">
-                    <div className="flex justify-between items-end mb-3">
-                        <div>
-                            <p className="text-xs font-semibold text-foreground">{sprint.sprintName}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {sprint.completedCount} of {sprint.totalCount} deliverables finished
-                            </p>
-                        </div>
-                        <span className="text-xs font-bold text-primary">{sprint.percentage}%</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-primary rounded-full transition-all duration-500"
-                            style={{ width: `${sprint.percentage}%` }}
-                        />
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="space-y-6 pb-16">
+      <section className="flex flex-col justify-between gap-5 pb-2 sm:flex-row sm:items-end">
+        <div className="max-w-3xl">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e8f4ed] px-2.5 py-1 text-[10px] font-medium text-[#367254]"><span className="h-1.5 w-1.5 rounded-full bg-[#5f9a78]" /> Your overview</span>
+            {activeProject && <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Briefcase className="h-3.5 w-3.5" />{activeProject.category || "Project"}</span>}
+          </div>
+          <h1 className="font-heading text-3xl font-medium tracking-[-0.03em] text-foreground">{activeProject ? activeProject.title : "Today at a glance"}</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{activeProject ? activeProject.description || "Tasks, priorities, and upcoming dates for this project." : "See what is moving, what needs attention, and what to do next."}</p>
         </div>
-    );
+        <Link href={projectId ? `/tasks/kanban?projectId=${projectId}` : "/projects"} className="group inline-flex w-fit items-center gap-2 text-xs font-medium text-primary">{projectId ? "Open project board" : "Browse projects"}<ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></Link>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((metric, index) => (
+          <div key={metric.label} className="min-h-28 rounded-xl border border-border/70 bg-white p-4">
+            <p className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground"><span className="h-2 w-2 rounded-full opacity-70" style={{ backgroundColor: metricColors[index % metricColors.length] }} />{metric.label}</p>
+            <div className="mt-4 flex items-end justify-between gap-3"><span className="text-2xl font-medium tracking-tight text-foreground">{metric.value}</span><span className={`text-[10px] font-medium ${metric.up ? "text-primary" : "text-[#c56d00]"}`}>{metric.change}</span></div>
+          </div>
+        ))}
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1.55fr_0.85fr]">
+        <section className="overflow-hidden rounded-xl border border-border/70 bg-white">
+          <div className="flex items-start justify-between border-b border-border/70 p-5">
+            <div><p className="text-sm font-medium text-foreground">This week</p><p className="mt-1 text-xs text-muted-foreground">Tasks added each day</p></div>
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground"><span className="h-2 w-2 rounded-full bg-[#8eb5e4]" /> New tasks</div>
+          </div>
+          <div className="h-[270px] p-5">
+            {isMounted && <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}><BarChart data={weeklyData} margin={{ top: 10, right: 0, left: -24, bottom: 0 }}><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#667469", fontWeight: 600, fontSize: 10 }} dy={10} /><Tooltip cursor={{ fill: "#f3f5f0" }} contentStyle={{ background: "#fff", border: "1px solid #d9ded5", borderRadius: "4px", boxShadow: "none", fontSize: "11px", padding: "7px 10px" }} /><Bar dataKey="commits" barSize={28} radius={[3, 3, 0, 0]}>{weeklyData.map((_, index) => <Cell key={index} fill={index === 3 || index === 4 ? "#1677ff" : "#dce7f5"} />)}</Bar></BarChart></ResponsiveContainer>}
+          </div>
+        </section>
+
+        <section className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-white">
+          <div className="flex items-center justify-between border-b border-border/70 p-5"><div className="flex items-center gap-2"><Flag className="h-4 w-4 text-[#d6a142]" /><h2 className="text-sm font-medium">Needs attention</h2></div><span className="text-[10px] text-muted-foreground">{priorities.length} items</span></div>
+          <div className="flex-1 p-4">
+            {priorities.length === 0 ? <EmptyState icon={CheckCircle} title="Nothing urgent" copy="Priority work is resolved or on schedule." /> : <div className="divide-y divide-border">{priorities.map((task) => <Link key={task.id} href={`/tasks?projectId=${projectId}`} className="group flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0"><p className="truncate text-xs font-medium text-foreground group-hover:text-primary">{task.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{task.project}</p></div>{task.urgent && <span className="shrink-0 rounded-full bg-[#fff4df] px-2 py-1 text-[9px] font-medium text-[#9a6500]">Urgent</span>}</Link>)}</div>}
+          </div>
+          <Link href={projectId ? `/tasks?projectId=${projectId}` : "/tasks"} className="flex items-center justify-between border-t border-border/70 px-5 py-3 text-xs font-medium text-primary">View task list <ArrowRight className="h-3.5 w-3.5" /></Link>
+        </section>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <section className="rounded-xl border border-border/70 bg-white p-5">
+          <div className="mb-5 flex items-center justify-between"><div className="flex items-center gap-2"><CalendarBlank className="h-4 w-4 text-[#729bc9]" /><h2 className="text-sm font-medium">Upcoming dates</h2></div><span className="text-[10px] text-muted-foreground">Next up</span></div>
+          {deadlines.length === 0 ? <EmptyState icon={CalendarBlank} title="No dates scheduled" copy="Add a due date to make the next checkpoint visible." /> : <div className="space-y-4">{deadlines.map((deadline, index) => <div key={`${deadline.title}-${index}`} className="grid grid-cols-[3px_1fr] gap-3"><span className={deadline.active ? "bg-[#8eb5e4]" : "bg-border"} /><div><p className="text-xs font-medium text-foreground">{deadline.title}</p><p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><Clock className="h-3 w-3" />{deadline.due}</p></div></div>)}</div>}
+        </section>
+
+        <section className="rounded-xl border border-border/70 bg-white p-5">
+          <div className="flex items-start justify-between"><div><p className="text-sm font-medium">{sprint.sprintName}</p><p className="mt-1 text-xs text-muted-foreground">{sprint.completedCount} of {sprint.totalCount} tasks finished</p></div><span className="font-heading text-3xl font-medium text-primary">{sprint.percentage}%</span></div>
+          <div className="mt-8 h-2 overflow-hidden bg-[#e3e8df]"><div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${sprint.percentage}%` }} /></div>
+          <div className="mt-3 flex justify-between text-[10px] font-medium text-muted-foreground"><span>Started</span><span>Complete</span></div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, title, copy }: { icon: typeof CheckCircle; title: string; copy: string }) {
+  return <div className="border border-dashed border-border bg-[#fafbf8] px-5 py-7 text-center"><Icon className="mx-auto h-5 w-5 text-muted-foreground" /><p className="mt-2 text-xs font-medium text-foreground">{title}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{copy}</p></div>;
 }
 
 export default function DashboardPage() {
-    return (
-        <Suspense
-            fallback={
-                <div className="space-y-8 animate-pulse pb-20">
-                    <div className="h-10 w-64 bg-muted/60 rounded-xl" />
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {[...Array(4)].map((_, i) => (
-                            <div key={i} className="h-24 bg-muted/40 rounded-xl border border-border" />
-                        ))}
-                    </div>
-                    <div className="h-64 bg-muted/40 rounded-xl border border-border" />
-                </div>
-            }
-        >
-            <DashboardContent />
-        </Suspense>
-    );
+  return <Suspense fallback={<DashboardLoading />}><DashboardContent /></Suspense>;
+}
+
+function DashboardLoading() {
+  return (
+    <div className="space-y-6 pb-16" aria-label="Loading dashboard">
+      <div className="space-y-3 py-2">
+        <div className="h-5 w-24 animate-pulse rounded-full bg-muted" />
+        <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
+        <div className="h-4 w-full max-w-lg animate-pulse rounded bg-muted" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((item) => <div key={item} className="h-28 animate-pulse rounded-xl border border-border/60 bg-white" />)}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1.55fr_0.85fr]">
+        <div className="h-[350px] animate-pulse rounded-xl border border-border/60 bg-white" />
+        <div className="h-[350px] animate-pulse rounded-xl border border-border/60 bg-white" />
+      </div>
+    </div>
+  );
+}
+
+function DataLoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center">
+      <div>
+        <WarningCircle className="mx-auto h-6 w-6 text-[#b87624]" />
+        <p className="mt-3 text-sm font-medium text-foreground">{message}</p>
+        <p className="mt-1 text-xs text-muted-foreground">Check your connection and try again.</p>
+        <button type="button" onClick={onRetry} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-muted">
+          <ArrowClockwise className="h-3.5 w-3.5" /> Try again
+        </button>
+      </div>
+    </div>
+  );
 }

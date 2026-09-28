@@ -10,7 +10,7 @@ interface SiteHeaderProps {
 
 export function SiteHeader({ name, showMenu = true }: SiteHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/40">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-[#f7f8f3]">
       <div className="container max-w-5xl mx-auto px-6 flex h-20 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
