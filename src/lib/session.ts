@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { getEncodedSessionSecret } from "@/lib/session-secret";
 import { pool } from "@/db";
 
-const encodedKey = getEncodedSessionSecret();
 const SESSION_COOKIE = "session";
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
@@ -21,12 +20,12 @@ export async function encrypt(payload: SessionPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(encodedKey);
+    .sign(getEncodedSessionSecret());
 }
 
 export async function decrypt(session: string | undefined = "") {
   try {
-    const { payload } = await jwtVerify(session, encodedKey, {
+    const { payload } = await jwtVerify(session, getEncodedSessionSecret(), {
       algorithms: ["HS256"],
     });
     return payload as SessionPayload;
