@@ -39,22 +39,19 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<ProjectMemberRole>("Member");
     const [isLoading, setIsLoading] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchMembers = async () => {
         if (!project) return;
         setIsLoading(true);
-        setLoadError(null);
         try {
             const res = await apiFetch(`/api/projects/${project.id}/members`);
-            if (!res.ok) throw new Error("Member request failed");
             const data = await res.json();
             if (data.data) {
                 setMembers(data.data);
             }
         } catch {
-            setLoadError("Members could not be loaded.");
+            toast.error("Failed to load members");
         } finally {
             setIsLoading(false);
         }
@@ -114,7 +111,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+            <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-none">
                 <div className="flex flex-col h-full">
                     {/* Header */}
                     <div className="px-6 py-5 border-b border-border/60">
@@ -128,7 +125,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                 </SheetTitle>
                             </div>
                             <SheetDescription className="text-xs text-muted-foreground">
-                                Manage collaborators and access permissions for <span className="font-semibold text-foreground">{project?.title}</span>.
+                                Manage members and access for <span className="font-semibold text-foreground">{project?.title}</span>.
                             </SheetDescription>
                         </SheetHeader>
                     </div>
@@ -146,21 +143,21 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                     placeholder="name@company.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="h-10 text-xs rounded-xl bg-background/50 border-border focus:border-primary flex-1 font-medium"
+                                    className="h-10 text-xs rounded-lg bg-white border-border focus:border-primary flex-1 font-medium"
                                     required
                                 />
                                 <Button
                                     type="submit"
                                     size="sm"
                                     disabled={isSubmitting || !email.trim()}
-                                    className="h-10 px-4 rounded-xl text-xs bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all shrink-0 cursor-pointer shadow-xs"
+                                    className="h-10 px-4 rounded-lg text-xs bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors shrink-0 cursor-pointer shadow-none"
                                 >
                                     <UserPlus size={14} className="mr-1 stroke-[2.5]" />
                                     Invite
                                 </Button>
                             </div>
                             <p className="text-[11px] text-muted-foreground">
-                                Enter any collaborator's email. They will instantly be added to this project.
+                                Enter a teammate's email to add them to this project.
                             </p>
                         </form>
 
@@ -172,25 +169,20 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
 
                             {isLoading ? (
                                 <div className="space-y-2.5">
-                                    <Skeleton className="h-12 w-full rounded-xl" />
-                                    <Skeleton className="h-12 w-full rounded-xl" />
-                                    <Skeleton className="h-12 w-full rounded-xl" />
-                                </div>
-                            ) : loadError ? (
-                                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-7 text-center text-xs text-muted-foreground">
-                                    <p>{loadError}</p>
-                                    <button type="button" onClick={fetchMembers} className="mt-2 font-medium text-primary hover:underline">Try again</button>
+                                    <Skeleton className="h-12 w-full rounded-lg" />
+                                    <Skeleton className="h-12 w-full rounded-lg" />
+                                    <Skeleton className="h-12 w-full rounded-lg" />
                                 </div>
                             ) : members.length === 0 ? (
-                                <div className="py-8 text-center text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-xl">
-                                    No collaborators yet. Invite someone above!
+                                <div className="py-8 text-center text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-lg">
+                                    No project members yet.
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     {members.map((member) => (
                                         <div
                                             key={member.id}
-                                            className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/60 group hover:border-border transition-colors text-xs"
+                                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/60 group hover:border-border transition-colors text-xs"
                                         >
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 {/* Avatar */}
@@ -223,7 +215,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemove(member)}
-                                                        className="text-muted-foreground hover:text-rose-600 p-1 rounded-md opacity-60 group-hover:opacity-100 transition-all cursor-pointer"
+                                                        className="text-muted-foreground hover:text-rose-600 p-1 rounded-md opacity-60 group-hover:opacity-100 transition-colors cursor-pointer"
                                                         title={`Remove ${member.name}`}
                                                     >
                                                         <Trash size={14} />
@@ -243,7 +235,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                             type="button"
                             size="sm"
                             onClick={() => onOpenChange(false)}
-                            className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all cursor-pointer shadow-xs"
+                            className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none"
                         >
                             Done
                         </Button>

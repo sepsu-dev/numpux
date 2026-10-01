@@ -3,7 +3,7 @@ import type { MasterMenu, UserGroup, UserPrivilege } from "@/types";
 
 export async function findMasterMenus(): Promise<MasterMenu[]> {
   const res = await pool.query(
-    "SELECT id, code, name, path, icon, section, parent_id, sort_order, is_active FROM master_menus ORDER BY sort_order ASC;"
+    "SELECT id, code, name, path, icon, section, parent_id, sort_order, is_active FROM master_menus ORDER BY CASE WHEN path = '/dashboard' THEN 0 ELSE 1 END, sort_order ASC;"
   );
   return res.rows.map((r) => ({
     id: r.id,
@@ -45,7 +45,7 @@ export async function findUserPrivileges(): Promise<
     FROM user_privileges up
     JOIN user_groups ug ON ug.id = up.group_id
     JOIN master_menus mm ON mm.id = up.menu_id
-    ORDER BY mm.sort_order ASC;
+    ORDER BY CASE WHEN mm.path = '/dashboard' THEN 0 ELSE 1 END, mm.sort_order ASC;
   `);
   return res.rows.map((r) => ({
     id: r.id,
@@ -67,7 +67,7 @@ export async function findAllowedMenusByRole(role = "user"): Promise<MasterMenu[
      WHERE LOWER(ug.name) = LOWER($1) 
        AND up.can_view = TRUE
        AND mm.is_active = TRUE
-     ORDER BY mm.sort_order ASC;`,
+     ORDER BY CASE WHEN mm.path = '/dashboard' THEN 0 ELSE 1 END, mm.sort_order ASC;`,
     [role]
   );
   return res.rows.map((r) => ({
@@ -182,11 +182,11 @@ export async function createMasterMenu(data: {
   if (res.rows.length === 0) return null;
   const created = res.rows[0];
 
-  // Grant privileges to Admin user group and Owner/Admin project groups
+  // Grant privileges to system administrators and Owner/Admin project groups
   await pool.query(
     `INSERT INTO user_privileges (id, group_id, menu_id, can_view)
      SELECT gen_random_uuid(), id, $1, true
-     FROM user_groups WHERE name = 'admin';`,
+     FROM user_groups WHERE name IN ('admin', 'superadmin');`,
     [id]
   );
   await pool.query(
@@ -257,7 +257,7 @@ export async function findProjectPrivileges() {
     FROM project_privileges pp
     JOIN project_groups pg ON pg.id = pp.group_id
     JOIN master_menus mm ON mm.id = pp.menu_id
-    ORDER BY mm.sort_order ASC;
+    ORDER BY CASE WHEN mm.path = '/dashboard' THEN 0 ELSE 1 END, mm.sort_order ASC;
   `);
   return res.rows.map((r) => ({
     id: r.id,
@@ -353,7 +353,7 @@ export async function findAllowedMenusByProjectRole(role = "member"): Promise<Ma
      WHERE LOWER(pg.name) = LOWER($1) 
        AND pp.can_view = TRUE
        AND mm.is_active = TRUE
-     ORDER BY mm.sort_order ASC;`,
+     ORDER BY CASE WHEN mm.path = '/dashboard' THEN 0 ELSE 1 END, mm.sort_order ASC;`,
     [role]
   );
   return res.rows.map((r) => ({

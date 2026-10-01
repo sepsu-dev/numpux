@@ -8,6 +8,7 @@ import { initDb } from "@/db";
 import { findUserByEmail, createUser, verifyAndUpgradePassword } from "@/lib/user-db";
 import { createTask, createProject, deleteTask, deleteProject, updateTask } from "@/lib/store";
 import type { TaskStatus } from "@/types";
+import { findAllMasterData } from "@/app/(backend)/api/master-data/query";
 
 export type AuthState = { errors?: Record<string, string[]>; message?: string } | undefined;
 
@@ -80,7 +81,7 @@ const taskSchema = z.object({
   title: z.string().min(1, { message: "Task title is required" }),
   projectId: z.string().min(1, { message: "Project is required" }),
   project: z.string().optional().default(""),
-  priority: z.enum(["Low", "Medium", "High", "Urgent"]).default("Medium"),
+  priority: z.string().trim().min(1).max(50).optional(),
   date: z.string().optional().default(""),
   description: z.string().optional().default(""),
 });
@@ -101,7 +102,12 @@ export async function createTaskAction(formData: FormData) {
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
-  const { title, projectId, priority, date, description } = parsed.data;
+  const { title, projectId, date, description } = parsed.data;
+  const masterData = await findAllMasterData();
+  const priority = parsed.data.priority || masterData.priorities[0]?.id;
+  const status = masterData.statuses[0]?.id;
+  const issueType = masterData.issueTypes[0]?.id;
+  if (!priority || !status || !issueType) return { errors: { priority: ["Task configuration is incomplete"] } };
   let projectName = parsed.data.project;
   const { getProject } = await import("@/lib/store");
   const proj = await getProject(projectId, session.userId);
@@ -114,7 +120,8 @@ export async function createTaskAction(formData: FormData) {
       project: projectName || "Project",
       priority,
       date: date.trim() ? date.trim() : undefined,
-      status: "To Do",
+      status,
+      issueType,
       description: description || undefined,
     },
     session.userId
@@ -140,9 +147,9 @@ export async function updateTaskStatusAction(id: string, status: string) {
   const session = await getSession();
   if (!session) return;
 
-  const valid = ["To Do", "In Progress", "Review", "Done"];
-  if (!valid.includes(status)) return;
-  await updateTask(id, { status: status as TaskStatus }, session.userId);
+  const normalizedStatus = status.trim();
+  if (!normalizedStatus || normalizedStatus.length > 50) return;
+  await updateTask(id, { status: normalizedStatus as TaskStatus }, session.userId);
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
 }
@@ -167,8 +174,10 @@ export async function createProjectAction(formData: FormData) {
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
   const { title, category, description } = parsed.data;
+  const projectStatus = (await findAllMasterData()).projectStatuses[0]?.id;
+  if (!projectStatus) return { errors: { category: ["Project status configuration is incomplete"] } };
   await createProject(
-    { title, category, description, status: "Active", tasks: 0, progress: 0 },
+    { title, category, description, status: projectStatus, tasks: 0, progress: 0 },
     session.userId
   );
   revalidatePath("/projects");

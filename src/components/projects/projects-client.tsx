@@ -28,21 +28,14 @@ import {
 import Link from "next/link";
 import { deleteProjectAction } from "@/lib/actions";
 import type { Project } from "@/types";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ProjectFormModal } from "./project-form-modal";
-import { MasterDataModal } from "@/components/settings/master-data-modal";
+import { ManageCategoriesModal } from "./manage-categories-modal";
 import { ProjectMembersModal } from "./project-members-modal";
-
-const DEFAULT_MASTER_CATEGORIES = [
-    "General",
-    "Product & Tech",
-    "Client Work",
-    "Operations",
-    "Marketing & Growth",
-    "Personal / Self",
-];
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 export function ProjectsClient({ projects: initialProjects }: { projects: Project[] }) {
+    const reduceMotion = useReducedMotion();
     const [projects, setProjects] = useState<Project[]>(initialProjects);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All");
@@ -52,24 +45,9 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
     const [membersProject, setMembersProject] = useState<Project | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    // Master categories with localStorage persistence
-    const [masterCategories, setMasterCategories] = useState<string[]>(() => {
-        if (typeof window !== "undefined") {
-            try {
-                const saved = localStorage.getItem("numpux_master_categories");
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-                }
-            } catch {}
-        }
-        // Initialize with default plus any distinct categories found in projects
-        const set = new Set<string>(DEFAULT_MASTER_CATEGORIES);
-        initialProjects.forEach((p) => {
-            if (p.category) set.add(p.category);
-        });
-        return Array.from(set);
-    });
+    const { categories: masterCategories, projectStatuses, loadAll } = useMasterDataStore();
+
+    useEffect(() => { void loadAll(); }, [loadAll]);
 
     const categories = useMemo(() => {
         const set = new Set<string>();
@@ -122,39 +100,39 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Keep personal and shared work organized in one place.
+                        Keep related tasks, people, and progress together.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsCategoriesModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-xl text-xs font-semibold border border-border/60 hover:border-border transition-all cursor-pointer"
-                        title="Manage Categories"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer"
+                        title="Manage categories"
                     >
                         <Tag size={14} className="text-muted-foreground" />
                         <span>Categories</span>
                     </button>
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 active:scale-98 transition-all shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
-                        <span>Create Project</span>
+                        <span>Create project</span>
                     </button>
                 </div>
             </div>
 
             {/* Search & Filter Bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search projects by name, category, or overview..."
+                        placeholder="Search projects"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -169,12 +147,12 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                 <div className="flex items-center gap-2">
                     <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Category:</span>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                        <SelectTrigger className="h-8 w-[150px] text-xs rounded-xl bg-card border-border/80">
-                            <SelectValue placeholder="All Categories" />
+                        <SelectTrigger className="h-8 w-[150px] text-xs rounded-lg bg-card border-border/80">
+                            <SelectValue placeholder="All categories" />
                         </SelectTrigger>
                         <SelectContent className="text-xs">
                             <SelectItem value="All" className="text-xs cursor-pointer">
-                                All Categories
+                                All categories
                             </SelectItem>
                             {categories
                                 .filter((c) => c !== "All")
@@ -190,24 +168,30 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
 
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProjects.map((project, idx) => (
+                {filteredProjects.map((project, index) => (
                     <motion.div
                         key={project.id}
-                        initial={{ opacity: 0, y: 12 }}
+                        layout={!reduceMotion}
+                        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.25, delay: idx * 0.04 }}
-                        className="bg-card border border-border/80 p-5 rounded-2xl shadow-2xs group hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between"
+                        whileHover={reduceMotion ? undefined : { y: -2 }}
+                        transition={{ duration: 0.3, delay: Math.min(index * 0.035, 0.2), ease: [0.16, 1, 0.3, 1] }}
+                        className="bg-card border border-border/80 p-5 rounded-lg shadow-none group hover:border-primary/40 hover:shadow-none transition-colors flex flex-col justify-between"
                     >
                         <div>
                             <div className="flex justify-between items-start mb-3">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                                        {project.category || "General"}
+                                        {project.category || "Uncategorized"}
                                     </span>
+                                    {(() => {
+                                        const status = projectStatuses.find((item) => item.id === project.status);
+                                        return <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${status?.colorClass || "bg-muted text-muted-foreground border-border"}`}>{status?.name || project.status}</span>;
+                                    })()}
                                     {project.userRole && (
                                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                                             project.userRole === "Owner"
-                                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                                ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
                                                 : "bg-muted text-muted-foreground border-border/60"
                                         }`}>
                                             {project.userRole}
@@ -235,13 +219,13 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                             onClick={() => setMembersProject(project)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
-                                            <Users size={13} /> Manage Team
+                                            <Users size={13} /> Manage members
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             onClick={() => setEditingProject(project)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
-                                            <PencilSimple size={13} /> Edit Project
+                                            <PencilSimple size={13} /> Edit project
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             className="text-rose-600 focus:text-rose-600 cursor-pointer flex items-center gap-2"
@@ -266,12 +250,12 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                         <div className="mt-5 pt-3.5 border-t border-border/50 space-y-3">
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center text-[11px]">
-                                    <span className="text-muted-foreground font-medium">{project.tasks || 0} Tasks</span>
+                                    <span className="text-muted-foreground font-medium">{project.tasks || 0} tasks</span>
                                     <span className="font-semibold text-foreground">{project.progress || 0}%</span>
                                 </div>
                                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-primary rounded-full transition-all duration-500"
+                                        className="h-full bg-primary rounded-full transition-colors duration-500"
                                         style={{ width: `${project.progress || 0}%` }}
                                     />
                                 </div>
@@ -297,20 +281,20 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                     </motion.div>
                 ))}
 
-                {/* Create Project Card Placeholder */}
+                {/* Create project Card Placeholder */}
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="h-full min-h-[160px] border border-dashed border-border/80 hover:border-primary/50 hover:bg-muted/20 rounded-2xl flex flex-col items-center justify-center p-6 text-center transition-all cursor-pointer group"
+                    className="h-full min-h-[160px] border border-dashed border-border/80 hover:border-primary/50 hover:bg-muted/20 rounded-lg flex flex-col items-center justify-center p-6 text-center transition-colors cursor-pointer group"
                 >
-                    <div className="w-9 h-9 rounded-xl bg-muted text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 flex items-center justify-center transition-all mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-muted text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 flex items-center justify-center transition-colors mb-2">
                         <Plus size={16} className="stroke-[2.5]" />
                     </div>
-                    <h4 className="text-xs font-semibold text-foreground">Create New Project</h4>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Give your work a clear place to start.</p>
+                    <h4 className="text-xs font-semibold text-foreground">Create project</h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Add another project.</p>
                 </button>
             </div>
 
-            {/* Create Project Modal */}
+            {/* Create project Modal */}
             <ProjectFormModal
                 open={isCreateModalOpen}
                 onOpenChange={setIsCreateModalOpen}
@@ -318,7 +302,7 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                 onSuccess={handleProjectSaved}
             />
 
-            {/* Edit Project Modal */}
+            {/* Edit project Modal */}
             <ProjectFormModal
                 open={!!editingProject}
                 onOpenChange={(open) => !open && setEditingProject(null)}
@@ -328,11 +312,9 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
             />
 
             {/* Master Data Modal */}
-            <MasterDataModal
+            <ManageCategoriesModal
                 open={isCategoriesModalOpen}
                 onOpenChange={setIsCategoriesModalOpen}
-                initialTab="categories"
-                onCategoriesChanged={setMasterCategories}
             />
 
             {/* Project Members Modal */}
@@ -344,28 +326,28 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
 
             {/* Delete Confirmation Modal */}
             <Dialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent className="rounded-2xl border border-border p-6 font-sans shadow-xl bg-card max-w-sm">
+                <DialogContent className="rounded-lg border border-border p-6 font-sans shadow-none bg-card max-w-sm">
                     <DialogHeader className="space-y-2">
-                        <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
                             <Trash size={18} />
                         </div>
-                        <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete Project?</DialogTitle>
+                        <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete project?</DialogTitle>
                         <DialogDescription className="text-xs text-muted-foreground">
-                            All tasks in this project will also be deleted. This action cannot be undone.
+                            This project and all of its tasks will be permanently deleted. This cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-4 flex gap-2">
                         <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 rounded-xl text-xs h-9 cursor-pointer"
+                            className="flex-1 rounded-lg text-xs h-9 cursor-pointer"
                             onClick={() => setDeleteId(null)}
                         >
                             Cancel
                         </Button>
                         <Button
                             size="sm"
-                            className="flex-1 rounded-xl text-xs h-9 bg-rose-600 hover:bg-rose-700 text-white font-medium cursor-pointer"
+                            className="flex-1 rounded-lg text-xs h-9 bg-rose-600 hover:bg-rose-700 text-white font-medium cursor-pointer"
                             onClick={handleDeleteConfirm}
                         >
                             Delete

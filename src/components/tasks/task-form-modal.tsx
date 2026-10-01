@@ -24,14 +24,10 @@ import {
 import { cn } from "@/lib/utils";
 import type { Task, Project, Priority, TaskStatus, ProjectMember, IssueType } from "@/types";
 import { apiFetch } from "@/lib/api-client";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-    getMasterIssueTypes,
-    getMasterPriorities,
     ISSUE_TYPE_ICONS,
-    MasterIssueTypeItem,
-    MasterPriorityItem,
 } from "@/lib/master-data";
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 interface TaskFormModalProps {
     open: boolean;
@@ -47,27 +43,22 @@ export function TaskFormModal({
     onOpenChange,
     task,
     defaultProjectId,
-    defaultStatus = "To Do",
+    defaultStatus,
     onSuccess,
 }: TaskFormModalProps) {
     const isEdit = !!task;
 
-    const [masterIssueTypes, setMasterIssueTypes] = useState<MasterIssueTypeItem[]>([]);
-    const [masterPriorities, setMasterPriorities] = useState<MasterPriorityItem[]>([]);
+    const { issueTypes: masterIssueTypes, priorities: masterPriorities, statuses: masterStatuses, loadAll } = useMasterDataStore();
 
     const [projects, setProjects] = useState<Project[]>([]);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-    const [projectsLoadError, setProjectsLoadError] = useState<string | null>(null);
-    const [projectsReloadKey, setProjectsReloadKey] = useState(0);
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
-    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
     const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
     const [assigneeId, setAssigneeId] = useState<string>("");
-    const [issueType, setIssueType] = useState<string>("Task");
+    const [issueType, setIssueType] = useState<string>("");
     const [title, setTitle] = useState("");
-    const [priority, setPriority] = useState<string>("Medium");
-    const [status, setStatus] = useState<TaskStatus>("To Do");
+    const [priority, setPriority] = useState<string>("");
+    const [status, setStatus] = useState<TaskStatus>("");
     const [date, setDate] = useState("");
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,15 +66,12 @@ export function TaskFormModal({
     // Load master issue types & priorities when modal is opened
     useEffect(() => {
         if (!open) return;
-        setMasterIssueTypes(getMasterIssueTypes());
-        setMasterPriorities(getMasterPriorities());
-    }, [open]);
+        void loadAll();
+    }, [open, loadAll]);
 
     // Fetch projects and current user when opened
     useEffect(() => {
         if (!open) return;
-        setIsLoadingProjects(true);
-        setProjectsLoadError(null);
         apiFetch("/api/auth/me")
             .then((r) => r.json())
             .then((res) => {
@@ -98,10 +86,7 @@ export function TaskFormModal({
             .catch(() => {});
 
         apiFetch("/api/projects")
-            .then((r) => {
-                if (!r.ok) throw new Error("Project request failed");
-                return r.json();
-            })
+            .then((r) => r.json())
             .then((res) => {
                 if (res.data) {
                     setProjects(res.data);
@@ -114,22 +99,15 @@ export function TaskFormModal({
                     }
                 }
             })
-            .catch(() => {
-                setProjects([]);
-                setProjectsLoadError("Projects could not be loaded.");
-            })
-            .finally(() => setIsLoadingProjects(false));
-    }, [open, defaultProjectId, task, projectsReloadKey]);
+            .catch(() => {});
+    }, [open, defaultProjectId, task]);
 
     // Fetch members whenever project changes
     useEffect(() => {
         if (!selectedProjectId) {
             setProjectMembers([]);
-            setIsLoadingMembers(false);
             return;
         }
-        setIsLoadingMembers(true);
-        setProjectMembers([]);
         apiFetch(`/api/projects/${selectedProjectId}/members`)
             .then((r) => r.json())
             .then((res) => {
@@ -137,8 +115,7 @@ export function TaskFormModal({
                     setProjectMembers(res.data);
                 }
             })
-            .catch(() => setProjectMembers([]))
-            .finally(() => setIsLoadingMembers(false));
+            .catch(() => setProjectMembers([]));
     }, [selectedProjectId]);
 
     // Populate fields when task changes
@@ -147,22 +124,22 @@ export function TaskFormModal({
             setTitle(task.title || "");
             setSelectedProjectId(task.projectId || "");
             setAssigneeId(task.assigneeId || "");
-            setIssueType(task.issueType || "Task");
-            setPriority(task.priority || "Medium");
-            setStatus(task.status || "To Do");
+            setIssueType(task.issueType || masterIssueTypes[0]?.id || "");
+            setPriority(task.priority || masterPriorities[0]?.id || "");
+            setStatus(task.status || masterStatuses[0]?.id || "");
             setDate(task.date || "");
             setDescription(task.description || "");
         } else {
             setTitle("");
             setSelectedProjectId(defaultProjectId || "");
             setAssigneeId("");
-            setIssueType("Task");
-            setPriority("Medium");
-            setStatus(defaultStatus);
+            setIssueType(masterIssueTypes[0]?.id || "");
+            setPriority(masterPriorities[0]?.id || "");
+            setStatus(defaultStatus || masterStatuses[0]?.id || "");
             setDate("");
             setDescription("");
         }
-    }, [task, open, defaultProjectId, defaultStatus]);
+    }, [task, open, defaultProjectId, defaultStatus, masterIssueTypes, masterPriorities, masterStatuses]);
 
     const activeProject = projects.find((p) => p.id === selectedProjectId);
     const activeAssignee =
@@ -227,27 +204,26 @@ export function TaskFormModal({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="sm:max-w-lg w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+            <SheetContent side="right" className="sm:max-w-lg w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-none">
                 <form onSubmit={handleSubmit} className="flex flex-col h-full">
                     {/* Header */}
                     <div className="px-6 py-5 border-b border-border/60">
                         <SheetHeader className="p-0">
                             <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                {isEdit ? "Edit Task" : "Create New Task"}
+                                {isEdit ? "Edit task" : "New task"}
                             </SheetTitle>
                             <SheetDescription className="text-xs text-muted-foreground mt-0.5">
                                 {isEdit
                                     ? "Update task details, schedule, or project assignment."
-                                    : "Add something you want to plan, track, or finish."}
+                                    : "Add a task with the details needed to start work."}
                             </SheetDescription>
                         </SheetHeader>
                     </div>
 
                     {/* Body */}
                     <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-                        {/* Jira-style Issue Type */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-foreground">Issue Type</Label>
+                            <Label className="text-xs font-semibold text-foreground">Task type</Label>
                             <div className="flex flex-wrap items-center gap-2">
                                 {masterIssueTypes.map((t) => {
                                     const Icon = ISSUE_TYPE_ICONS[t.iconName] || CheckSquare;
@@ -258,10 +234,10 @@ export function TaskFormModal({
                                             type="button"
                                             onClick={() => setIssueType(t.id)}
                                             className={cn(
-                                                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer",
+                                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer",
                                                 isSelected
-                                                    ? cn("border-transparent shadow-xs ring-1 ring-border/80", t.colorClass)
-                                                    : "bg-background/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                                    ? cn("border-transparent shadow-none ring-1 ring-border/80", t.colorClass)
+                                                    : "bg-white border-border text-muted-foreground hover:text-foreground hover:bg-muted/40"
                                             )}
                                         >
                                             <Icon size={14} weight={isSelected ? "bold" : "regular"} />
@@ -275,20 +251,20 @@ export function TaskFormModal({
                         {/* Title */}
                         <div className="space-y-1.5">
                             <Label htmlFor="task-modal-title" className="text-xs font-semibold text-foreground">
-                                Task Title <span className="text-primary">*</span>
+                                Task title <span className="text-primary">*</span>
                             </Label>
                             <Input
                                 id="task-modal-title"
                                 placeholder="e.g. Implement payment webhook callback"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="h-10 text-xs rounded-xl bg-background/50 border-border focus:border-primary transition-all font-medium"
+                                className="h-10 text-xs rounded-lg bg-white border-border focus:border-primary transition-colors font-medium"
                                 autoFocus
                                 required
                             />
                         </div>
 
-                        {/* Project Workspace (Full Width) */}
+                        {/* Project (Full Width) */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-foreground">
                                 Project <span className="text-primary">*</span>
@@ -298,35 +274,21 @@ export function TaskFormModal({
                                     <button
                                         type="button"
                                         className={cn(
-                                            "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-xs font-medium cursor-pointer shadow-2xs",
-                                            isLoadingProjects || projectsLoadError
-                                                ? "border-border text-muted-foreground"
-                                                : !selectedProjectId
-                                                    ? "border-amber-300 text-muted-foreground"
-                                                    : "border-border text-foreground"
+                                            "h-10 w-full flex items-center justify-between rounded-lg border px-3 bg-white hover:bg-background transition-colors text-xs font-medium cursor-pointer shadow-none",
+                                            !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border text-foreground"
                                         )}
                                     >
                                         <div className="flex items-center gap-2 truncate">
                                             <Briefcase size={14} className={activeProject ? "text-primary shrink-0" : "text-muted-foreground shrink-0"} />
                                             <span className="truncate">
-                                                {isLoadingProjects ? "Loading projects…" : projectsLoadError ? "Unable to load projects" : activeProject ? activeProject.title : "Select Project"}
+                                                {activeProject ? activeProject.title : "Select a project"}
                                             </span>
                                         </div>
                                         <CaretDown size={13} className="text-muted-foreground opacity-70 shrink-0 ml-2" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[280px] max-h-60 overflow-y-auto p-1 text-xs">
-                                    {isLoadingProjects ? (
-                                        <div className="space-y-2 p-2">
-                                            <Skeleton className="h-8 w-full" />
-                                            <Skeleton className="h-8 w-full" />
-                                        </div>
-                                    ) : projectsLoadError ? (
-                                        <div className="p-3 text-center text-[11px] text-muted-foreground">
-                                            <p>{projectsLoadError}</p>
-                                            <button type="button" onClick={() => setProjectsReloadKey((key) => key + 1)} className="mt-2 font-medium text-primary hover:underline">Try again</button>
-                                        </div>
-                                    ) : projects.length === 0 ? (
+                                    {projects.length === 0 ? (
                                         <div className="p-2 text-center text-muted-foreground text-[11px]">
                                             No projects found
                                         </div>
@@ -375,28 +337,20 @@ export function TaskFormModal({
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="h-10 w-full flex items-center justify-between rounded-xl border border-border px-3 bg-background/50 hover:bg-background transition-all text-xs font-medium cursor-pointer shadow-2xs text-foreground"
+                                            className="h-10 w-full flex items-center justify-between rounded-lg border border-border px-3 bg-white hover:bg-background transition-colors text-xs font-medium cursor-pointer shadow-none text-foreground"
                                         >
                                             <div className="flex items-center gap-2 truncate">
                                                 <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-                                                    {isLoadingMembers ? <span className="h-2 w-2 animate-pulse rounded-full bg-primary/50" /> : activeAssignee ? activeAssignee.name.charAt(0).toUpperCase() : <UserIcon size={12} />}
+                                                    {activeAssignee ? activeAssignee.name.charAt(0).toUpperCase() : <UserIcon size={12} />}
                                                 </div>
                                                 <span className="truncate">
-                                                    {isLoadingMembers ? "Loading members…" : activeAssignee ? activeAssignee.name : "Unassigned"}
+                                                    {activeAssignee ? activeAssignee.name : "Unassigned"}
                                                 </span>
                                             </div>
                                             <CaretDown size={13} className="text-muted-foreground opacity-70 shrink-0" />
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-56 p-1 text-xs">
-                                        {isLoadingMembers && (
-                                            <div className="space-y-2 p-2">
-                                                <Skeleton className="h-9 w-full" />
-                                                <Skeleton className="h-9 w-full" />
-                                            </div>
-                                        )}
-                                        {!isLoadingMembers && (
-                                            <>
                                         <DropdownMenuItem
                                             onClick={() => setAssigneeId("")}
                                             className="flex items-center justify-between cursor-pointer py-2 px-2.5 rounded-lg text-muted-foreground"
@@ -445,8 +399,6 @@ export function TaskFormModal({
                                                     {assigneeId === m.userId && <Check size={13} className="text-primary shrink-0" />}
                                                 </DropdownMenuItem>
                                             ))}
-                                            </>
-                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -455,12 +407,12 @@ export function TaskFormModal({
                         {/* Due Date */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-foreground">
-                                Due Date
+                                Due date
                             </Label>
                             <DatePicker
                                 value={date}
                                 onChange={(val) => setDate(val)}
-                                placeholder="Select due date..."
+                                placeholder="Select a due date"
                             />
                         </div>
 
@@ -476,10 +428,10 @@ export function TaskFormModal({
                                             type="button"
                                             onClick={() => setPriority(p.id)}
                                             className={cn(
-                                                "flex items-center justify-center gap-1.5 py-2 px-3 text-xs rounded-xl border transition-all cursor-pointer",
+                                                "flex items-center justify-center gap-1.5 py-2 px-3 text-xs rounded-lg border transition-colors cursor-pointer",
                                                 isSelected
-                                                    ? "bg-foreground text-background font-semibold border-foreground shadow-2xs"
-                                                    : "bg-background/50 text-muted-foreground border-border hover:text-foreground hover:bg-muted/50"
+                                                    ? "bg-foreground text-background font-semibold border-foreground shadow-none"
+                                                    : "bg-white text-muted-foreground border-border hover:text-foreground hover:bg-muted/50"
                                             )}
                                         >
                                             <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.dotColor)} />
@@ -490,17 +442,43 @@ export function TaskFormModal({
                             </div>
                         </div>
 
+                        {/* Workflow Status */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-foreground">Status</Label>
+                            <div className="flex flex-wrap gap-2">
+                                {masterStatuses.map((item) => {
+                                    const isSelected = status === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            type="button"
+                                            onClick={() => setStatus(item.id)}
+                                            className={cn(
+                                                "flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs transition-colors",
+                                                isSelected
+                                                    ? "border-primary bg-primary/10 font-semibold text-primary"
+                                                    : "border-border bg-white text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                            )}
+                                        >
+                                            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", item.dotColor)} />
+                                            <span>{item.name}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         {/* Description */}
                         <div className="space-y-1.5">
                             <Label htmlFor="task-modal-desc" className="text-xs font-semibold text-foreground">
-                                Description & Details
+                                Description
                             </Label>
                             <Textarea
                                 id="task-modal-desc"
-                                placeholder="Add context, checklists, or steps..."
+                                placeholder="Add context, expected outcome, or useful notes"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="min-h-[90px] text-xs rounded-xl bg-background/50 border-border focus:border-primary transition-all font-normal resize-none"
+                                className="min-h-[90px] text-xs rounded-lg bg-white border-border focus:border-primary transition-colors font-normal resize-none"
                             />
                         </div>
                     </div>
@@ -512,17 +490,17 @@ export function TaskFormModal({
                             variant="outline"
                             size="sm"
                             onClick={() => onOpenChange(false)}
-                            className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted"
+                            className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted"
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             size="sm"
-                            disabled={isSubmitting || isLoadingProjects || !!projectsLoadError}
-                            className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs"
+                            disabled={isSubmitting || !issueType || !priority || !status}
+                            className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none"
                         >
-                            {isLoadingProjects ? "Loading…" : isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create Task"}
+                            {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Create task"}
                         </Button>
                     </div>
                 </form>

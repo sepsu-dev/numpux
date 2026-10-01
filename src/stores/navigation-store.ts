@@ -2,6 +2,16 @@ import { create } from "zustand";
 import { apiFetch } from "@/lib/api-client";
 import type { MasterMenu } from "@/types";
 
+function normalizeNavigationMenus(menus: MasterMenu[]): MasterMenu[] {
+  return menus
+    .map((menu) =>
+      menu.path === "/dashboard"
+        ? { ...menu, name: "Dashboard", sortOrder: 0 }
+        : menu
+    )
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
 interface NavigationState {
   menus: MasterMenu[];
   sections: string[];
@@ -30,10 +40,10 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
         let sections: string[] = [];
 
         if (Array.isArray(json.data)) {
-          menus = json.data;
+          menus = normalizeNavigationMenus(json.data);
           sections = Array.from(new Set(menus.map((m) => m.section || "Planning")));
         } else if (json.data.menus && Array.isArray(json.data.menus)) {
-          menus = json.data.menus;
+          menus = normalizeNavigationMenus(json.data.menus);
           if (json.data.sections && Array.isArray(json.data.sections) && json.data.sections.length > 0) {
             // Keep ordered sections from database and add any extra sections from menus
             const menuSections = new Set(menus.map((m) => m.section || "Planning"));
@@ -56,9 +66,10 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   },
 
   setMenus: (menus: MasterMenu[]) => {
+    const normalizedMenus = normalizeNavigationMenus(menus);
     const sections = Array.from(
-      new Set(menus.map((m) => m.section || "Planning"))
+      new Set(normalizedMenus.map((m) => m.section || "Planning"))
     );
-    set({ menus, sections });
+    set({ menus: normalizedMenus, sections });
   },
 }));

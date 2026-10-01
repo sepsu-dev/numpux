@@ -53,13 +53,13 @@ export default function UserPrivilegesPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">User Privileges</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">User access</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredMenus.length} {filteredMenus.length === 1 ? "menu item" : "menu items"}
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Manage sidebar menu visibility and privileges for each system user role.
+                        Choose which navigation links each system role can access.
                     </p>
                 </div>
 
@@ -67,7 +67,7 @@ export default function UserPrivilegesPage() {
                     <button
                         onClick={loadAllPrivileges}
                         disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-xl text-xs font-semibold border border-border/60 hover:border-border transition-all cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer disabled:opacity-50"
                         title="Refresh Data"
                     >
                         <ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} />
@@ -77,15 +77,15 @@ export default function UserPrivilegesPage() {
             </div>
 
             {/* Search & Role Filter Bar matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search menu name or path..."
+                        placeholder="Search links"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -101,13 +101,13 @@ export default function UserPrivilegesPage() {
                 <div className="flex items-center gap-2">
                     <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Role Group:</span>
                     <Select value={selectedUserGroup} onValueChange={setSelectedUserGroup}>
-                        <SelectTrigger className="h-8 w-[160px] text-xs rounded-xl bg-card border-border/80">
-                            <SelectValue placeholder="Select Role" />
+                        <SelectTrigger className="h-8 w-[160px] text-xs rounded-lg bg-card border-border/80">
+                            <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent className="text-xs">
                             {userGroups.map((g) => (
                                 <SelectItem key={g.id} value={g.name} className="text-xs cursor-pointer">
-                                    {g.displayName || (g.name === "admin" ? "Administrator" : g.name.charAt(0).toUpperCase() + g.name.slice(1))}
+                                    {g.displayName || (g.name === "superadmin" ? "Super Administrator" : g.name === "admin" ? "Administrator" : g.name.charAt(0).toUpperCase() + g.name.slice(1))}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -116,7 +116,7 @@ export default function UserPrivilegesPage() {
             </div>
 
             {/* Clean Table Container */}
-            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-2xs">
+            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
                 <table className="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
@@ -189,6 +189,7 @@ export default function UserPrivilegesPage() {
                                                 </span>
                                                 <Switch
                                                     checked={canView}
+                                                    disabled={selectedUserGroup.toLowerCase() === "superadmin"}
                                                     onCheckedChange={() => handleTogglePrivilege(selectedUserGroup, menu.id, canView)}
                                                     aria-label="Toggle privilege"
                                                 />

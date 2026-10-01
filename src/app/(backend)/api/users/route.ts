@@ -42,6 +42,10 @@ export async function POST(request: Request) {
     return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
+  if (!auth.user?.role || !["admin", "superadmin"].includes(auth.user.role)) {
+    return errorResponse("Forbidden. Only administrators can create users.", 403);
+  }
+
   try {
     await initDb();
     const body = await request.json();
@@ -55,6 +59,9 @@ export async function POST(request: Request) {
     }
 
     const { name, email, password, role } = parsed.data;
+    if (role === "superadmin" && auth.user.role !== "superadmin") {
+      return errorResponse("Only a superadmin can create another superadmin.", 403);
+    }
     const existing = await findUserByEmail(email.trim().toLowerCase());
     if (existing) {
       return conflictResponse("A user with this email already exists");

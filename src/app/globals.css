@@ -2,11 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
-  --font-heading: var(--font-fredoka);
-  --font-sans: var(--font-inter);
+  --font-heading: var(--font-manrope), "Segoe UI", sans-serif;
+  --font-sans: var(--font-jakarta), "Segoe UI", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -32,153 +30,84 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 0.875rem;
+  --radius-4xl: 1rem;
 }
 
-/* ─── Light theme — Crave Style (Lime Green & Clean Pastel) ─── */
 :root {
-  --background: #f7f8f3;
-  --foreground: #111d14; /* Deep Forest-slate */
+  color-scheme: light;
+  --background: #f7f8f7;
+  --foreground: #17201b;
   --card: #ffffff;
-  --card-foreground: #111d14;
+  --card-foreground: #17201b;
   --popover: #ffffff;
-  --popover-foreground: #111d14;
+  --popover-foreground: #17201b;
   --primary: #078a55;
-  --primary-foreground: #ffffff; /* Crisp white text on primary */
-  --secondary: #edf1e9;
-  --secondary-foreground: #14301d;
-  --muted: #eef1eb;
-  --muted-foreground: #526356;
-  --accent: #dff5e9;
-  --accent-foreground: #14301d;
-  --destructive: #ef4444;
-  --border: #d9ded5;
-  --input: #cfd6cb;
+  --primary-hover: #06784a;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1ef;
+  --secondary-foreground: #24332a;
+  --muted: #eef1ef;
+  --muted-foreground: #66736b;
+  --accent: #e6f6ed;
+  --accent-foreground: #08633e;
+  --destructive: #b42318;
+  --border: #dfe4e1;
+  --input: #cfd6d2;
   --ring: #078a55;
-  --radius: 0.625rem;
-
-  /* Sidebar Tokens */
+  --chart-1: #078a55;
+  --chart-2: #2984f7;
+  --chart-3: #f5a300;
+  --chart-4: #5ab98c;
+  --chart-5: #91bffb;
   --sidebar: #ffffff;
-  --sidebar-foreground: #14301d;
+  --sidebar-foreground: #253129;
   --sidebar-primary: #078a55;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #edf1e9;
-  --sidebar-accent-foreground: #14301d;
-  --sidebar-border: #e4e8de;
+  --sidebar-accent: #e9f6ef;
+  --sidebar-accent-foreground: #08633e;
+  --sidebar-border: #e2e6e3;
   --sidebar-ring: #078a55;
 }
 
-/* ─── Dark theme ───────────────────────────────────────────── */
-.dark {
-  --background: #0f1410;
-  --foreground: #f2f5f1;
-  --card: #151c16;
-  --card-foreground: #f2f5f1;
-  --popover: #151c16;
-  --popover-foreground: #f2f5f1;
-  --primary: #22c55e;
-  --primary-foreground: #091a0f;
-  --secondary: #1a241c;
-  --secondary-foreground: #e5ede3;
-  --muted: #1c261e;
-  --muted-foreground: #8aa090;
-  --accent: #233326;
-  --accent-foreground: #e5ede3;
-  --destructive: #f87171;
-  --border: #243026;
-  --input: #243026;
-  --ring: #22c55e;
-
-  /* Dark Sidebar Tokens */
-  --sidebar: #131a14;
-  --sidebar-foreground: #f2f5f1;
-  --sidebar-primary: #22c55e;
-  --sidebar-primary-foreground: #091a0f;
-  --sidebar-accent: #1b261d;
-  --sidebar-accent-foreground: #f2f5f1;
-  --sidebar-border: #222e24;
-  --sidebar-ring: #22c55e;
-}
-
-/* ─── Base styles ──────────────────────────────────────────── */
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
+  * { @apply border-border outline-ring/40; }
+  html { @apply scroll-smooth font-sans; background: var(--background); }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply min-h-screen bg-background text-foreground antialiased;
+    font-feature-settings: "kern", "liga", "calt";
+    font-optical-sizing: auto;
   }
-
-  html {
-    @apply font-sans scroll-smooth;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+    text-wrap: balance;
+    font-optical-sizing: auto;
   }
-
-  /* ─── Custom scrollbar ─────────────────────────────────── */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
+  button, input, textarea, select { font: inherit; }
+  ::selection { background: #ccefdc; color: #075a38; }
+  button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--muted-foreground);
+    background: #cfd6d2;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
   }
 }
 
-/* ─── Custom Crave Style Utilities ─────────────────────────── */
-.bg-dot-grid {
-  background-image: radial-gradient(rgba(17, 29, 20, 0.06) 1.2px, transparent 1.2px);
-  background-size: 28px 28px;
-}
-
-.crave-shadow {
-  box-shadow: 0px 2px 8px rgba(17, 29, 20, 0.04);
-}
-
-.crave-border {
-  border: 1px solid #e9ede4;
-}
-
-.lime-glow-button {
-  background: #078a55;
-  color: #ffffff;
-  border: 1px solid rgba(17, 29, 20, 0.15);
-  box-shadow: 0 2px 6px rgba(130, 226, 94, 0.35);
-  transition: all 0.2s ease-in-out;
-}
-
-.lime-glow-button:hover {
-  background: #067a4b;
-  box-shadow: 0 3px 8px rgba(7, 138, 85, 0.25);
-  transform: translateY(-1.5px);
-}
-
-.lime-glow-button:active {
-  transform: translateY(0.5px);
-}
-
-/* ─── Kanban Drag Cursor Stability ────────────────────────── */
 body.is-dragging-card,
 body.is-dragging-card * {
   cursor: grabbing !important;
@@ -186,61 +115,5 @@ body.is-dragging-card * {
   -webkit-user-select: none !important;
 }
 
-.kanban-card-draggable {
-  cursor: grab;
-  touch-action: none;
-}
-
-.kanban-card-draggable:active {
-  cursor: grabbing;
-}
-
-.section-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  color: var(--primary);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.section-kicker::before {
-  width: 1.4rem;
-  height: 2px;
-  border-radius: 99px;
-  background: currentColor;
-  content: "";
-}
-
-.auth-input {
-  width: 100%;
-  height: 2.75rem;
-  padding: 0 0.875rem 0 2.35rem;
-  border: 1px solid var(--input);
-  border-radius: 0.5rem;
-  background: #ffffff;
-  color: var(--foreground);
-  font-size: 0.75rem;
-  outline: none;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.auth-input::placeholder { color: #8a978d; }
-.auth-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(7, 138, 85, 0.1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-
-  *, *::before, *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+.kanban-card-draggable { cursor: grab; touch-action: none; }
+.kanban-card-draggable:active { cursor: grabbing; }

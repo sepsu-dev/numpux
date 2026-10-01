@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { User, Lock, EnvelopeSimple, Buildings, Key, ShieldCheck } from "@phosphor-icons/react";
+import { User, Lock, EnvelopeSimple, Key, ShieldCheck } from "@phosphor-icons/react";
 import { apiFetch } from "@/lib/api-client";
 
 interface ProfileModalProps {
@@ -29,7 +29,6 @@ export function ProfileModal({
     onUserUpdated,
 }: ProfileModalProps) {
     const [name, setName] = useState(currentUser.name);
-    const [organization, setOrganization] = useState("Numpux Workspace");
     const [isSaving, setIsSaving] = useState(false);
 
     // Password change fields
@@ -90,7 +89,7 @@ export function ProfileModal({
                 throw new Error(data.message || "Failed to update profile");
             }
 
-            toast.success("Profile updated successfully!");
+            toast.success("Profile updated");
             onUserUpdated({ name: name.trim(), email: currentUser.email });
             onOpenChange(false);
         } catch (err: any) {
@@ -109,16 +108,16 @@ export function ProfileModal({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+            <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-none">
                 <form onSubmit={handleSave} className="flex flex-col h-full">
                     {/* Header */}
                     <div className="px-6 py-5 border-b border-border/60">
                         <SheetHeader className="p-0">
                             <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                User Profile
+                                Profile
                             </SheetTitle>
                             <SheetDescription className="text-xs text-muted-foreground mt-0.5">
-                                Manage personal profile details, organization role, and security.
+                                Update your name or change your password.
                             </SheetDescription>
                         </SheetHeader>
                     </div>
@@ -126,18 +125,13 @@ export function ProfileModal({
                     {/* Body */}
                     <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                         {/* Profile Avatar Card */}
-                        <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-muted/40 border border-border/70">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-base shrink-0 border border-primary/20">
+                        <div className="flex items-center gap-3.5 p-3 rounded-lg bg-muted/40 border border-border/70">
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-base shrink-0 border border-primary/20">
                                 {initials}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <h4 className="font-semibold text-xs text-foreground truncate">{currentUser.name}</h4>
                                 <p className="text-[11px] text-muted-foreground truncate">{currentUser.email}</p>
-                                <div className="mt-1 flex items-center gap-1.5">
-                                    <span className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
-                                        Workspace Admin
-                                    </span>
-                                </div>
                             </div>
                         </div>
 
@@ -145,7 +139,7 @@ export function ProfileModal({
                         <div className="space-y-3.5">
                             <div className="space-y-1.5">
                                 <Label htmlFor="profile-name" className="text-xs font-semibold text-foreground">
-                                    Full Name
+                                    Full name
                                 </Label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" size={13} />
@@ -153,7 +147,7 @@ export function ProfileModal({
                                         id="profile-name"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        className="h-10 text-xs rounded-xl pl-9 bg-background/50 border-border focus:border-primary font-medium shadow-2xs"
+                                        className="h-10 text-xs rounded-lg pl-9 bg-white border-border focus:border-primary font-medium shadow-none"
                                         required
                                     />
                                 </div>
@@ -161,7 +155,7 @@ export function ProfileModal({
 
                             <div className="space-y-1.5">
                                 <Label htmlFor="profile-email" className="text-xs font-semibold text-foreground">
-                                    Email Address
+                                    Email address
                                 </Label>
                                 <div className="relative">
                                     <EnvelopeSimple className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" size={13} />
@@ -169,32 +163,18 @@ export function ProfileModal({
                                         id="profile-email"
                                         value={currentUser.email}
                                         disabled
-                                        className="h-10 text-xs rounded-xl pl-9 bg-muted/40 border-border/60 text-muted-foreground font-medium shadow-none cursor-not-allowed"
+                                        className="h-10 text-xs rounded-lg pl-9 bg-muted/40 border-border/60 text-muted-foreground font-medium shadow-none cursor-not-allowed"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <Label htmlFor="profile-org" className="text-xs font-semibold text-foreground">
-                                    Organization / Workspace
-                                </Label>
-                                <div className="relative">
-                                    <Buildings className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" size={13} />
-                                    <Input
-                                        id="profile-org"
-                                        value={organization}
-                                        onChange={(e) => setOrganization(e.target.value)}
-                                        className="h-10 text-xs rounded-xl pl-9 bg-background/50 border-border focus:border-primary font-medium shadow-2xs"
-                                    />
-                                </div>
-                            </div>
                         </div>
 
                         {/* Security / Password section */}
                         <div className="pt-3 border-t border-border/50">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-foreground">Account Security</p>
+                                    <p className="text-xs font-semibold text-foreground">Password</p>
                                     <p className="text-[11px] text-muted-foreground">Change your account password</p>
                                 </div>
                                 <button
@@ -202,14 +182,14 @@ export function ProfileModal({
                                     onClick={() => setShowPasswordChange(!showPasswordChange)}
                                     className="text-xs font-semibold text-primary hover:underline cursor-pointer"
                                 >
-                                    {showPasswordChange ? "Hide" : "Change Password"}
+                                    {showPasswordChange ? "Cancel" : "Change password"}
                                 </button>
                             </div>
 
                             {showPasswordChange && (
-                                <div className="mt-3.5 space-y-3 p-3.5 rounded-xl border border-border/70 bg-background/40">
+                                <div className="mt-3.5 space-y-3 p-3.5 rounded-lg border border-border/70 bg-white">
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] font-semibold text-foreground">Current Password</Label>
+                                        <Label className="text-[11px] font-semibold text-foreground">Current password</Label>
                                         <div className="relative">
                                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" size={13} />
                                             <Input
@@ -222,7 +202,7 @@ export function ProfileModal({
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] font-semibold text-foreground">New Password</Label>
+                                        <Label className="text-[11px] font-semibold text-foreground">New password</Label>
                                         <div className="relative">
                                             <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" size={13} />
                                             <Input
@@ -235,7 +215,7 @@ export function ProfileModal({
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] font-semibold text-foreground">Confirm New Password</Label>
+                                        <Label className="text-[11px] font-semibold text-foreground">Confirm new password</Label>
                                         <div className="relative">
                                             <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" size={13} />
                                             <Input
@@ -259,7 +239,7 @@ export function ProfileModal({
                             variant="outline"
                             size="sm"
                             onClick={() => onOpenChange(false)}
-                            className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted"
+                            className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted"
                         >
                             Cancel
                         </Button>
@@ -267,9 +247,9 @@ export function ProfileModal({
                             type="submit"
                             size="sm"
                             disabled={isSaving}
-                            className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs"
+                            className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none"
                         >
-                            {isSaving ? "Saving..." : "Save Changes"}
+                            {isSaving ? "Saving..." : "Save changes"}
                         </Button>
                     </div>
                 </form>

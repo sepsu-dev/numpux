@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -10,16 +10,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 export default function NewProjectPage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [category, setCategory] = useState("");
+    const [status, setStatus] = useState("");
+    const { categories, projectStatuses, loadAll, isLoading } = useMasterDataStore();
+
+    useEffect(() => { void loadAll(); }, [loadAll]);
+    useEffect(() => {
+        if (!category && categories[0]) setCategory(categories[0]);
+        if (!status && projectStatuses[0]) setStatus(projectStatuses[0].id);
+    }, [category, status, categories, projectStatuses]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const title = formData.get("title") as string;
-        const category = (formData.get("category") as string) || "General";
         const description = (formData.get("description") as string) || "";
 
         if (!title.trim()) {
@@ -36,13 +45,13 @@ export default function NewProjectPage() {
                     title: title.trim(),
                     category: category.trim(),
                     description: description.trim(),
-                    status: "Active",
+                    status,
                 }),
             });
 
             const data = await res.json();
             if (res.ok) {
-                toast.success("Project created successfully!");
+                toast.success("Project created");
                 router.push("/projects");
                 router.refresh();
             } else {
@@ -56,18 +65,18 @@ export default function NewProjectPage() {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+        <div className="space-y-6 max-w-3xl">
             <div className="flex items-center gap-3">
-                <Link href="/projects" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs">
+                <Link href="/projects" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none">
                     <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Create Project</h2>
-                    <p className="text-muted-foreground text-xs mt-0.5">Give your work a clear place to start.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Create project</h2>
+                    <p className="text-muted-foreground text-xs mt-0.5">Create a clear home for related tasks, owners, and dates.</p>
                 </div>
             </div>
 
-            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+            <div className="bg-card border border-border/80 rounded-lg p-6 sm:p-8 shadow-none">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-5">
                         <div className="grid gap-1.5">
@@ -76,36 +85,39 @@ export default function NewProjectPage() {
                                 id="title"
                                 name="title"
                                 placeholder="e.g. Mobile App Redesign"
-                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium px-3.5 bg-background/50 transition-all text-foreground shadow-2xs"
+                                className="h-10 text-xs rounded-lg border border-border focus:border-primary font-medium px-3.5 bg-white transition-colors text-foreground shadow-none"
                                 required
                             />
                         </div>
 
                         <div className="grid gap-1.5">
                             <Label htmlFor="category" className="font-semibold text-xs text-foreground px-0.5">Category</Label>
-                            <Input
+                            <select
                                 id="category"
                                 name="category"
-                                placeholder="e.g. Product & Tech, Client Work, Operations..."
-                                className="h-10 rounded-xl border border-border focus:border-primary font-medium px-3.5 bg-background/50 transition-all text-foreground shadow-2xs text-xs"
-                            />
+                                value={category}
+                                onChange={(event) => setCategory(event.target.value)}
+                                className="h-10 rounded-lg border border-border focus:border-primary font-medium px-3.5 bg-white transition-colors text-foreground shadow-none text-xs"
+                            ><option value="" disabled>Select category</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
                         </div>
+
+                        <div className="grid gap-1.5"><Label htmlFor="status" className="font-semibold text-xs text-foreground px-0.5">Status</Label><select id="status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-border bg-white px-3.5 text-xs font-medium"><option value="" disabled>Select status</option>{projectStatuses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
 
                         <div className="grid gap-1.5">
                             <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description</Label>
                             <Textarea
                                 id="description"
                                 name="description"
-                                placeholder="What is this project about?"
-                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs bg-background/50 transition-all text-foreground shadow-2xs"
+                                placeholder="What is this project for?"
+                                className="min-h-[110px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-xs bg-white transition-colors text-foreground shadow-none"
                             />
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
-                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSubmitting} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
-                            {isSubmitting ? "Creating..." : "Create Project"}
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSubmitting || isLoading || !category || !status} className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none">
+                            {isSubmitting ? "Creating..." : "Create project"}
                         </Button>
                     </div>
                 </form>

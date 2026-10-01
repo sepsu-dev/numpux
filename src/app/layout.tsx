@@ -1,37 +1,44 @@
 import type { Metadata } from "next";
-import { Fredoka, Inter } from "next/font/google";
+import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/theme-provider";
 import "@/app/globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const fredoka = Fredoka({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-fredoka",
-  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
 });
 
 export function generateMetadata(): Metadata {
   return {
     title: {
-      default: "Numpux — Simple project tracking",
+      default: "Numpux — Projects and tasks, kept clear",
       template: "%s — Numpux",
     },
-    description: "A simple place to organize projects and tasks, made for personal use and small teams.",
+    description:
+      "Plan projects, organize tasks, and keep work moving in one clear workspace.",
   };
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${fredoka.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        <NextTopLoader showSpinner={false} color="#15803d" />
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster position="top-center" richColors />
-        </ThemeProvider>
+    <html
+      lang="en"
+      className={`${jakarta.variable} ${manrope.variable}`}
+      data-scroll-behavior="smooth"
+    >
+      <body>
+        <NextTopLoader showSpinner={false} color="#078a55" height={2} />
+        <TooltipProvider>{children}</TooltipProvider>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

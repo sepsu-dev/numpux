@@ -80,7 +80,7 @@ export async function createUser(
   name: string,
   email: string,
   passwordPlain: string,
-  role: "admin" | "user" = "user"
+  role: "superadmin" | "admin" | "user" = "user"
 ): Promise<User> {
   const id = randomUUID();
   const passwordHash = hashPassword(passwordPlain);

@@ -1,45 +1,40 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Lock, FloppyDisk, SpinnerGap, CheckCircle } from "@phosphor-icons/react";
+import { User, Lock, FloppyDisk, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const [role, setRole] = useState<"superadmin" | "admin" | "user">("user");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
-      setIsLoading(true);
-      setLoadError(null);
       try {
         const res = await apiFetch("/api/auth/me");
-        if (!res.ok) throw new Error("Profile request failed");
-        const json = await res.json();
-        if (json.data) {
-          setName(json.data.name || "");
-          setEmail(json.data.email || "");
-          setRole(json.data.role || "user");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            setName(json.data.name || "");
+            setEmail(json.data.email || "");
+            setRole(json.data.role || "user");
+          }
         }
       } catch (err) {
         console.error("Failed to load profile", err);
-        setLoadError("Your profile could not be loaded.");
       } finally {
         setIsLoading(false);
       }
     }
     loadProfile();
-  }, [reloadKey]);
+  }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +76,7 @@ export default function ProfilePage() {
         return;
       }
 
-      toast.success("Profile updated successfully!");
+      toast.success("Profile updated");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -94,39 +89,29 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6" aria-label="Loading profile">
-        <div className="space-y-2"><Skeleton className="h-7 w-40" /><Skeleton className="h-4 w-72" /></div>
-        <div className="space-y-5 rounded-xl border border-border/60 bg-white p-6">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-32" />
-        </div>
+      <div className="flex h-64 items-center justify-center">
+        <SpinnerGap className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
-  }
-
-  if (loadError) {
-    return <LoadFailure message={loadError} onRetry={() => setReloadKey((key) => key + 1)} />;
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">User Profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Profile</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your account settings, name, and security preferences.
+          Update your account details and password.
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6 shadow-2xs">
+      <div className="bg-card border border-border rounded-lg p-6 shadow-none">
         <form onSubmit={handleUpdateProfile} className="space-y-6">
           <div className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <User size={16} /> Basic Information
+              <User size={16} /> Account details
             </h2>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">Full Name</label>
+              <label className="text-xs font-medium text-foreground">Full name</label>
               <input
                 type="text"
                 value={name}
@@ -138,7 +123,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">Email Address</label>
+              <label className="text-xs font-medium text-foreground">Email address</label>
               <input
                 type="email"
                 value={email}
@@ -149,21 +134,25 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">Account Status / Role</label>
+              <label className="text-xs font-medium text-foreground">Role</label>
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
-                    role === "admin"
-                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                      : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                    role === "superadmin"
+                      ? "border-violet-500/20 bg-violet-500/10 text-violet-600"
+                      : role === "admin"
+                      ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                      : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
                   }`}
                 >
-                  {role === "admin" ? "Administrator" : "Standard User"}
+                  {role === "superadmin" ? "Super Administrator" : role === "admin" ? "Administrator" : "Standard User"}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {role === "admin"
+                  {role === "superadmin"
+                    ? "Unrestricted access to system configuration and all menus."
+                    : role === "admin"
                     ? "Full system administrative privileges."
-                    : "Standard workspace member privileges."}
+                      : "Access is based on your assigned workspace role."}
                 </span>
               </div>
             </div>
@@ -173,10 +162,10 @@ export default function ProfilePage() {
 
           <div className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Lock size={16} /> Change Password
+              <Lock size={16} /> Change password
             </h2>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">Current Password</label>
+              <label className="text-xs font-medium text-foreground">Current password</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -188,7 +177,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">New Password</label>
+                <label className="text-xs font-medium text-foreground">New password</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -199,7 +188,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Confirm New Password</label>
+                <label className="text-xs font-medium text-foreground">Confirm new password</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -215,18 +204,14 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs transition-all hover:bg-primary/90 active:scale-98 disabled:opacity-50 cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs transition-colors hover:bg-primary/90 disabled:opacity-50 cursor-pointer shadow-none"
             >
               {isSaving ? <SpinnerGap size={14} className="animate-spin" /> : <FloppyDisk size={14} />}
-              Save Changes
+              Save changes
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-}
-
-function LoadFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return <div className="mx-auto flex min-h-64 max-w-2xl items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center"><div><p className="text-sm font-medium text-foreground">{message}</p><p className="mt-1 text-xs text-muted-foreground">Check your connection and try again.</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Try again</button></div></div>;
 }

@@ -5,7 +5,7 @@ import { WhyChooseUs } from "@/components/landing/why-choose-us";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-background font-sans">
+    <main>
       <Hero />
       <Features />
       <WhyChooseUs />

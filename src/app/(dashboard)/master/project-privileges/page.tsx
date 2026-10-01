@@ -5,12 +5,12 @@ import { UsersThree, ArrowClockwise, MagnifyingGlass, X, Plus, Trash } from "@ph
 import { cn } from "@/lib/utils";
 import { usePrivilegesStore } from "@/stores/privileges-store";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -96,20 +96,20 @@ export default function ProjectPrivilegesPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Project Privileges</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Project roles</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredMenus.length} {filteredMenus.length === 1 ? "feature item" : "feature items"}
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Manage feature and menu access levels based on project member roles (Owner, Admin, Member, or custom roles).
+                        Decide what each project role can view and change.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsCreateRoleModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 active:scale-98 transition-all shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
                         <span>Add Project Role</span>
@@ -117,7 +117,7 @@ export default function ProjectPrivilegesPage() {
                     <button
                         onClick={loadAllPrivileges}
                         disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-xl text-xs font-semibold border border-border/60 hover:border-border transition-all cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer disabled:opacity-50"
                         title="Refresh Data"
                     >
                         <ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} />
@@ -127,15 +127,15 @@ export default function ProjectPrivilegesPage() {
             </div>
 
             {/* Search & Project Role Filter Bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search menu or action..."
+                        placeholder="Search permissions"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -151,8 +151,8 @@ export default function ProjectPrivilegesPage() {
                 <div className="flex items-center gap-2">
                     <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Project Role:</span>
                     <Select value={selectedProjectGroup} onValueChange={setSelectedProjectGroup}>
-                        <SelectTrigger className="h-8 w-[160px] text-xs rounded-xl bg-card border-border/80">
-                            <SelectValue placeholder="Select Role" />
+                        <SelectTrigger className="h-8 w-[160px] text-xs rounded-lg bg-card border-border/80">
+                            <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent className="text-xs">
                             {projectGroups.map((g) => (
@@ -182,7 +182,7 @@ export default function ProjectPrivilegesPage() {
             </div>
 
             {/* Clean Table Container */}
-            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-2xs">
+            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
                 <table className="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
@@ -270,83 +270,71 @@ export default function ProjectPrivilegesPage() {
                 </table>
             </div>
 
-            {/* Create Project Role Sheet */}
-            <Sheet open={isCreateRoleModalOpen} onOpenChange={setIsCreateRoleModalOpen}>
-                <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
-                    <form onSubmit={handleCreateRole} className="flex flex-col h-full">
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-border/60">
-                            <SheetHeader className="p-0">
-                                <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                    Add Project Role
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
-                                    Define a new role for project-level access control and permissions.
-                                </SheetDescription>
-                            </SheetHeader>
+            {/* Create Project Role Modal */}
+            <Dialog open={isCreateRoleModalOpen} onOpenChange={setIsCreateRoleModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-foreground">
+                            Add Project Role
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateRole} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground">
+                                Role Code / Name
+                            </label>
+                            <input
+                                type="text"
+                                value={newRoleName}
+                                onChange={(e) => setNewRoleName(e.target.value)}
+                                placeholder="e.g. viewer, contributor, reviewer..."
+                                autoFocus
+                                required
+                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
                         </div>
-
-                        {/* Body */}
-                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Role Code / Name <span className="text-primary">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newRoleName}
-                                    onChange={(e) => setNewRoleName(e.target.value)}
-                                    placeholder="e.g. viewer, contributor, reviewer..."
-                                    autoFocus
-                                    required
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Display Label
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newRoleDisplayName}
-                                    onChange={(e) => setNewRoleDisplayName(e.target.value)}
-                                    placeholder="e.g. Project Viewer, External Auditor..."
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Description
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newRoleDescription}
-                                    onChange={(e) => setNewRoleDescription(e.target.value)}
-                                    placeholder="Brief description of member role scope..."
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground">
+                                Display Label
+                            </label>
+                            <input
+                                type="text"
+                                value={newRoleDisplayName}
+                                onChange={(e) => setNewRoleDisplayName(e.target.value)}
+                                placeholder="e.g. Project Viewer, External Auditor..."
+                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
                         </div>
-
-                        {/* Footer */}
-                        <div className="px-6 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground">
+                                Description
+                            </label>
+                            <input
+                                type="text"
+                                value={newRoleDescription}
+                                onChange={(e) => setNewRoleDescription(e.target.value)}
+                                placeholder="What should members with this role be able to do?"
+                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+                        <DialogFooter className="gap-2 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateRoleModalOpen(false)}
-                                className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:scale-98 cursor-pointer transition-all shadow-xs"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
                             >
                                 Save Role
                             </button>
-                        </div>
+                        </DialogFooter>
                     </form>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

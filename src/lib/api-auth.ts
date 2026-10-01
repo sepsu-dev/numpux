@@ -18,7 +18,7 @@ export type AuthResult =
         userId: string;
         email: string;
         name: string;
-        role?: "admin" | "user";
+        role?: "superadmin" | "admin" | "user";
       };
       error?: undefined;
       statusCode?: undefined;
@@ -60,7 +60,7 @@ export function validatePublicKey(request: Request | NextRequest): { isValid: bo
 /**
  * Helper to optionally extract authenticated user from Authorization header or cookie
  */
-export async function getOptionalAuthUser(request: Request | NextRequest): Promise<{ userId: string; email: string; name: string; role?: "admin" | "user" } | null> {
+export async function getOptionalAuthUser(request: Request | NextRequest): Promise<{ userId: string; email: string; name: string; role?: "superadmin" | "admin" | "user" } | null> {
   const headers = request.headers;
   const authHeader = headers.get("authorization") || headers.get("Authorization");
   let token: string | undefined;
@@ -93,7 +93,7 @@ export async function getOptionalAuthUser(request: Request | NextRequest): Promi
       userId: String(payload.userId || ""),
       email: String(payload.email || ""),
       name: String(payload.name || ""),
-      role: (payload.role as "admin" | "user") || "user",
+      role: (payload.role as "superadmin" | "admin" | "user") || "user",
     };
   } catch {
     return null;

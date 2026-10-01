@@ -227,6 +227,116 @@ export async function initDb() {
       );
     `);
 
+    // 6.6. Database-backed configurable master data
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS master_categories (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        sort_order INT DEFAULT 1,
+        is_default BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS master_issue_types (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT,
+        icon_name VARCHAR(50) NOT NULL DEFAULT 'CheckSquare',
+        color_class TEXT NOT NULL,
+        sort_order INT DEFAULT 1,
+        is_default BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS master_priorities (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        level INT NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 5),
+        dot_color VARCHAR(100) NOT NULL,
+        badge_class TEXT NOT NULL,
+        sort_order INT DEFAULT 1,
+        is_default BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS master_statuses (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT,
+        sort_order INT DEFAULT 1,
+        dot_color VARCHAR(100) NOT NULL,
+        badge_class TEXT NOT NULL,
+        header_border VARCHAR(100) NOT NULL,
+        is_completed BOOLEAN DEFAULT FALSE,
+        is_default BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS master_project_statuses (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT,
+        color_class TEXT NOT NULL,
+        sort_order INT DEFAULT 1,
+        is_completed BOOLEAN DEFAULT FALSE,
+        is_default BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      INSERT INTO master_categories (id, name, sort_order, is_default)
+      VALUES
+        ('General', 'General', 1, true),
+        ('Product & Tech', 'Product & Tech', 2, false),
+        ('Client Work', 'Client Work', 3, false),
+        ('Operations', 'Operations', 4, false),
+        ('Marketing & Growth', 'Marketing & Growth', 5, false),
+        ('Personal / Self', 'Personal / Self', 6, false)
+      ON CONFLICT (id) DO NOTHING;
+
+      INSERT INTO master_issue_types (id, name, description, icon_name, color_class, sort_order, is_default)
+      VALUES
+        ('Task', 'Task', 'General work or actionable task', 'CheckSquare', 'text-blue-500 bg-blue-500/10 border-blue-200/50 dark:border-blue-900/50', 1, true),
+        ('Bug', 'Bug', 'Defect, error, or unexpected behavior', 'Bug', 'text-rose-500 bg-rose-500/10 border-rose-200/50 dark:border-rose-900/50', 2, true),
+        ('Story', 'Story', 'User story or deliverable feature', 'BookmarkSimple', 'text-emerald-500 bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-900/50', 3, true),
+        ('Improvement', 'Improvement', 'Refactoring, optimization, or UI polish', 'Lightning', 'text-purple-500 bg-purple-500/10 border-purple-200/50 dark:border-purple-900/50', 4, false)
+      ON CONFLICT (id) DO NOTHING;
+
+      INSERT INTO master_priorities (id, name, level, dot_color, badge_class, sort_order, is_default)
+      VALUES
+        ('Low', 'Low', 1, 'bg-primary', 'bg-primary/10 text-primary border-primary/20', 1, true),
+        ('Medium', 'Medium', 2, 'bg-[#2984f7]', 'bg-[#eef6ff] text-[#1768c5] border-[#c8e0ff]', 2, true),
+        ('High', 'High', 3, 'bg-[#f5a300]', 'bg-[#fff7e6] text-[#946000] border-[#ffe0a3]', 3, true),
+        ('Urgent', 'Urgent', 4, 'bg-rose-500', 'bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50', 4, true)
+      ON CONFLICT (id) DO NOTHING;
+
+      INSERT INTO master_statuses (id, name, description, sort_order, dot_color, badge_class, header_border, is_completed, is_default)
+      VALUES
+        ('To Do', 'To Do', 'Work that has not started', 1, 'bg-slate-400', 'bg-slate-100 text-slate-700', 'border-slate-200/80', false, true),
+        ('In Progress', 'In Progress', 'Work currently in progress', 2, 'bg-[#2984f7]', 'bg-[#eef6ff] text-[#1768c5]', 'border-[#c8e0ff]', false, true),
+        ('Review', 'In Review', 'Work awaiting review or approval', 3, 'bg-[#f5a300]', 'bg-[#fff7e6] text-[#946000]', 'border-[#ffe0a3]', false, true),
+        ('Done', 'Done', 'Completed and verified work', 4, 'bg-primary', 'bg-primary/10 text-primary', 'border-primary/25', true, true)
+      ON CONFLICT (id) DO NOTHING;
+
+      INSERT INTO master_project_statuses (id, name, description, color_class, sort_order, is_completed, is_default)
+      VALUES
+        ('Planning', 'Planning', 'Project is being prepared', 'bg-[#fff7e6] text-[#946000] border-[#ffe0a3]', 1, false, true),
+        ('Active', 'Active', 'Project is actively being worked on', 'bg-[#eef6ff] text-[#1768c5] border-[#c8e0ff]', 2, false, true),
+        ('Completed', 'Completed', 'Project work has been completed', 'bg-primary/10 text-primary border-primary/20', 3, true, true)
+      ON CONFLICT (id) DO NOTHING;
+    `);
+
     // Seed Default Sections
     await client.query(`
       INSERT INTO master_sections (id, name, sort_order)
@@ -263,9 +373,9 @@ export async function initDb() {
     await client.query(`
       INSERT INTO master_menus (id, code, name, path, icon, section, sort_order, is_active)
       VALUES 
-        ('10000000-0000-0000-0000-000000000001', 'board', 'Board', '/tasks/kanban', 'SquaresFour', 'Planning', 1, true),
-        ('10000000-0000-0000-0000-000000000002', 'backlog', 'Backlog', '/tasks', 'ListDashes', 'Planning', 2, true),
-        ('10000000-0000-0000-0000-000000000003', 'summary', 'Summary', '/dashboard', 'ChartLineUp', 'Planning', 3, true),
+        ('10000000-0000-0000-0000-000000000003', 'summary', 'Dashboard', '/dashboard', 'ChartLineUp', 'Planning', 1, true),
+        ('10000000-0000-0000-0000-000000000001', 'board', 'Board', '/tasks/kanban', 'SquaresFour', 'Planning', 2, true),
+        ('10000000-0000-0000-0000-000000000002', 'backlog', 'Backlog', '/tasks', 'ListDashes', 'Planning', 3, true),
         ('10000000-0000-0000-0000-000000000004', 'projects', 'Projects', '/projects', 'FolderSimple', 'Workspace', 4, true),
         ('10000000-0000-0000-0000-000000000005', 'master_menus', 'Master Menus', '/master/menus', 'ListNumbers', 'Settings', 5, true),
         ('10000000-0000-0000-0000-000000000006', 'user_privileges', 'User Privileges', '/master/user-privileges', 'ShieldCheck', 'Settings', 6, true),
@@ -273,7 +383,9 @@ export async function initDb() {
         ('10000000-0000-0000-0000-000000000008', 'categories', 'Category Project', '/master/categories', 'Tag', 'Settings', 8, true),
         ('10000000-0000-0000-0000-000000000009', 'issue_types', 'Issue Type', '/master/issue-types', 'CheckSquare', 'Settings', 9, true),
         ('10000000-0000-0000-0000-000000000010', 'priorities', 'Priorities', '/master/priorities', 'Flag', 'Settings', 10, true),
-        ('10000000-0000-0000-0000-000000000011', 'master_sections', 'Master Sections', '/master/sections', 'Rows', 'Settings', 11, true)
+        ('10000000-0000-0000-0000-000000000012', 'statuses', 'Task Statuses', '/master/statuses', 'Columns', 'Settings', 11, true),
+        ('10000000-0000-0000-0000-000000000013', 'project_statuses', 'Project Statuses', '/master/project-statuses', 'Columns', 'Settings', 12, true),
+        ('10000000-0000-0000-0000-000000000011', 'master_sections', 'Master Sections', '/master/sections', 'Rows', 'Settings', 13, true)
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
         section = EXCLUDED.section,
@@ -285,12 +397,13 @@ export async function initDb() {
       DELETE FROM master_menus WHERE code = 'settings';
     `);
 
-    // Seed Default User Groups ('admin' and 'user')
+    // Seed Default User Groups
     await client.query(`
       INSERT INTO user_groups (id, name, description)
       VALUES 
         ('20000000-0000-0000-0000-000000000001', 'admin', 'Administrator group with full menu visibility'),
-        ('20000000-0000-0000-0000-000000000002', 'user', 'Regular user group with restricted menu access')
+        ('20000000-0000-0000-0000-000000000002', 'user', 'Regular user group with restricted menu access'),
+        ('20000000-0000-0000-0000-000000000003', 'superadmin', 'Super administrator with unrestricted system access')
       ON CONFLICT (name) DO NOTHING;
     `);
 
@@ -299,28 +412,43 @@ export async function initDb() {
     await client.query(`
       INSERT INTO user_privileges (id, group_id, menu_id, can_view)
       SELECT 
-        '30000000-0000-0000-0000-00000000000' || row_number() over (),
+        gen_random_uuid(),
         ug.id,
         mm.id,
         true
       FROM user_groups ug
       CROSS JOIN master_menus mm
       WHERE ug.name = 'admin'
-      ON CONFLICT (group_id, menu_id) DO NOTHING;
+      ON CONFLICT DO NOTHING;
+    `);
+
+    // Superadmin always sees every active menu
+    await client.query(`
+      INSERT INTO user_privileges (id, group_id, menu_id, can_view)
+      SELECT gen_random_uuid(), ug.id, mm.id, true
+      FROM user_groups ug
+      CROSS JOIN master_menus mm
+      WHERE ug.name = 'superadmin'
+      ON CONFLICT DO NOTHING;
+
+      UPDATE user_privileges up
+      SET can_view = true
+      FROM user_groups ug
+      WHERE up.group_id = ug.id AND ug.name = 'superadmin';
     `);
 
     // User group: Settings section is hidden by default for regular user
     await client.query(`
       INSERT INTO user_privileges (id, group_id, menu_id, can_view)
       SELECT 
-        '40000000-0000-0000-0000-00000000000' || row_number() over (),
+        gen_random_uuid(),
         ug.id,
         mm.id,
         CASE WHEN mm.section = 'Settings' THEN false ELSE true END
       FROM user_groups ug
       CROSS JOIN master_menus mm
       WHERE ug.name = 'user'
-      ON CONFLICT (group_id, menu_id) DO NOTHING;
+      ON CONFLICT DO NOTHING;
     `);
 
     // 9. Project Groups Table (Project-level roles: Owner, Admin, Member)
@@ -361,42 +489,42 @@ export async function initDb() {
     await client.query(`
       INSERT INTO project_privileges (id, group_id, menu_id, can_view)
       SELECT 
-        '60000000-0000-0000-0000-00000000000' || row_number() over (),
+        gen_random_uuid(),
         pg.id,
         mm.id,
         true
       FROM project_groups pg
       CROSS JOIN master_menus mm
       WHERE pg.name = 'owner'
-      ON CONFLICT (group_id, menu_id) DO NOTHING;
+      ON CONFLICT DO NOTHING;
     `);
 
     // - Admin sees all menus
     await client.query(`
       INSERT INTO project_privileges (id, group_id, menu_id, can_view)
       SELECT 
-        '70000000-0000-0000-0000-00000000000' || row_number() over (),
+        gen_random_uuid(),
         pg.id,
         mm.id,
         true
       FROM project_groups pg
       CROSS JOIN master_menus mm
       WHERE pg.name = 'admin'
-      ON CONFLICT (group_id, menu_id) DO NOTHING;
+      ON CONFLICT DO NOTHING;
     `);
 
     // - Member sees board, backlog, summary, projects, but NOT settings section
     await client.query(`
       INSERT INTO project_privileges (id, group_id, menu_id, can_view)
       SELECT 
-        '80000000-0000-0000-0000-00000000000' || row_number() over (),
+        gen_random_uuid(),
         pg.id,
         mm.id,
         CASE WHEN mm.section = 'Settings' THEN false ELSE true END
       FROM project_groups pg
       CROSS JOIN master_menus mm
       WHERE pg.name = 'member'
-      ON CONFLICT (group_id, menu_id) DO NOTHING;
+      ON CONFLICT DO NOTHING;
     `);
 
     // Seed default Admin User (admin@numpux.com / admin123)

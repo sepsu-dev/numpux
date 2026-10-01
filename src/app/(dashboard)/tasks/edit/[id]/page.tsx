@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import type { Task, Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 export default function EditTaskPage() {
     const router = useRouter();
@@ -28,17 +28,16 @@ export default function EditTaskPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const [reloadKey, setReloadKey] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
+    const { priorities, loadAll } = useMasterDataStore();
+
+    useEffect(() => { void loadAll(); }, [loadAll]);
 
     useEffect(() => {
         if (!id) return;
-        setIsLoading(true);
-        setLoadError(null);
         Promise.all([
-            apiFetch(`/api/tasks/${id}`).then((r) => { if (!r.ok) throw new Error("Task request failed"); return r.json(); }),
-            apiFetch("/api/projects").then((r) => { if (!r.ok) throw new Error("Project request failed"); return r.json(); })
+            apiFetch(`/api/tasks/${id}`).then((r) => r.json()),
+            apiFetch("/api/projects").then((r) => r.json())
         ])
             .then(([taskRes, projectsRes]) => {
                 if (taskRes.data) {
@@ -49,9 +48,9 @@ export default function EditTaskPage() {
                     setProjects(projectsRes.data);
                 }
             })
-            .catch(() => setLoadError("Task details could not be loaded."))
+            .catch(() => {})
             .finally(() => setIsLoading(false));
-    }, [id, reloadKey]);
+    }, [id]);
 
     const activeProject = projects.find((p) => p.id === selectedProjectId);
 
@@ -100,34 +99,25 @@ export default function EditTaskPage() {
 
     if (isLoading) {
         return (
-            <div className="max-w-3xl space-y-6" aria-label="Loading task details">
-                <div className="space-y-2"><Skeleton className="h-7 w-36" /><Skeleton className="h-3.5 w-72" /></div>
-                <div className="space-y-5 rounded-xl border border-border/60 bg-white p-6 sm:p-8">
-                    <Skeleton className="h-10 w-full" />
-                    <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
-                    <Skeleton className="h-28 w-full" />
-                </div>
+            <div className="py-20 text-center text-muted-foreground text-sm font-medium">
+                Loading task details...
             </div>
         );
     }
 
-    if (loadError || !task) {
-        return <LoadFailure message={loadError || "Task not found."} onRetry={() => setReloadKey((key) => key + 1)} />;
-    }
-
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+        <div className="space-y-6 max-w-3xl">
             <div className="flex items-center gap-3">
-                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs cursor-pointer">
+                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none cursor-pointer">
                     <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit Task</h2>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit task</h2>
                     <p className="text-muted-foreground text-xs mt-0.5">Update progress, priority, and implementation notes.</p>
                 </div>
             </div>
 
-            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+            <div className="bg-card border border-border/80 rounded-lg p-6 sm:p-8 shadow-none">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-5">
                         <div className="grid gap-1.5">
@@ -136,30 +126,30 @@ export default function EditTaskPage() {
                                 id="title"
                                 name="title"
                                 defaultValue={task?.title || ""}
-                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 transition-all shadow-2xs"
+                                className="h-10 text-xs rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5 bg-white transition-colors shadow-none"
                                 required
                             />
                         </div>
 
-                        {/* Project Workspace (Full Width) */}
+                        {/* Project (Full Width) */}
                         <div className="grid gap-1.5">
-                            <Label className="font-semibold text-xs text-foreground px-0.5">Project Workspace *</Label>
+                            <Label className="font-semibold text-xs text-foreground px-0.5">Project *</Label>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button
                                         type="button"
-                                        className="h-10 w-full flex items-center justify-between rounded-xl border border-border px-3 bg-background/50 hover:bg-background transition-all text-foreground font-medium shadow-2xs text-xs cursor-pointer"
+                                        className="h-10 w-full flex items-center justify-between rounded-lg border border-border px-3 bg-white hover:bg-background transition-colors text-foreground font-medium shadow-none text-xs cursor-pointer"
                                     >
                                         <div className="flex items-center gap-2 truncate">
                                             <Briefcase size={14} className={!activeProject ? "text-muted-foreground shrink-0" : "text-primary shrink-0"} />
                                             <span className="text-xs truncate">
-                                                {activeProject ? activeProject.title : (task?.project || "Select Project")}
+                                                {activeProject ? activeProject.title : (task?.project || "Select a project")}
                                             </span>
                                         </div>
                                         <CaretDown size={13} className="text-muted-foreground opacity-60 shrink-0 ml-2" />
                                     </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[280px] max-h-60 overflow-y-auto rounded-xl border border-border p-1 text-xs shadow-md">
+                                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[280px] max-h-60 overflow-y-auto rounded-lg border border-border p-1 text-xs shadow-md">
                                     {projects.map((proj) => (
                                         <DropdownMenuItem
                                             key={proj.id}
@@ -191,7 +181,7 @@ export default function EditTaskPage() {
                                     name="date"
                                     type="date"
                                     defaultValue={task?.date || ""}
-                                    className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 shadow-2xs"
+                                    className="h-10 text-xs rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5 bg-white shadow-none"
                                 />
                             </div>
                         </div>
@@ -199,22 +189,17 @@ export default function EditTaskPage() {
                         <div className="grid gap-1.5">
                             <Label htmlFor="priority" className="font-semibold text-xs text-foreground px-0.5">Priority Level</Label>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                                {[
-                                    { id: 'Low', label: 'Low', value: 'Low' },
-                                    { id: 'Medium', label: 'Medium', value: 'Medium' },
-                                    { id: 'High', label: 'High', value: 'High' },
-                                    { id: 'Critical', label: 'Urgent', value: 'Urgent' }
-                                ].map((p) => (
+                                {priorities.map((p) => (
                                     <label key={p.id} className="cursor-pointer group">
                                         <input
                                             type="radio"
                                             name="priority"
-                                            value={p.value}
+                                            value={p.id}
                                             className="sr-only peer"
-                                            defaultChecked={task?.priority === p.value || (!task?.priority && p.id === 'Medium')}
+                                            defaultChecked={task?.priority === p.id || (!task?.priority && p.id === priorities[0]?.id)}
                                         />
-                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium border border-border rounded-xl peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-checked:font-semibold transition-all shadow-2xs hover:bg-muted/50">
-                                            {p.label}
+                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium border border-border rounded-lg peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-checked:font-semibold transition-colors shadow-none hover:bg-muted/50">
+                                            {p.name}
                                         </div>
                                     </label>
                                 ))}
@@ -227,23 +212,19 @@ export default function EditTaskPage() {
                                 id="description"
                                 name="description"
                                 defaultValue={task?.description || ""}
-                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs text-foreground bg-background/50 shadow-2xs"
+                                className="min-h-[110px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-xs text-foreground bg-white shadow-none"
                             />
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
-                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSaving} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
-                            {isSaving ? "Saving..." : "Save Changes"}
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSaving} className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none">
+                            {isSaving ? "Saving..." : "Save changes"}
                         </Button>
                     </div>
                 </form>
             </div>
         </div>
     );
-}
-
-function LoadFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
-    return <div className="flex min-h-64 max-w-3xl items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center"><div><p className="text-sm font-medium text-foreground">{message}</p><p className="mt-1 text-xs text-muted-foreground">Check the task or try loading it again.</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Try again</button></div></div>;
 }

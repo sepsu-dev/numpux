@@ -1,12 +1,12 @@
-export type Priority = "Low" | "Medium" | "High" | "Urgent";
+export type Priority = "Low" | "Medium" | "High" | "Urgent" | (string & {});
 
-export type TaskStatus = "To Do" | "In Progress" | "Review" | "Done";
+export type TaskStatus = "To Do" | "In Progress" | "Review" | "Done" | (string & {});
 
-export type IssueType = "Task" | "Bug" | "Story";
+export type IssueType = "Task" | "Bug" | "Story" | (string & {});
 
 export type ProjectMemberRole = "Owner" | "Admin" | "Member" | "Viewer";
 
-export type UserRole = "admin" | "user";
+export type UserRole = "superadmin" | "admin" | "user";
 
 export type User = {
   id: string;
@@ -113,7 +113,7 @@ export type Project = {
   title: string;
   description: string;
   category: string;
-  status: "Active" | "Planning" | "Completed";
+  status: "Active" | "Planning" | "Completed" | (string & {});
   tasks: number;
   progress: number;
   membersCount?: number;

@@ -92,8 +92,7 @@ export async function POST(request: Request) {
     return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
-  // Only admin account can manage privileges
-  if (auth.user?.role !== "admin") {
+  if (!auth.user?.role || !["admin", "superadmin"].includes(auth.user.role)) {
     return errorResponse("Forbidden. Only administrators can configure privileges.", 403);
   }
 
@@ -226,6 +225,9 @@ export async function POST(request: Request) {
     }
 
     const { groupName, menuId, canView } = parsed.data;
+    if (groupName.toLowerCase() === "superadmin" && !canView) {
+      return badRequestResponse("Superadmin must retain access to every menu");
+    }
     const ok = await setGroupMenuPrivilege(groupName, menuId, canView);
     if (!ok) {
       return badRequestResponse("User group not found");

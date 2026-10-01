@@ -16,12 +16,12 @@ import { cn } from "@/lib/utils";
 import type { MasterMenu } from "@/types";
 import { usePrivilegesStore } from "@/stores/privileges-store";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -150,20 +150,20 @@ export default function MasterMenusPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Master Menus</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Navigation</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredMenus.length} {filteredMenus.length === 1 ? "menu" : "menus"}
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Atur urutan menu sidebar, ubah label nama, dan tentukan visibilitas secara global.
+                        Control the order, labels, grouping, and visibility of sidebar links.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsCreateMenuModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 active:scale-98 transition-all shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
                         <span>Add Menu</span>
@@ -171,7 +171,7 @@ export default function MasterMenusPage() {
                     <button
                         onClick={loadAllPrivileges}
                         disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-xl text-xs font-semibold border border-border/60 hover:border-border transition-all cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer disabled:opacity-50"
                         title="Refresh Data"
                     >
                         <ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} />
@@ -181,15 +181,15 @@ export default function MasterMenusPage() {
             </div>
 
             {/* Search & Filter Bar matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search menu by name or path..."
+                        placeholder="Search links"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -204,8 +204,8 @@ export default function MasterMenusPage() {
                 <div className="flex items-center gap-2">
                     <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Section:</span>
                     <Select value={selectedSection} onValueChange={setSelectedSection}>
-                        <SelectTrigger className="h-8 w-[140px] text-xs rounded-xl bg-card border-border/80">
-                            <SelectValue placeholder="All Sections" />
+                        <SelectTrigger className="h-8 w-[140px] text-xs rounded-lg bg-card border-border/80">
+                            <SelectValue placeholder="All sections" />
                         </SelectTrigger>
                         <SelectContent className="text-xs">
                             {sections.map((sec) => (
@@ -219,7 +219,7 @@ export default function MasterMenusPage() {
             </div>
 
             {/* Clean Table Container */}
-            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-2xs">
+            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
                 <table className="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
@@ -294,7 +294,7 @@ export default function MasterMenusPage() {
                                                     value={item.name}
                                                     onChange={(e) => handleRenameMenu(item.id, e.target.value)}
                                                     className={cn(
-                                                        "text-xs bg-transparent border border-transparent hover:border-border focus:border-primary focus:bg-background rounded-lg px-2 py-1 transition-all outline-none",
+                                                        "text-xs bg-transparent border border-transparent hover:border-border focus:border-primary focus:bg-background rounded-lg px-2 py-1 transition-colors outline-none",
                                                         isSubmenu ? "font-normal text-foreground/90" : "font-semibold text-foreground"
                                                     )}
                                                 />
@@ -311,7 +311,7 @@ export default function MasterMenusPage() {
                                                 onValueChange={(val) => handleParentChange(item.id, val)}
                                             >
                                                 <SelectTrigger className="h-7 w-[130px] text-[11px] rounded-lg bg-muted/30 border-border/60">
-                                                    <SelectValue placeholder="Parent Menu" />
+                                                    <SelectValue placeholder="Parent link" />
                                                 </SelectTrigger>
                                                 <SelectContent className="text-xs">
                                                     <SelectItem value="none" className="text-xs">None (Top-level)</SelectItem>
@@ -393,129 +393,121 @@ export default function MasterMenusPage() {
                 </table>
             </div>
 
-            {/* Create Menu Sheet */}
-            <Sheet open={isCreateMenuModalOpen} onOpenChange={setIsCreateMenuModalOpen}>
-                <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
-                    <form onSubmit={handleCreateMenu} className="flex flex-col h-full">
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-border/60">
-                            <SheetHeader className="p-0">
-                                <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                    Add Master Menu
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
-                                    Tambah menu atau submenu baru ke sistem navigasi aplikasi.
-                                </SheetDescription>
-                            </SheetHeader>
+            {/* Create Menu Dialog */}
+            <Dialog open={isCreateMenuModalOpen} onOpenChange={setIsCreateMenuModalOpen}>
+                <DialogContent className="sm:max-w-[420px] rounded-lg bg-card border border-border p-6 shadow-none">
+                    <DialogHeader className="space-y-1">
+                        <DialogTitle className="text-lg font-bold text-foreground tracking-tight">
+                            Add Master Menu
+                        </DialogTitle>
+                        <p className="text-xs text-muted-foreground">
+                            Tambah menu atau submenu baru ke sistem navigasi aplikasi.
+                        </p>
+                    </DialogHeader>
+
+                    <form onSubmit={handleCreateMenu} className="space-y-4 pt-3">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-foreground">
+                                Menu Name <span className="text-destructive">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. Analytics, Milestones, Reports"
+                                value={newMenuName}
+                                onChange={(e) => setNewMenuName(e.target.value)}
+                                required
+                                className="w-full px-3 py-2 text-xs bg-muted/30 border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors text-foreground"
+                            />
                         </div>
 
-                        {/* Body */}
-                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Menu Name <span className="text-primary">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Analytics, Milestones, Reports"
-                                    value={newMenuName}
-                                    onChange={(e) => setNewMenuName(e.target.value)}
-                                    required
-                                    autoFocus
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all text-foreground font-medium"
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-foreground">
+                                Route Path <span className="text-destructive">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. /analytics or /master/milestones"
+                                value={newMenuPath}
+                                onChange={(e) => setNewMenuPath(e.target.value)}
+                                required
+                                className="w-full px-3 py-2 text-xs font-mono bg-muted/30 border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors text-foreground"
+                            />
+                        </div>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Route Path <span className="text-primary">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. /analytics or /master/milestones"
-                                    value={newMenuPath}
-                                    onChange={(e) => setNewMenuPath(e.target.value)}
-                                    required
-                                    className="w-full px-3 py-2.5 text-xs font-mono bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-foreground">
+                                Parent Menu (Opsional untuk Submenu)
+                            </label>
+                            <Select
+                                value={newMenuParentId || "none"}
+                                onValueChange={(val) => setNewMenuParentId(val === "none" ? "" : val)}
+                            >
+                                <SelectTrigger className="h-9 w-full text-xs rounded-lg bg-card border-border">
+                                    <SelectValue placeholder="None (top-level link)" />
+                                </SelectTrigger>
+                                <SelectContent className="text-xs">
+                                    <SelectItem value="none" className="text-xs">None (Jadikan Menu Utama / Top-level)</SelectItem>
+                                    {parentCandidates.map((p) => (
+                                        <SelectItem key={p.id} value={p.id} className="text-xs">
+                                            {p.name} ({p.section || "General"})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
+                        <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Parent Menu (Opsional untuk Submenu)
-                                </label>
+                                <label className="text-xs font-semibold text-foreground">Section</label>
                                 <Select
-                                    value={newMenuParentId || "none"}
-                                    onValueChange={(val) => setNewMenuParentId(val === "none" ? "" : val)}
+                                    value={newMenuSection}
+                                    onValueChange={setNewMenuSection}
                                 >
-                                    <SelectTrigger className="h-10 w-full text-xs rounded-xl bg-background/50 border-border">
-                                        <SelectValue placeholder="None (Jadikan Menu Utama / Top-level)" />
+                                    <SelectTrigger className="h-9 w-full text-xs rounded-lg bg-card border-border">
+                                        <SelectValue placeholder="Select section" />
                                     </SelectTrigger>
                                     <SelectContent className="text-xs">
-                                        <SelectItem value="none" className="text-xs">None (Jadikan Menu Utama / Top-level)</SelectItem>
-                                        {parentCandidates.map((p) => (
-                                            <SelectItem key={p.id} value={p.id} className="text-xs">
-                                                {p.name} ({p.section || "General"})
-                                            </SelectItem>
-                                        ))}
+                                        {sections
+                                            .filter((s) => s !== "All")
+                                            .map((sec) => (
+                                                <SelectItem key={sec} value={sec} className="text-xs">
+                                                    {sec}
+                                                </SelectItem>
+                                            ))}
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-foreground">Section</label>
-                                    <Select
-                                        value={newMenuSection}
-                                        onValueChange={setNewMenuSection}
-                                    >
-                                        <SelectTrigger className="h-10 w-full text-xs rounded-xl bg-background/50 border-border">
-                                            <SelectValue placeholder="Select Section" />
-                                        </SelectTrigger>
-                                        <SelectContent className="text-xs">
-                                            {sections
-                                                .filter((s) => s !== "All")
-                                                .map((sec) => (
-                                                    <SelectItem key={sec} value={sec} className="text-xs">
-                                                        {sec}
-                                                    </SelectItem>
-                                                ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-foreground">Icon Code</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. ChartBar, Folder"
-                                        value={newMenuIcon}
-                                        onChange={(e) => setNewMenuIcon(e.target.value)}
-                                        className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all text-foreground font-medium"
-                                    />
-                                </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-foreground">Icon Code</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. ChartBar, Folder"
+                                    value={newMenuIcon}
+                                    onChange={(e) => setNewMenuIcon(e.target.value)}
+                                    className="w-full px-3 py-2 text-xs bg-muted/30 border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors text-foreground"
+                                />
                             </div>
                         </div>
 
-                        {/* Footer */}
-                        <div className="px-6 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5">
+                        <DialogFooter className="pt-3 flex items-center justify-end gap-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateMenuModalOpen(false)}
-                                className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted rounded-xl transition-all cursor-pointer"
+                                className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={!newMenuName.trim() || !newMenuPath.trim()}
-                                className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 active:scale-98 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                                className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 rounded-lg transition-colors shadow-none cursor-pointer disabled:opacity-50"
                             >
                                 Create Menu
                             </button>
-                        </div>
+                        </DialogFooter>
                     </form>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

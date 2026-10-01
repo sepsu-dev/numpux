@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-export const projectStatusSchema = z.enum(["Planning", "Active", "Completed"]);
+export const projectStatusSchema = z.string().trim().min(1, "Project status is required").max(64);
 
 export const createProjectSchema = z.object({
   title: z.string().min(1, "Project title is required"),
   category: z.string().min(1, "Project category is required"),
   description: z.string().optional().default(""),
-  status: projectStatusSchema.optional().default("Planning"),
+  status: projectStatusSchema,
   tasks: z.number().int().nonnegative().optional().default(0),
   progress: z.number().min(0).max(100).optional().default(0),
 });

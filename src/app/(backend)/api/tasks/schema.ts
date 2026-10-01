@@ -1,19 +1,19 @@
 import { z } from "zod";
 
-export const prioritySchema = z.enum(["Low", "Medium", "High", "Urgent"]);
-export const taskStatusSchema = z.enum(["To Do", "In Progress", "Review", "Done"]);
-export const issueTypeSchema = z.enum(["Task", "Bug", "Story"]);
+export const prioritySchema = z.string().trim().min(1, "Priority is required").max(50, "Priority is too long");
+export const taskStatusSchema = z.string().trim().min(1, "Task status is required").max(50, "Task status is too long");
+export const issueTypeSchema = z.string().trim().min(1, "Task type is required").max(50, "Task type is too long");
 
 export const createTaskSchema = z.object({
   title: z.string().min(1, "Task title is required"),
   projectId: z.string().min(1, "projectId is required"),
   project: z.string().optional().default("Project"),
-  priority: prioritySchema.optional().default("Medium"),
+  priority: prioritySchema,
   date: z.string().optional(),
-  status: taskStatusSchema.optional().default("To Do"),
+  status: taskStatusSchema,
   description: z.string().optional(),
   assigneeId: z.string().optional(),
-  issueType: issueTypeSchema.optional().default("Task"),
+  issueType: issueTypeSchema,
 });
 
 export const updateTaskSchema = z.object({

@@ -49,7 +49,7 @@ export async function findTasks(userId?: string, projectId?: string): Promise<Ta
   return res.rows.map((row) => ({
     id: row.id,
     key: row.task_key || undefined,
-    issueType: (row.issue_type as IssueType) || "Task",
+    issueType: (row.issue_type as IssueType) || "",
     userId: row.user_id,
     projectId: row.project_id,
     title: row.title,
@@ -109,7 +109,7 @@ export async function findTaskById(id: string, userId?: string): Promise<Task | 
   return {
     id: row.id,
     key: row.task_key || undefined,
-    issueType: (row.issue_type as IssueType) || "Task",
+    issueType: (row.issue_type as IssueType) || "",
     userId: row.user_id,
     projectId: row.project_id,
     title: row.title,
@@ -155,13 +155,13 @@ export async function insertTask(data: CreateTaskInput, userId?: string): Promis
       data.projectId,
       data.title,
       projTitle,
-      data.priority || "Medium",
+      data.priority,
       data.date || null,
-      data.status || "To Do",
+      data.status,
       data.description || null,
       data.assigneeId || null,
       taskKey,
-      data.issueType || "Task",
+      data.issueType,
     ]
   );
 

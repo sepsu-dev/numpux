@@ -19,7 +19,7 @@ import {
 import type { Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 export default function NewTaskPage() {
     const router = useRouter();
@@ -27,21 +27,18 @@ export default function NewTaskPage() {
     const prefillProjectId = searchParams.get("projectId") || "";
 
     const [projects, setProjects] = useState<Project[]>([]);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(true);
-    const [projectsLoadError, setProjectsLoadError] = useState<string | null>(null);
-    const [projectsReloadKey, setProjectsReloadKey] = useState(0);
     const [selectedProjectId, setSelectedProjectId] = useState<string>(prefillProjectId);
     const [dueDate, setDueDate] = useState<string>("");
+    const [priority, setPriority] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { priorities, statuses, issueTypes, loadAll, isLoading: isMasterLoading } = useMasterDataStore();
+
+    useEffect(() => { void loadAll(); }, [loadAll]);
+    useEffect(() => { if (!priority && priorities[0]) setPriority(priorities[0].id); }, [priority, priorities]);
 
     useEffect(() => {
-        setIsLoadingProjects(true);
-        setProjectsLoadError(null);
         apiFetch("/api/projects")
-            .then((res) => {
-                if (!res.ok) throw new Error("Project request failed");
-                return res.json();
-            })
+            .then((res) => res.json())
             .then((res) => {
                 if (res.data) {
                     setProjects(res.data);
@@ -53,12 +50,8 @@ export default function NewTaskPage() {
                     }
                 }
             })
-            .catch(() => {
-                setProjects([]);
-                setProjectsLoadError("Projects could not be loaded.");
-            })
-            .finally(() => setIsLoadingProjects(false));
-    }, [prefillProjectId, projectsReloadKey]);
+            .catch(() => {});
+    }, [prefillProjectId]);
 
     const activeProject = projects.find((p) => p.id === selectedProjectId);
 
@@ -66,7 +59,6 @@ export default function NewTaskPage() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const title = formData.get("title") as string;
-        const priority = formData.get("priority") as string;
         const description = formData.get("description") as string;
 
         if (!title.trim()) {
@@ -88,7 +80,9 @@ export default function NewTaskPage() {
                     title: title.trim(),
                     projectId: selectedProjectId,
                     project: activeProject ? activeProject.title : "Project",
-                    priority: priority || "Medium",
+                    priority,
+                    status: statuses[0]?.id,
+                    issueType: issueTypes[0]?.id,
                     date: dueDate ? dueDate : undefined,
                     description: description.trim() || undefined,
                 }),
@@ -99,7 +93,7 @@ export default function NewTaskPage() {
                 throw new Error(errData.message || "Failed to create task");
             }
 
-            toast.success("Task created successfully!");
+            toast.success("Task created");
             router.push(selectedProjectId ? `/tasks?projectId=${selectedProjectId}` : "/tasks");
             router.refresh();
         } catch (err: any) {
@@ -110,18 +104,18 @@ export default function NewTaskPage() {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+        <div className="space-y-6 max-w-3xl">
             <div className="flex items-center gap-3">
-                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs cursor-pointer">
+                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none cursor-pointer">
                     <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Create Task</h2>
-                    <p className="text-muted-foreground text-xs mt-0.5">Define task details, priority, and link to a project.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Create task</h2>
+                    <p className="text-muted-foreground text-xs mt-0.5">Add the information someone needs to start this task.</p>
                 </div>
             </div>
 
-            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+            <div className="bg-card border border-border/80 rounded-lg p-6 sm:p-8 shadow-none">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-5">
                         <div className="grid gap-1.5">
@@ -130,7 +124,7 @@ export default function NewTaskPage() {
                                 id="title"
                                 name="title"
                                 placeholder="e.g. Implement webhook retry queue"
-                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium px-3.5 bg-background/50 transition-all text-foreground shadow-2xs"
+                                className="h-10 text-xs rounded-lg border border-border focus:border-primary font-medium px-3.5 bg-white transition-colors text-foreground shadow-none"
                                 required
                             />
                         </div>
@@ -139,9 +133,9 @@ export default function NewTaskPage() {
                             <div className="grid gap-1.5">
                                 <div className="flex items-center justify-between">
                                     <Label className="font-semibold text-xs text-foreground px-0.5">Project *</Label>
-                                    {!isLoadingProjects && !projectsLoadError && projects.length === 0 && (
+                                    {projects.length === 0 && (
                                         <Link href="/projects/new" className="text-[11px] text-primary hover:underline font-semibold">
-                                            + Create Project First
+                                            + Create a project first
                                         </Link>
                                     )}
                                 </div>
@@ -150,35 +144,21 @@ export default function NewTaskPage() {
                                         <button
                                             type="button"
                                             className={cn(
-                                                "h-10 w-full flex items-center justify-between rounded-xl border px-3 bg-background/50 hover:bg-background transition-all text-foreground font-medium shadow-2xs text-xs cursor-pointer",
-                                                isLoadingProjects || projectsLoadError
-                                                    ? "border-border text-muted-foreground"
-                                                    : !selectedProjectId
-                                                        ? "border-amber-300 text-muted-foreground"
-                                                        : "border-border"
+                                                "h-10 w-full flex items-center justify-between rounded-lg border px-3 bg-white hover:bg-background transition-colors text-foreground font-medium shadow-none text-xs cursor-pointer",
+                                                !selectedProjectId ? "border-amber-300 text-muted-foreground" : "border-border"
                                             )}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Briefcase size={14} className={!activeProject ? "text-muted-foreground" : "text-primary"} />
                                                 <span className={!activeProject ? "text-muted-foreground" : "text-foreground font-medium"}>
-                                                    {isLoadingProjects ? "Loading projects…" : projectsLoadError ? "Unable to load projects" : activeProject ? activeProject.title : (projects.length === 0 ? "No Projects" : "Select Project")}
+                                                    {activeProject ? activeProject.title : (projects.length === 0 ? "No projects" : "Select a project")}
                                                 </span>
                                             </div>
                                             <CaretDown size={13} className="text-muted-foreground opacity-60" />
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-[280px] p-1 text-xs">
-                                        {isLoadingProjects ? (
-                                            <div className="space-y-2 p-2">
-                                                <Skeleton className="h-8 w-full" />
-                                                <Skeleton className="h-8 w-full" />
-                                            </div>
-                                        ) : projectsLoadError ? (
-                                            <div className="p-3 text-center text-[11px] text-muted-foreground">
-                                                <p>{projectsLoadError}</p>
-                                                <button type="button" onClick={() => setProjectsReloadKey((key) => key + 1)} className="mt-2 font-medium text-primary hover:underline">Try again</button>
-                                            </div>
-                                        ) : projects.map((project) => (
+                                        {projects.map((project) => (
                                             <DropdownMenuItem
                                                 key={project.id}
                                                 className="cursor-pointer py-2 px-2.5 rounded-lg flex items-center justify-between"
@@ -198,7 +178,7 @@ export default function NewTaskPage() {
                                 <DatePicker
                                     value={dueDate}
                                     onChange={(val) => setDueDate(val)}
-                                    placeholder="Select due date..."
+                                    placeholder="Select a due date"
                                 />
                             </div>
                         </div>
@@ -206,37 +186,33 @@ export default function NewTaskPage() {
                         <div className="grid gap-1.5">
                             <Label className="font-semibold text-xs text-foreground px-0.5">Priority</Label>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                                {[
-                                    { id: 'Low', label: 'Low', value: 'Low' },
-                                    { id: 'Medium', label: 'Medium', value: 'Medium' },
-                                    { id: 'High', label: 'High', value: 'High' },
-                                    { id: 'Critical', label: 'Urgent', value: 'Urgent' },
-                                ].map((p) => (
+                                {priorities.map((p) => (
                                     <label key={p.id} className="cursor-pointer group">
-                                        <input type="radio" name="priority" value={p.value} className="sr-only peer" defaultChecked={p.id === 'Medium'} />
-                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium rounded-xl border border-border peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-checked:font-semibold transition-all hover:bg-muted/50 shadow-2xs">
-                                            {p.label}
+                                        <input type="radio" name="priority" value={p.id} checked={priority === p.id} onChange={() => setPriority(p.id)} className="sr-only peer" />
+                                        <div className="flex items-center justify-center p-2.5 text-xs font-medium rounded-lg border border-border peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-checked:font-semibold transition-colors hover:bg-muted/50 shadow-none">
+                                            {p.name}
                                         </div>
                                     </label>
                                 ))}
+                                {isMasterLoading && <div className="col-span-full h-10 animate-pulse rounded-lg bg-muted" />}
                             </div>
                         </div>
 
                         <div className="grid gap-1.5">
-                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description & Acceptance Criteria</Label>
+                            <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description</Label>
                             <Textarea
                                 id="description"
                                 name="description"
-                                placeholder="Add technical background, testing checklist, or steps to complete..."
-                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs bg-background/50 transition-all text-foreground shadow-2xs"
+                                placeholder="Add context, expected outcome, or useful notes."
+                                className="min-h-[110px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-xs bg-white transition-colors text-foreground shadow-none"
                             />
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
-                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSubmitting || isLoadingProjects || !!projectsLoadError} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
-                            {isLoadingProjects ? "Loading…" : isSubmitting ? "Creating..." : "Create Task"}
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSubmitting || !priority || !statuses[0] || !issueTypes[0]} className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none">
+                            {isSubmitting ? "Creating..." : "Create task"}
                         </Button>
                     </div>
                 </form>

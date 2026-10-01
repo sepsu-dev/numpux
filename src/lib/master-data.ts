@@ -1,353 +1,57 @@
 import {
-    CheckSquare,
-    Bug,
-    BookmarkSimple,
-    Lightning,
-    Shield,
-    Fire,
-    Rocket,
-    type Icon,
+  BookmarkSimple,
+  Bug,
+  CheckSquare,
+  Fire,
+  Lightning,
+  Rocket,
+  Shield,
+  type Icon,
 } from "@phosphor-icons/react";
 
-export type IssueTypeIconName = "CheckSquare" | "Bug" | "BookmarkSimple" | "Lightning" | "Shield" | "Fire" | "Rocket";
+export type IssueTypeIconName =
+  | "CheckSquare"
+  | "Bug"
+  | "BookmarkSimple"
+  | "Lightning"
+  | "Shield"
+  | "Fire"
+  | "Rocket";
 
-export interface MasterCategoryItem {
-    id: string;
-    name: string;
-    isDefault?: boolean;
-}
-
-export interface MasterIssueTypeItem {
-    id: string;
-    name: string;
-    description?: string;
-    iconName: IssueTypeIconName;
-    colorClass: string; // e.g. "text-blue-500 bg-blue-500/10"
-    isDefault?: boolean;
-}
-
-export interface MasterPriorityItem {
-    id: string;
-    name: string;
-    level: number; // 1-5
-    dotColor: string; // e.g. "bg-amber-500"
-    badgeClass: string;
-    isDefault?: boolean;
-}
-
-export interface MasterMenuItem {
-    id: "dashboard" | "tasks" | "projects" | "master";
-    label: string;
-    path: string;
-    enabled: boolean;
-    order: number;
-}
-
-export const DEFAULT_MASTER_MENU_ITEMS: MasterMenuItem[] = [
-    { id: "dashboard", label: "Summary", path: "/dashboard", enabled: true, order: 1 },
-    { id: "tasks", label: "Board & Backlog", path: "/tasks", enabled: true, order: 2 },
-    { id: "projects", label: "Projects", path: "/projects", enabled: true, order: 3 },
-    { id: "master", label: "Project Settings", path: "/master", enabled: true, order: 4 },
-];
+export interface MasterCategoryItem { id: string; name: string; isDefault?: boolean; }
+export interface MasterIssueTypeItem { id: string; name: string; description?: string; iconName: IssueTypeIconName; colorClass: string; isDefault?: boolean; }
+export interface MasterPriorityItem { id: string; name: string; level: number; dotColor: string; badgeClass: string; isDefault?: boolean; }
+export interface MasterStatusItem { id: string; name: string; description?: string; order: number; dotColor: string; badgeClass: string; headerBorder: string; isCompleted: boolean; isDefault?: boolean; }
+export interface MasterProjectStatusItem { id: string; name: string; description?: string; colorClass: string; order: number; isCompleted: boolean; isDefault?: boolean; }
 
 export const ISSUE_TYPE_ICONS: Record<IssueTypeIconName, Icon> = {
-    CheckSquare,
-    Bug,
-    BookmarkSimple,
-    Lightning,
-    Shield,
-    Fire,
-    Rocket,
+  CheckSquare, Bug, BookmarkSimple, Lightning, Shield, Fire, Rocket,
 };
 
-export const DEFAULT_MASTER_CATEGORIES: MasterCategoryItem[] = [
-    { id: "General", name: "General", isDefault: true },
-    { id: "Product & Tech", name: "Product & Tech" },
-    { id: "Client Work", name: "Client Work" },
-    { id: "Operations", name: "Operations" },
-    { id: "Marketing & Growth", name: "Marketing & Growth" },
-    { id: "Personal / Self", name: "Personal / Self" },
-];
-
-export const DEFAULT_MASTER_ISSUE_TYPES: MasterIssueTypeItem[] = [
-    {
-        id: "Task",
-        name: "Task",
-        description: "General work or actionable task",
-        iconName: "CheckSquare",
-        colorClass: "text-blue-500 bg-blue-500/10 border-blue-200/50 dark:border-blue-900/50",
-        isDefault: true,
-    },
-    {
-        id: "Bug",
-        name: "Bug",
-        description: "Defect, error, or unexpected behavior",
-        iconName: "Bug",
-        colorClass: "text-rose-500 bg-rose-500/10 border-rose-200/50 dark:border-rose-900/50",
-        isDefault: true,
-    },
-    {
-        id: "Story",
-        name: "Story",
-        description: "User story or deliverable feature",
-        iconName: "BookmarkSimple",
-        colorClass: "text-emerald-500 bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-900/50",
-        isDefault: true,
-    },
-    {
-        id: "Improvement",
-        name: "Improvement",
-        description: "Refactoring, optimization, or UI polish",
-        iconName: "Lightning",
-        colorClass: "text-purple-500 bg-purple-500/10 border-purple-200/50 dark:border-purple-900/50",
-    },
-];
-
-export const DEFAULT_MASTER_PRIORITIES: MasterPriorityItem[] = [
-    {
-        id: "Low",
-        name: "Low",
-        level: 1,
-        dotColor: "bg-slate-400",
-        badgeClass: "bg-slate-50 text-slate-600 border-slate-200/80 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800",
-        isDefault: true,
-    },
-    {
-        id: "Medium",
-        name: "Medium",
-        level: 2,
-        dotColor: "bg-sky-500",
-        badgeClass: "bg-sky-50 text-sky-700 border-sky-200/70 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40",
-        isDefault: true,
-    },
-    {
-        id: "High",
-        name: "High",
-        level: 3,
-        dotColor: "bg-amber-500",
-        badgeClass: "bg-amber-50 text-amber-700 border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40",
-        isDefault: true,
-    },
-    {
-        id: "Urgent",
-        name: "Urgent",
-        level: 4,
-        dotColor: "bg-rose-500",
-        badgeClass: "bg-rose-50 text-rose-700 border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/40",
-        isDefault: true,
-    },
-];
-
-const STORAGE_KEYS = {
-    CATEGORIES: "numpux_master_categories",
-    ISSUE_TYPES: "numpux_master_issue_types",
-    PRIORITIES: "numpux_master_priorities",
-    MENUS: "numpux_master_menus",
-};
-
-function reportStorageError(operation: string, error: unknown): void {
-    if (process.env.NODE_ENV !== "production") {
-        console.warn(`[master-data] ${operation} failed`, error);
-    }
+export function getStatusConfig(statuses: MasterStatusItem[], statusId?: string): MasterStatusItem {
+  const requested = statusId || statuses[0]?.id || "Unknown";
+  return statuses.find((status) => status.id.toLowerCase() === requested.toLowerCase()) || {
+    id: requested, name: requested, description: "Workflow status", order: statuses.length + 1,
+    dotColor: "bg-muted-foreground", badgeClass: "bg-muted text-muted-foreground",
+    headerBorder: "border-border", isCompleted: false,
+  };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
+export function getIssueTypeConfig(issueTypes: MasterIssueTypeItem[], typeId?: string) {
+  const found = issueTypes.find((type) => type.id.toLowerCase() === (typeId || "").toLowerCase()) || issueTypes[0];
+  return {
+    icon: found ? ISSUE_TYPE_ICONS[found.iconName] || CheckSquare : CheckSquare,
+    colorClass: found?.colorClass || "text-muted-foreground bg-muted border-border",
+    name: found?.name || typeId || "Task",
+  };
 }
 
-function isMenuItem(value: unknown): value is MasterMenuItem {
-    if (!isRecord(value)) return false;
-    return ["dashboard", "tasks", "projects", "master"].includes(String(value.id))
-        && typeof value.label === "string"
-        && typeof value.path === "string"
-        && typeof value.enabled === "boolean"
-        && typeof value.order === "number";
+export function getPriorityConfig(priorities: MasterPriorityItem[], priorityName?: string) {
+  const requested = priorityName || "";
+  const found = priorities.find((priority) => priority.id.toLowerCase() === requested.toLowerCase() || priority.name.toLowerCase() === requested.toLowerCase()) || priorities[0];
+  return {
+    label: found?.name || priorityName || "Priority",
+    dotClass: found?.dotColor || "bg-muted-foreground",
+    badgeClass: found?.badgeClass || "bg-muted text-muted-foreground border-border",
+  };
 }
-
-function isIssueTypeItem(value: unknown): value is MasterIssueTypeItem {
-    if (!isRecord(value)) return false;
-    return typeof value.id === "string"
-        && typeof value.name === "string"
-        && (value.description === undefined || typeof value.description === "string")
-        && typeof value.iconName === "string"
-        && value.iconName in ISSUE_TYPE_ICONS
-        && typeof value.colorClass === "string"
-        && (value.isDefault === undefined || typeof value.isDefault === "boolean");
-}
-
-function isPriorityItem(value: unknown): value is MasterPriorityItem {
-    if (!isRecord(value)) return false;
-    return typeof value.id === "string"
-        && typeof value.name === "string"
-        && typeof value.level === "number"
-        && Number.isFinite(value.level)
-        && typeof value.dotColor === "string"
-        && typeof value.badgeClass === "string"
-        && (value.isDefault === undefined || typeof value.isDefault === "boolean");
-}
-
-export function getMasterMenuItems(): MasterMenuItem[] {
-    if (typeof window === "undefined") return DEFAULT_MASTER_MENU_ITEMS;
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.MENUS);
-        if (raw) {
-            const parsed: unknown = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isMenuItem)) {
-                // Merge any newly introduced default menu items (e.g. "master") if not present
-                const existingIds = new Set(parsed.map((item: MasterMenuItem) => item.id));
-                const missingDefaults = DEFAULT_MASTER_MENU_ITEMS.filter((item) => !existingIds.has(item.id));
-                if (missingDefaults.length > 0) {
-                    const merged = [
-                        ...parsed,
-                        ...missingDefaults.map((item, idx) => ({
-                            ...item,
-                            order: parsed.length + idx + 1,
-                        })),
-                    ];
-                    localStorage.setItem(STORAGE_KEYS.MENUS, JSON.stringify(merged));
-                    return merged;
-                }
-                return parsed;
-            }
-        }
-    } catch (error) {
-        reportStorageError("load menus", error);
-    }
-    return DEFAULT_MASTER_MENU_ITEMS;
-}
-
-export function saveMasterMenuItems(items: MasterMenuItem[]): boolean {
-    if (typeof window === "undefined") return false;
-    try {
-        localStorage.setItem(STORAGE_KEYS.MENUS, JSON.stringify(items));
-        window.dispatchEvent(new Event("numpux_master_data_updated"));
-        return true;
-    } catch (error) {
-        reportStorageError("save menus", error);
-        return false;
-    }
-}
-
-export function getMasterCategories(): string[] {
-    if (typeof window === "undefined") return DEFAULT_MASTER_CATEGORIES.map((c) => c.name);
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-        if (raw) {
-            const parsed: unknown = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                // Support both array of strings and array of objects
-                const categories = parsed.map((item) => {
-                    if (typeof item === "string") return item;
-                    if (isRecord(item) && typeof item.name === "string") return item.name;
-                    return null;
-                });
-                if (categories.every((item): item is string => item !== null)) return categories;
-            }
-        }
-    } catch (error) {
-        reportStorageError("load categories", error);
-    }
-    return DEFAULT_MASTER_CATEGORIES.map((c) => c.name);
-}
-
-export function saveMasterCategories(categories: string[]): boolean {
-    if (typeof window === "undefined") return false;
-    try {
-        localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-        window.dispatchEvent(new Event("numpux_master_data_updated"));
-        return true;
-    } catch (error) {
-        reportStorageError("save categories", error);
-        return false;
-    }
-}
-
-export function getMasterIssueTypes(): MasterIssueTypeItem[] {
-    if (typeof window === "undefined") return DEFAULT_MASTER_ISSUE_TYPES;
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.ISSUE_TYPES);
-        if (raw) {
-            const parsed: unknown = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isIssueTypeItem)) return parsed;
-        }
-    } catch (error) {
-        reportStorageError("load issue types", error);
-    }
-    return DEFAULT_MASTER_ISSUE_TYPES;
-}
-
-export function saveMasterIssueTypes(items: MasterIssueTypeItem[]): boolean {
-    if (typeof window === "undefined") return false;
-    try {
-        localStorage.setItem(STORAGE_KEYS.ISSUE_TYPES, JSON.stringify(items));
-        window.dispatchEvent(new Event("numpux_master_data_updated"));
-        return true;
-    } catch (error) {
-        reportStorageError("save issue types", error);
-        return false;
-    }
-}
-
-export function getMasterPriorities(): MasterPriorityItem[] {
-    if (typeof window === "undefined") return DEFAULT_MASTER_PRIORITIES;
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.PRIORITIES);
-        if (raw) {
-            const parsed: unknown = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isPriorityItem)) return parsed;
-        }
-    } catch (error) {
-        reportStorageError("load priorities", error);
-    }
-    return DEFAULT_MASTER_PRIORITIES;
-}
-
-export function saveMasterPriorities(items: MasterPriorityItem[]): boolean {
-    if (typeof window === "undefined") return false;
-    try {
-        localStorage.setItem(STORAGE_KEYS.PRIORITIES, JSON.stringify(items));
-        window.dispatchEvent(new Event("numpux_master_data_updated"));
-        return true;
-    } catch (error) {
-        reportStorageError("save priorities", error);
-        return false;
-    }
-}
-
-export function getIssueTypeConfig(typeId?: string): { icon: Icon; colorClass: string; name: string } {
-    const types = getMasterIssueTypes();
-    const found = types.find((t) => t.id.toLowerCase() === (typeId || "task").toLowerCase());
-    if (found) {
-        return {
-            icon: ISSUE_TYPE_ICONS[found.iconName] || CheckSquare,
-            colorClass: found.colorClass,
-            name: found.name,
-        };
-    }
-    // Fallback defaults
-    if (typeId === "Bug") {
-        return { icon: Bug, colorClass: "text-rose-500 bg-rose-500/10", name: "Bug" };
-    }
-    if (typeId === "Story") {
-        return { icon: BookmarkSimple, colorClass: "text-emerald-500 bg-emerald-500/10", name: "Story" };
-    }
-    return { icon: CheckSquare, colorClass: "text-blue-500 bg-blue-500/10", name: "Task" };
-}
-
-export function getPriorityConfig(priorityName?: string): { label: string; dotClass: string; badgeClass: string } {
-    const priorities = getMasterPriorities();
-    const found = priorities.find((p) => p.id.toLowerCase() === (priorityName || "medium").toLowerCase() || p.name.toLowerCase() === (priorityName || "medium").toLowerCase());
-    if (found) {
-        return {
-            label: found.name,
-            dotClass: found.dotColor,
-            badgeClass: found.badgeClass,
-        };
-    }
-    return {
-        label: priorityName || "Medium",
-        dotClass: "bg-sky-500",
-        badgeClass: "bg-sky-50 text-sky-700 border-sky-200/70 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40",
-    };
-}
-

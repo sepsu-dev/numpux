@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import type { Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useMasterDataStore } from "@/stores/master-data-store";
 import {
     Select,
     SelectContent,
@@ -27,29 +27,28 @@ export default function EditProjectPage() {
 
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const [reloadKey, setReloadKey] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
+    const { categories, projectStatuses, loadAll } = useMasterDataStore();
+
+    useEffect(() => { void loadAll(); }, [loadAll]);
 
     useEffect(() => {
         if (!id) return;
-        setIsLoading(true);
-        setLoadError(null);
         apiFetch(`/api/projects/${id}`)
-            .then((res) => { if (!res.ok) throw new Error("Project request failed"); return res.json(); })
+            .then((res) => res.json())
             .then((res) => {
                 if (res.data) setProject(res.data);
             })
-            .catch(() => setLoadError("Project details could not be loaded."))
+            .catch(() => { })
             .finally(() => setIsLoading(false));
-    }, [id, reloadKey]);
+    }, [id]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const title = formData.get("title") as string;
         const category = formData.get("category") as string;
-        const status = formData.get("status") as "Active" | "Planning" | "Completed";
+        const status = formData.get("status") as string;
         const description = formData.get("description") as string;
 
         setIsSaving(true);
@@ -72,34 +71,25 @@ export default function EditProjectPage() {
 
     if (isLoading) {
         return (
-            <div className="max-w-3xl space-y-6" aria-label="Loading project details">
-                <div className="space-y-2"><Skeleton className="h-7 w-40" /><Skeleton className="h-3.5 w-72" /></div>
-                <div className="space-y-5 rounded-xl border border-border/60 bg-white p-6 sm:p-8">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-28 w-full" />
-                    <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
-                </div>
+            <div className="py-20 text-center text-muted-foreground text-sm font-medium">
+                Loading project details...
             </div>
         );
     }
 
-    if (loadError || !project) {
-        return <LoadFailure message={loadError || "Project not found."} onRetry={() => setReloadKey((key) => key + 1)} />;
-    }
-
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-3xl">
+        <div className="space-y-6 max-w-3xl">
             <div className="flex items-center gap-3">
-                <Link href="/projects" className="p-2 hover:bg-muted/70 rounded-xl text-foreground transition-all border border-border bg-card active:scale-95 shadow-2xs">
+                <Link href="/projects" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none">
                     <ArrowLeft size={15} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit Project</h2>
-                    <p className="text-muted-foreground text-xs mt-0.5">Adjust initiative milestones, scope, and objectives.</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit project</h2>
+                    <p className="text-muted-foreground text-xs mt-0.5">Update the project name, status, category, and description.</p>
                 </div>
             </div>
 
-            <div className="bg-card border border-border/80 rounded-2xl p-6 sm:p-8 shadow-2xs">
+            <div className="bg-card border border-border/80 rounded-lg p-6 sm:p-8 shadow-none">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-5">
                         <div className="grid gap-1.5">
@@ -108,7 +98,7 @@ export default function EditProjectPage() {
                                 id="p-title"
                                 name="title"
                                 defaultValue={project?.title || ""}
-                                className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 shadow-2xs"
+                                className="h-10 text-xs rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5 bg-white shadow-none"
                                 required
                             />
                         </div>
@@ -116,56 +106,51 @@ export default function EditProjectPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="grid gap-1.5">
                                 <Label htmlFor="p-status" className="font-semibold text-xs text-foreground px-0.5">Status</Label>
-                                <input type="hidden" name="status" value={project?.status || "Active"} />
+                                <input type="hidden" name="status" value={project?.status || projectStatuses[0]?.id || ""} />
                                 <Select
-                                    value={project?.status || "Active"}
+                                    value={project?.status || projectStatuses[0]?.id || ""}
                                     onValueChange={(val: any) => setProject((prev) => prev ? { ...prev, status: val } : null)}
                                 >
-                                    <SelectTrigger className="h-10 w-full rounded-xl border border-border bg-background/50 px-3 text-xs font-medium text-foreground shadow-2xs">
-                                        <SelectValue placeholder="Select Status" />
+                                    <SelectTrigger className="h-10 w-full rounded-lg border border-border bg-white px-3 text-xs font-medium text-foreground shadow-none">
+                                        <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
                                     <SelectContent className="text-xs">
-                                        <SelectItem value="Active" className="text-xs cursor-pointer">Active</SelectItem>
-                                        <SelectItem value="Planning" className="text-xs cursor-pointer">Planning</SelectItem>
-                                        <SelectItem value="Completed" className="text-xs cursor-pointer">Completed</SelectItem>
+                                        {projectStatuses.map((item) => <SelectItem key={item.id} value={item.id} className="text-xs cursor-pointer">{item.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="grid gap-1.5">
                                 <Label htmlFor="p-category" className="font-semibold text-xs text-foreground px-0.5">Category</Label>
-                                <Input
+                                <select
                                     id="p-category"
                                     name="category"
-                                    defaultValue={project?.category || ""}
-                                    className="h-10 text-xs rounded-xl border border-border focus:border-primary font-medium text-foreground px-3.5 bg-background/50 shadow-2xs"
+                                    value={project?.category || ""}
+                                    onChange={(event) => setProject((prev) => prev ? { ...prev, category: event.target.value } : null)}
+                                    className="h-10 text-xs rounded-lg border border-border focus:border-primary font-medium text-foreground px-3.5 bg-white shadow-none"
                                     required
-                                />
+                                ><option value="" disabled>Select category</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
                             </div>
                         </div>
 
                         <div className="grid gap-1.5">
-                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground px-0.5">Description & Objectives</Label>
+                            <Label htmlFor="p-desc" className="font-semibold text-xs text-foreground px-0.5">Description</Label>
                             <Textarea
                                 id="p-desc"
                                 name="description"
                                 defaultValue={project?.description || ""}
-                                className="min-h-[110px] rounded-xl border border-border focus:border-primary resize-none p-3.5 font-normal text-xs text-foreground bg-background/50 shadow-2xs"
+                                className="min-h-[110px] rounded-lg border border-border focus:border-primary resize-none p-3.5 font-normal text-xs text-foreground bg-white shadow-none"
                             />
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
-                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSaving} className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs">
-                            {isSaving ? "Saving..." : "Save Changes"}
+                        <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
+                        <Button type="submit" size="sm" disabled={isSaving} className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none">
+                            {isSaving ? "Saving..." : "Save changes"}
                         </Button>
                     </div>
                 </form>
             </div>
         </div>
     );
-}
-
-function LoadFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
-    return <div className="flex min-h-64 max-w-3xl items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 text-center"><div><p className="text-sm font-medium text-foreground">{message}</p><p className="mt-1 text-xs text-muted-foreground">Check the project or try loading it again.</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted">Try again</button></div></div>;
 }

@@ -9,6 +9,8 @@ import {
 } from "@/lib/response";
 import { kanbanPatchSchema } from "../schema";
 import { findTasks, updateTaskById } from "../query";
+import { initDb } from "@/db";
+import { findAllMasterData } from "@/app/(backend)/api/master-data/query";
 
 export async function GET(request: Request) {
   const { isValid } = validatePublicKey(request);
@@ -22,30 +24,21 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId") || undefined;
 
-  const allTasks = await findTasks(authUser?.userId, projectId);
-
+  await initDb();
+  const [allTasks, masterData] = await Promise.all([
+    findTasks(authUser?.userId, projectId),
+    findAllMasterData(),
+  ]);
+  const configuredIds = new Set(masterData.statuses.map((status) => status.id));
+  const orphanStatuses = Array.from(new Set(allTasks.map((task) => task.status).filter((status) => !configuredIds.has(status))));
   const columns = [
-    {
-      id: "todo",
-      title: "To Do",
-      tasks: allTasks.filter((t) => t.status === "To Do"),
-    },
-    {
-      id: "inprogress",
-      title: "In Progress",
-      tasks: allTasks.filter((t) => t.status === "In Progress"),
-    },
-    {
-      id: "review",
-      title: "Review",
-      tasks: allTasks.filter((t) => t.status === "Review"),
-    },
-    {
-      id: "done",
-      title: "Done",
-      tasks: allTasks.filter((t) => t.status === "Done"),
-    },
-  ];
+    ...masterData.statuses,
+    ...orphanStatuses.map((status, index) => ({ id: status, name: status, order: masterData.statuses.length + index + 1 })),
+  ].map((status) => ({
+    id: status.id,
+    title: status.name,
+    tasks: allTasks.filter((task) => task.status === status.id),
+  }));
 
   return successResponse(columns);
 }

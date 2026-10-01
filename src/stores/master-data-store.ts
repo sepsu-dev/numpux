@@ -1,163 +1,115 @@
 import { create } from "zustand";
-import {
-  getMasterCategories,
-  saveMasterCategories,
-  getMasterIssueTypes,
-  saveMasterIssueTypes,
-  getMasterPriorities,
-  saveMasterPriorities,
-  type MasterIssueTypeItem,
-  type MasterPriorityItem,
-} from "@/lib/master-data";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-client";
+import type { MasterCategoryItem, MasterIssueTypeItem, MasterPriorityItem, MasterProjectStatusItem, MasterStatusItem } from "@/lib/master-data";
 
+type Resource = "categories" | "issueTypes" | "priorities" | "statuses" | "projectStatuses";
+interface MasterDataPayload { categories: MasterCategoryItem[]; issueTypes: MasterIssueTypeItem[]; priorities: MasterPriorityItem[]; statuses: MasterStatusItem[]; projectStatuses: MasterProjectStatusItem[]; }
 interface MasterDataState {
-  // Categories
   categories: string[];
-  loadCategories: () => void;
-  addCategory: (name: string) => boolean;
-  updateCategory: (idx: number, newName: string) => void;
-  removeCategory: (cat: string) => boolean;
-
-  // Issue Types
+  categoryItems: MasterCategoryItem[];
   issueTypes: MasterIssueTypeItem[];
-  loadIssueTypes: () => void;
-  addIssueType: (item: MasterIssueTypeItem) => boolean;
-  removeIssueType: (id: string) => boolean;
-
-  // Priorities
   priorities: MasterPriorityItem[];
-  loadPriorities: () => void;
-  addPriority: (item: MasterPriorityItem) => boolean;
-  removePriority: (id: string) => boolean;
+  statuses: MasterStatusItem[];
+  projectStatuses: MasterProjectStatusItem[];
+  isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
+  hasLoaded: boolean;
+  loadAll: (force?: boolean) => Promise<void>;
+  loadCategories: () => Promise<void>;
+  loadIssueTypes: () => Promise<void>;
+  loadPriorities: () => Promise<void>;
+  loadStatuses: () => Promise<void>;
+  loadProjectStatuses: () => Promise<void>;
+  addCategory: (name: string) => Promise<boolean>;
+  updateCategory: (idx: number, name: string) => Promise<boolean>;
+  removeCategory: (name: string) => Promise<boolean>;
+  addIssueType: (item: MasterIssueTypeItem) => Promise<boolean>;
+  updateIssueType: (id: string, updates: Partial<Omit<MasterIssueTypeItem, "id">>) => Promise<boolean>;
+  removeIssueType: (id: string) => Promise<boolean>;
+  addPriority: (item: MasterPriorityItem) => Promise<boolean>;
+  updatePriority: (id: string, updates: Partial<Omit<MasterPriorityItem, "id">>) => Promise<boolean>;
+  removePriority: (id: string) => Promise<boolean>;
+  addStatus: (item: MasterStatusItem) => Promise<boolean>;
+  updateStatus: (id: string, updates: Partial<Omit<MasterStatusItem, "id">>) => Promise<boolean>;
+  removeStatus: (id: string) => Promise<boolean>;
+  addProjectStatus: (item: MasterProjectStatusItem) => Promise<boolean>;
+  updateProjectStatus: (id: string, updates: Partial<Omit<MasterProjectStatusItem, "id">>) => Promise<boolean>;
+  removeProjectStatus: (id: string) => Promise<boolean>;
 }
 
-export const useMasterDataStore = create<MasterDataState>((set, get) => ({
-  // Categories
-  categories: [],
-  loadCategories: () => {
-    set({ categories: getMasterCategories() });
-  },
-  addCategory: (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return false;
-    const current = get().categories;
-    if (current.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error("Nama kategori sudah ada");
-      return false;
-    }
-    const updated = [...current, trimmed];
-    if (!saveMasterCategories(updated)) {
-      toast.error("Kategori gagal disimpan");
-      return false;
-    }
-    set({ categories: updated });
-    toast.success(`Kategori "${trimmed}" berhasil ditambahkan`);
-    return true;
-  },
-  updateCategory: (idx: number, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed) return;
-    const current = get().categories;
-    if (idx < 0 || idx >= current.length) return;
-    if (current.some((category, categoryIdx) => categoryIdx !== idx && category.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error("Nama kategori sudah ada");
-      return;
-    }
-    const updated = [...current];
-    updated[idx] = trimmed;
-    if (!saveMasterCategories(updated)) {
-      toast.error("Kategori gagal disimpan");
-      return;
-    }
-    set({ categories: updated });
-    toast.success("Kategori berhasil diperbarui");
-  },
-  removeCategory: (cat: string) => {
-    const current = get().categories;
-    if (current.length <= 1) {
-      toast.error("Minimal harus menyisakan 1 kategori");
-      return false;
-    }
-    const updated = current.filter((c) => c !== cat);
-    if (!saveMasterCategories(updated)) {
-      toast.error("Kategori gagal dihapus");
-      return false;
-    }
-    set({ categories: updated });
-    toast.success(`Kategori "${cat}" berhasil dihapus`);
-    return true;
-  },
+function payloadToState(payload: MasterDataPayload) {
+  return { categoryItems: payload.categories, categories: payload.categories.map((item) => item.name), issueTypes: payload.issueTypes, priorities: payload.priorities, statuses: payload.statuses, projectStatuses: payload.projectStatuses };
+}
 
-  // Issue Types
-  issueTypes: [],
-  loadIssueTypes: () => {
-    set({ issueTypes: getMasterIssueTypes() });
-  },
-  addIssueType: (item: MasterIssueTypeItem) => {
-    const current = get().issueTypes;
-    if (current.some((t) => t.name.toLowerCase() === item.name.toLowerCase())) {
-      toast.error("Issue type name already exists");
-      return false;
-    }
-    const updated = [...current, item];
-    if (!saveMasterIssueTypes(updated)) {
-      toast.error("Issue type could not be saved");
-      return false;
-    }
-    set({ issueTypes: updated });
-    toast.success(`Issue type "${item.name}" created`);
-    return true;
-  },
-  removeIssueType: (id: string) => {
-    const current = get().issueTypes;
-    if (current.length <= 1) {
-      toast.error("You must keep at least 1 issue type");
-      return false;
-    }
-    const updated = current.filter((t) => t.id !== id);
-    if (!saveMasterIssueTypes(updated)) {
-      toast.error("Issue type could not be removed");
-      return false;
-    }
-    set({ issueTypes: updated });
-    toast.success("Issue type removed");
-    return true;
-  },
+async function readResponse(response: Response): Promise<{ data?: MasterDataPayload; message?: string }> {
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.message || "Permintaan master data gagal");
+  return body;
+}
 
-  // Priorities
-  priorities: [],
-  loadPriorities: () => {
-    set({ priorities: getMasterPriorities() });
-  },
-  addPriority: (item: MasterPriorityItem) => {
-    const current = get().priorities;
-    if (current.some((p) => p.name.toLowerCase() === item.name.toLowerCase())) {
-      toast.error("Priority name already exists");
+export const useMasterDataStore = create<MasterDataState>((set, get) => {
+  const mutate = async (method: "POST" | "PUT" | "DELETE", body: Record<string, unknown>, successMessage: string) => {
+    set({ isSaving: true, error: null });
+    try {
+      const result = await readResponse(await apiFetch("/api/master-data", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+      if (result.data) set({ ...payloadToState(result.data), hasLoaded: true });
+      toast.success(successMessage);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Master data gagal disimpan";
+      set({ error: message });
+      toast.error(message);
       return false;
-    }
-    const updated = [...current, item];
-    if (!saveMasterPriorities(updated)) {
-      toast.error("Priority could not be saved");
-      return false;
-    }
-    set({ priorities: updated });
-    toast.success(`Priority "${item.name}" created`);
-    return true;
-  },
-  removePriority: (id: string) => {
-    const current = get().priorities;
-    if (current.length <= 1) {
-      toast.error("You must keep at least 1 priority");
-      return false;
-    }
-    const updated = current.filter((p) => p.id !== id);
-    if (!saveMasterPriorities(updated)) {
-      toast.error("Priority could not be removed");
-      return false;
-    }
-    set({ priorities: updated });
-    toast.success("Priority removed");
-    return true;
-  },
-}));
+    } finally { set({ isSaving: false }); }
+  };
+
+  const loadAll = async (force = false) => {
+    if (get().isLoading || (get().hasLoaded && !force)) return;
+    set({ isLoading: true, error: null });
+    try {
+      const result = await readResponse(await apiFetch("/api/master-data", { cache: "no-store" }));
+      if (result.data) set({ ...payloadToState(result.data), hasLoaded: true });
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : "Master data gagal dimuat" });
+    } finally { set({ isLoading: false }); }
+  };
+
+  const resource = (name: Resource) => name;
+  return {
+    categories: [], categoryItems: [], issueTypes: [], priorities: [], statuses: [], projectStatuses: [],
+    isLoading: false, isSaving: false, error: null, hasLoaded: false,
+    loadAll,
+    loadCategories: () => loadAll(), loadIssueTypes: () => loadAll(), loadPriorities: () => loadAll(), loadStatuses: () => loadAll(), loadProjectStatuses: () => loadAll(),
+    addCategory: async (name) => {
+      const trimmed = name.trim();
+      if (!trimmed) return false;
+      if (get().categories.some((item) => item.toLowerCase() === trimmed.toLowerCase())) { toast.error("Nama kategori sudah ada"); return false; }
+      return mutate("POST", { resource: resource("categories"), item: { id: crypto.randomUUID(), name: trimmed } }, `Kategori "${trimmed}" berhasil ditambahkan`);
+    },
+    updateCategory: async (idx, name) => {
+      const item = get().categoryItems[idx];
+      const trimmed = name.trim();
+      if (!item || !trimmed) return false;
+      return mutate("PUT", { resource: resource("categories"), id: item.id, updates: { name: trimmed } }, "Kategori berhasil diperbarui");
+    },
+    removeCategory: async (name) => {
+      const item = get().categoryItems.find((category) => category.name === name);
+      if (!item) return false;
+      return mutate("DELETE", { resource: resource("categories"), id: item.id }, `Kategori "${name}" berhasil dihapus`);
+    },
+    addIssueType: (item) => mutate("POST", { resource: resource("issueTypes"), item }, `Issue type "${item.name}" berhasil ditambahkan`),
+    updateIssueType: (id, updates) => mutate("PUT", { resource: resource("issueTypes"), id, updates }, "Issue type berhasil diperbarui"),
+    removeIssueType: (id) => mutate("DELETE", { resource: resource("issueTypes"), id }, "Issue type berhasil dihapus"),
+    addPriority: (item) => mutate("POST", { resource: resource("priorities"), item }, `Priority "${item.name}" berhasil ditambahkan`),
+    updatePriority: (id, updates) => mutate("PUT", { resource: resource("priorities"), id, updates }, "Priority berhasil diperbarui"),
+    removePriority: (id) => mutate("DELETE", { resource: resource("priorities"), id }, "Priority berhasil dihapus"),
+    addStatus: (item) => mutate("POST", { resource: resource("statuses"), item }, `Status "${item.name}" berhasil ditambahkan`),
+    updateStatus: (id, updates) => mutate("PUT", { resource: resource("statuses"), id, updates }, "Status berhasil diperbarui"),
+    removeStatus: (id) => mutate("DELETE", { resource: resource("statuses"), id }, "Status berhasil dihapus"),
+    addProjectStatus: (item) => mutate("POST", { resource: resource("projectStatuses"), item }, `Status project "${item.name}" berhasil ditambahkan`),
+    updateProjectStatus: (id, updates) => mutate("PUT", { resource: resource("projectStatuses"), id, updates }, "Status project berhasil diperbarui"),
+    removeProjectStatus: (id) => mutate("DELETE", { resource: resource("projectStatuses"), id }, "Status project berhasil dihapus"),
+  };
+});

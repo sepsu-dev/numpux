@@ -22,7 +22,7 @@ export async function createNewUser(
   name: string,
   email: string,
   passwordPlain: string,
-  role: "admin" | "user" = "user"
+  role: "superadmin" | "admin" | "user" = "user"
 ): Promise<User> {
   const id = crypto.randomUUID();
   const passwordHash = hashPassword(passwordPlain);

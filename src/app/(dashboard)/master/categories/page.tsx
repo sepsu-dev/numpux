@@ -10,13 +10,14 @@ import {
     MagnifyingGlass,
 } from "@phosphor-icons/react";
 import { useMasterDataStore } from "@/stores/master-data-store";
+import { MasterDataNotice } from "@/components/settings/master-data-notice";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function MasterCategoriesPage() {
     const {
@@ -25,6 +26,8 @@ export default function MasterCategoriesPage() {
         addCategory,
         updateCategory,
         removeCategory,
+        isLoading,
+        error,
     } = useMasterDataStore();
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -46,17 +49,17 @@ export default function MasterCategoriesPage() {
         );
     }, [categories, searchQuery]);
 
-    const handleAdd = (e: React.FormEvent) => {
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        const success = addCategory(newCatName);
+        const success = await addCategory(newCatName);
         if (success) {
             setNewCatName("");
             setIsCreateModalOpen(false);
         }
     };
 
-    const handleRemove = (cat: string) => {
-        removeCategory(cat);
+    const handleRemove = async (cat: string) => {
+        await removeCategory(cat);
     };
 
     const handleStartEdit = (idx: number, cat: string) => {
@@ -64,31 +67,31 @@ export default function MasterCategoriesPage() {
         setEditValue(cat);
     };
 
-    const handleSaveEdit = (idx: number) => {
-        updateCategory(idx, editValue);
-        setEditingIdx(null);
+    const handleSaveEdit = async (idx: number) => {
+        if (await updateCategory(idx, editValue)) setEditingIdx(null);
     };
 
     return (
         <div className="space-y-6">
+            <MasterDataNotice isLoading={isLoading} error={error} />
             {/* Header matching Projects page */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Project Categories</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Project categories</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredCategories.length} {filteredCategories.length === 1 ? "category" : "categories"}
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Manage global classification tags used across project creation, filtering, and reporting.
+                        Define the categories available when projects are created or filtered.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 active:scale-98 transition-all shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
                         <span>Create Category</span>
@@ -97,15 +100,15 @@ export default function MasterCategoriesPage() {
             </div>
 
             {/* Search Bar matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search categories..."
+                        placeholder="Search categories"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -119,7 +122,7 @@ export default function MasterCategoriesPage() {
             </div>
 
             {/* Clean Table Container */}
-            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-2xs">
+            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
                 <table className="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
@@ -142,14 +145,14 @@ export default function MasterCategoriesPage() {
                                         {idx + 1}
                                     </td>
                                     <td className="py-3 px-5">
-                                        {editingIdx === idx ? (
+                                        {editingIdx === categories.indexOf(cat) ? (
                                             <div className="flex items-center gap-2 max-w-sm">
                                                 <input
                                                     type="text"
                                                     value={editValue}
                                                     onChange={(e) => setEditValue(e.target.value)}
                                                     onKeyDown={(e) => {
-                                                        if (e.key === "Enter") handleSaveEdit(idx);
+                                                        if (e.key === "Enter") handleSaveEdit(categories.indexOf(cat));
                                                         if (e.key === "Escape") setEditingIdx(null);
                                                     }}
                                                     autoFocus
@@ -157,7 +160,7 @@ export default function MasterCategoriesPage() {
                                                 />
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleSaveEdit(idx)}
+                                                    onClick={() => handleSaveEdit(categories.indexOf(cat))}
                                                     className="h-8 px-2.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
                                                     title="Simpan"
                                                 >
@@ -185,7 +188,7 @@ export default function MasterCategoriesPage() {
                                         <div className="inline-flex items-center gap-1">
                                             <button
                                                 type="button"
-                                                onClick={() => handleStartEdit(idx, cat)}
+                                                onClick={() => handleStartEdit(categories.indexOf(cat), cat)}
                                                 className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
                                                 title="Edit category"
                                             >
@@ -208,58 +211,46 @@ export default function MasterCategoriesPage() {
                 </table>
             </div>
 
-            {/* Create Category Sheet */}
-            <Sheet open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
-                    <form onSubmit={handleAdd} className="flex flex-col h-full">
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-border/60">
-                            <SheetHeader className="p-0">
-                                <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                    Create Project Category
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
-                                    Add a new classification tag for project grouping and filtering.
-                                </SheetDescription>
-                            </SheetHeader>
+            {/* Create Category Modal */}
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-foreground">
+                            Create Project Category
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAdd} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground">
+                                Category Name
+                            </label>
+                            <input
+                                type="text"
+                                value={newCatName}
+                                onChange={(e) => setNewCatName(e.target.value)}
+                                placeholder="e.g. Mobile Apps, Infrastructure..."
+                                autoFocus
+                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
                         </div>
-
-                        {/* Body */}
-                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Category Name <span className="text-primary">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newCatName}
-                                    onChange={(e) => setNewCatName(e.target.value)}
-                                    placeholder="e.g. Mobile Apps, Infrastructure..."
-                                    autoFocus
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-6 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5">
+                        <DialogFooter className="gap-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateModalOpen(false)}
-                                className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:scale-98 cursor-pointer transition-all shadow-xs"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
                             >
                                 Save Category
                             </button>
-                        </div>
+                        </DialogFooter>
                     </form>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

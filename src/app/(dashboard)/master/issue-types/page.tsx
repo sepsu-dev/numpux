@@ -12,17 +12,19 @@ import {
     Plus,
     Trash,
     MagnifyingGlass,
+    PencilSimple,
     X,
 } from "@phosphor-icons/react";
 import { type MasterIssueTypeItem } from "@/lib/master-data";
 import { useMasterDataStore } from "@/stores/master-data-store";
+import { MasterDataNotice } from "@/components/settings/master-data-notice";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import {
     Select,
     SelectContent,
@@ -42,22 +44,23 @@ const AVAILABLE_ICONS = [
 ] as const;
 
 const AVAILABLE_COLORS = [
-    { label: "Blue", class: "text-blue-500 bg-blue-500/10 border-blue-200/50 dark:border-blue-900/50" },
-    { label: "Rose", class: "text-rose-500 bg-rose-500/10 border-rose-200/50 dark:border-rose-900/50" },
-    { label: "Emerald", class: "text-emerald-500 bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-900/50" },
-    { label: "Purple", class: "text-purple-500 bg-purple-500/10 border-purple-200/50 dark:border-purple-900/50" },
-    { label: "Amber", class: "text-amber-500 bg-amber-500/10 border-amber-200/50 dark:border-amber-900/50" },
-    { label: "Cyan", class: "text-cyan-500 bg-cyan-500/10 border-cyan-200/50 dark:border-cyan-900/50" },
+    { label: "Blue", class: "text-blue-500 bg-blue-500/10 border-blue-200/50" },
+    { label: "Rose", class: "text-rose-500 bg-rose-500/10 border-rose-200/50" },
+    { label: "Emerald", class: "text-emerald-500 bg-emerald-500/10 border-emerald-200/50" },
+    { label: "Purple", class: "text-purple-500 bg-purple-500/10 border-purple-200/50" },
+    { label: "Amber", class: "text-amber-500 bg-amber-500/10 border-amber-200/50" },
+    { label: "Cyan", class: "text-cyan-500 bg-cyan-500/10 border-cyan-200/50" },
 ];
 
 export default function MasterIssueTypesPage() {
-    const { issueTypes, loadIssueTypes, addIssueType, removeIssueType } = useMasterDataStore();
+    const { issueTypes, loadIssueTypes, addIssueType, updateIssueType, removeIssueType, isLoading, error } = useMasterDataStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [name, setName] = useState("");
     const [desc, setDesc] = useState("");
     const [selectedIcon, setSelectedIcon] = useState<(typeof AVAILABLE_ICONS)[number]["name"]>("CheckSquare");
     const [selectedColor, setSelectedColor] = useState(AVAILABLE_COLORS[0].class);
+    const [editingType, setEditingType] = useState<MasterIssueTypeItem | null>(null);
 
     useEffect(() => {
         loadIssueTypes();
@@ -73,7 +76,7 @@ export default function MasterIssueTypesPage() {
         );
     }, [issueTypes, searchQuery]);
 
-    const handleAdd = (e: React.FormEvent) => {
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         const trimmed = name.trim();
         if (!trimmed) return;
@@ -86,38 +89,65 @@ export default function MasterIssueTypesPage() {
             colorClass: selectedColor,
         };
 
-        const success = addIssueType(newItem);
+        const success = editingType
+            ? await updateIssueType(editingType.id, {
+                name: newItem.name,
+                description: newItem.description,
+                iconName: newItem.iconName,
+                colorClass: newItem.colorClass,
+            })
+            : await addIssueType(newItem);
         if (success) {
             setName("");
             setDesc("");
+            setEditingType(null);
             setIsCreateModalOpen(false);
         }
     };
 
-    const handleRemove = (id: string) => {
-        removeIssueType(id);
+    const handleRemove = async (id: string) => {
+        await removeIssueType(id);
+    };
+
+    const handleCreate = () => {
+        setEditingType(null);
+        setName("");
+        setDesc("");
+        setSelectedIcon("CheckSquare");
+        setSelectedColor(AVAILABLE_COLORS[0].class);
+        setIsCreateModalOpen(true);
+    };
+
+    const handleEdit = (type: MasterIssueTypeItem) => {
+        setEditingType(type);
+        setName(type.name);
+        setDesc(type.description || "");
+        setSelectedIcon(type.iconName);
+        setSelectedColor(type.colorClass);
+        setIsCreateModalOpen(true);
     };
 
     return (
         <div className="space-y-6">
+            <MasterDataNotice isLoading={isLoading} error={error} />
             {/* Header matching Projects page */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Issue Types</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Task types</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredIssueTypes.length} {filteredIssueTypes.length === 1 ? "type" : "types"}
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Configure tracker issue items, badges, and icons used across Kanban boards and backlogs.
+                        Define the task types and icons available across lists and boards.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 active:scale-98 transition-all shadow-xs cursor-pointer"
+                        onClick={handleCreate}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
                         <span>Create Issue Type</span>
@@ -126,15 +156,15 @@ export default function MasterIssueTypesPage() {
             </div>
 
             {/* Search Bar matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search issue types..."
+                        placeholder="Search task types"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -148,7 +178,7 @@ export default function MasterIssueTypesPage() {
             </div>
 
             {/* Clean Table Container */}
-            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-2xs">
+            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
                 <table className="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
@@ -174,7 +204,7 @@ export default function MasterIssueTypesPage() {
                                         <td className="py-3.5 px-5">
                                             <div className="flex items-center gap-3">
                                                 <div
-                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center border shadow-2xs ${type.colorClass}`}
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center border shadow-none ${type.colorClass}`}
                                                 >
                                                     <IconComponent className="w-4 h-4" weight="duotone" />
                                                 </div>
@@ -194,7 +224,16 @@ export default function MasterIssueTypesPage() {
                                             {type.description || "-"}
                                         </td>
                                         <td className="py-3.5 px-5 text-right pr-6">
-                                            {!type.isDefault ? (
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(type)}
+                                                    className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                                    title={`Edit ${type.name}`}
+                                                >
+                                                    <PencilSimple size={14} />
+                                                </button>
+                                                {!type.isDefault ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemove(type.id)}
@@ -203,9 +242,8 @@ export default function MasterIssueTypesPage() {
                                                 >
                                                     <Trash size={14} />
                                                 </button>
-                                            ) : (
-                                                <span className="text-[11px] text-muted-foreground/60 italic">System</span>
-                                            )}
+                                                ) : null}
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -215,121 +253,115 @@ export default function MasterIssueTypesPage() {
                 </table>
             </div>
 
-            {/* Create Issue Type Sheet */}
-            <Sheet open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
-                    <form onSubmit={handleAdd} className="flex flex-col h-full">
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-border/60">
-                            <SheetHeader className="p-0">
-                                <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                    Create Issue Type
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
-                                    Define a new issue classification with icon and color badge.
-                                </SheetDescription>
-                            </SheetHeader>
+            {/* Create Issue Type Modal */}
+            <Dialog
+                open={isCreateModalOpen}
+                onOpenChange={(open) => {
+                    setIsCreateModalOpen(open);
+                    if (!open) setEditingType(null);
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-foreground">
+                            {editingType ? "Edit task type" : "Create task type"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAdd} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground">
+                                Type Name
+                            </label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="e.g. Hotfix, Defect, Improvement..."
+                                autoFocus
+                                required
+                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
                         </div>
-
-                        {/* Body */}
-                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground">
+                                Description
+                            </label>
+                            <input
+                                type="text"
+                                value={desc}
+                                onChange={(e) => setDesc(e.target.value)}
+                                placeholder="When should this type be used?"
+                                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Type Name <span className="text-primary">*</span>
+                                <label className="text-xs font-semibold text-muted-foreground">
+                                    Icon
                                 </label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="e.g. Hotfix, Defect, Improvement..."
-                                    autoFocus
-                                    required
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">
-                                    Description
-                                </label>
-                                <input
-                                    type="text"
-                                    value={desc}
-                                    onChange={(e) => setDesc(e.target.value)}
-                                    placeholder="Short explanation of what this item represents..."
-                                    className="w-full px-3 py-2.5 text-xs bg-background/50 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-foreground">
-                                        Icon
-                                    </label>
-                                    <Select
-                                        value={selectedIcon}
-                                        onValueChange={(val) => setSelectedIcon(val as any)}
-                                    >
-                                        <SelectTrigger className="h-10 w-full text-xs rounded-xl bg-background/50 border-border">
-                                            <SelectValue placeholder="Select Icon" />
-                                        </SelectTrigger>
-                                        <SelectContent className="text-xs">
-                                            {AVAILABLE_ICONS.map((i) => {
-                                                const IconComp = i.icon;
-                                                return (
-                                                    <SelectItem key={i.name} value={i.name} className="text-xs cursor-pointer">
-                                                        <div className="flex items-center gap-2">
-                                                            <IconComp size={13} />
-                                                            <span>{i.label}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-foreground">
-                                        Color Badge
-                                    </label>
-                                    <Select
-                                        value={selectedColor}
-                                        onValueChange={setSelectedColor}
-                                    >
-                                        <SelectTrigger className="h-10 w-full text-xs rounded-xl bg-background/50 border-border">
-                                            <SelectValue placeholder="Select Color" />
-                                        </SelectTrigger>
-                                        <SelectContent className="text-xs">
-                                            {AVAILABLE_COLORS.map((c) => (
-                                                <SelectItem key={c.label} value={c.class} className="text-xs cursor-pointer">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${c.class}`}>
-                                                        {c.label}
-                                                    </span>
+                                <Select
+                                    value={selectedIcon}
+                                    onValueChange={(val) => setSelectedIcon(val as any)}
+                                >
+                                    <SelectTrigger className="h-9 w-full text-xs rounded-lg bg-background border-border">
+                                        <SelectValue placeholder="Select icon" />
+                                    </SelectTrigger>
+                                    <SelectContent className="text-xs">
+                                        {AVAILABLE_ICONS.map((i) => {
+                                            const IconComp = i.icon;
+                                            return (
+                                                <SelectItem key={i.name} value={i.name} className="text-xs cursor-pointer">
+                                                    <div className="flex items-center gap-2">
+                                                        <IconComp size={13} />
+                                                        <span>{i.label}</span>
+                                                    </div>
                                                 </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                            );
+                                        })}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-muted-foreground">
+                                    Color Badge
+                                </label>
+                                <Select
+                                    value={selectedColor}
+                                    onValueChange={setSelectedColor}
+                                >
+                                    <SelectTrigger className="h-9 w-full text-xs rounded-lg bg-background border-border">
+                                        <SelectValue placeholder="Select color" />
+                                    </SelectTrigger>
+                                    <SelectContent className="text-xs">
+                                        {AVAILABLE_COLORS.map((c) => (
+                                            <SelectItem key={c.label} value={c.class} className="text-xs cursor-pointer">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${c.class}`}>
+                                                    {c.label}
+                                                </span>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
-
-                        {/* Footer */}
-                        <div className="px-6 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5">
+                        <DialogFooter className="gap-2 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateModalOpen(false)}
-                                className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:scale-98 cursor-pointer transition-all shadow-xs"
+                                className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
                             >
-                                Save Issue Type
+                                {editingType ? "Save changes" : "Save task type"}
                             </button>
-                        </div>
+                        </DialogFooter>
                     </form>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

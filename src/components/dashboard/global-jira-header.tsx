@@ -1,14 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Bell, Gear, Plus } from "@phosphor-icons/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Gear, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
 import { SettingsModal } from "@/components/dashboard/settings-modal";
 
+function getPageTitle(pathname: string) {
+  if (pathname === "/dashboard") return "Dashboard";
+  if (pathname === "/projects") return "Projects";
+  if (pathname.startsWith("/projects/new")) return "New project";
+  if (pathname.startsWith("/projects/edit")) return "Edit project";
+  if (pathname === "/tasks") return "Tasks";
+  if (pathname === "/tasks/kanban") return "Board";
+  if (pathname.startsWith("/tasks/new")) return "New task";
+  if (pathname.startsWith("/tasks/edit")) return "Edit task";
+  if (pathname === "/profile") return "Profile";
+  if (pathname.startsWith("/master")) return "Workspace settings";
+  return "Numpux";
+}
+
 export function GlobalJiraHeader() {
+  const pathname = usePathname();
   const router = useRouter();
   const activeProjectId = useSearchParams().get("projectId") || "";
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -16,20 +31,34 @@ export function GlobalJiraHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border/70 bg-white px-4 sm:px-6">
-        <div className="flex items-center">
-          <SidebarTrigger className="cursor-pointer rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted" />
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border bg-white px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <SidebarTrigger className="rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" />
+          <span className="h-4 w-px bg-border" />
+          <p className="truncate text-sm font-semibold">{getPageTitle(pathname)}</p>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button type="button" title="Notifications" onClick={() => toast.info("No unread notifications", { description: "Your workspace is up to date." })} className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Bell size={17} /></button>
-          <button type="button" title="Settings" onClick={() => setSettingsModalOpen(true)} className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Gear size={17} /></button>
-          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          <button type="button" onClick={() => setCreateModalOpen(true)} className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-medium text-white transition-colors hover:bg-[#067a4b]"><Plus size={14} /><span className="hidden sm:inline">New task</span></button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCreateModalOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-white hover:bg-primary-hover">
+            <Plus size={14} weight="bold" />
+            <span className="hidden sm:inline">New task</span>
+          </button>
+          <button title="Workspace settings" onClick={() => setSettingsModalOpen(true)} className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Gear size={15} />
+          </button>
         </div>
       </header>
 
-      <TaskFormModal open={createModalOpen} onOpenChange={setCreateModalOpen} defaultProjectId={activeProjectId} onSuccess={(newTask) => { toast.success(`Created ${newTask.key || "task"} successfully`); setCreateModalOpen(false); router.refresh(); }} />
+      <TaskFormModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        defaultProjectId={activeProjectId}
+        onSuccess={(newTask) => {
+          toast.success(`${newTask.key || "Task"} created`);
+          setCreateModalOpen(false);
+          router.refresh();
+        }}
+      />
       <SettingsModal open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
     </>
   );

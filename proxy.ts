@@ -5,7 +5,7 @@ import { jwtVerify } from "jose";
 const secretKey = process.env.JWT_SECRET || process.env.SESSION_SECRET || "numpux-dev-secret-change-me";
 const encodedKey = new TextEncoder().encode(secretKey);
 
-const PROTECTED_PREFIXES = ["/dashboard", "/tasks", "/projects"];
+const PROTECTED_PREFIXES = ["/dashboard", "/tasks", "/projects", "/master", "/profile"];
 const PUBLIC_PATHS = ["/login", "/register"];
 
 async function hasValidSession(request: NextRequest): Promise<boolean> {
@@ -39,5 +39,13 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/tasks/:path*", "/projects/:path*", "/login", "/register"],
+  matcher: [
+    "/dashboard/:path*",
+    "/tasks/:path*",
+    "/projects/:path*",
+    "/master/:path*",
+    "/profile/:path*",
+    "/login",
+    "/register",
+  ],
 };

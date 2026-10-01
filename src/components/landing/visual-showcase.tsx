@@ -1,199 +1,24 @@
-"use client";
-
-import { WarningCircle, NotePencil, Sparkle, BookOpen, Check, ShieldCheck, Lightning } from "@phosphor-icons/react";
+import { Check, Columns, Flag } from "@phosphor-icons/react/dist/ssr";
 
 export function VisualShowcase() {
-    return (
-        <section className="py-24 relative overflow-hidden bg-background">
-            {/* Soft grid background */}
-            <div className="absolute inset-0 bg-dot-grid pointer-events-none z-0" />
-
-            <div className="container max-w-5xl mx-auto px-6 relative z-10 text-center">
-                {/* Header */}
-                <div className="max-w-xl mx-auto mb-16">
-                    <h2 className="text-3xl md:text-[38px] font-bold text-foreground tracking-tight leading-tight mb-4">
-                        Track, Execute, and<br />
-                        <span className="text-muted-foreground font-medium">Deliver Every Single Day</span>
-                    </h2>
-                </div>
-
-                {/* Staggered Floating Cards & Mobile Phone Mockup Layout */}
-                <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 lg:gap-16">
-                    {/* Left Column - Floating Cards */}
-                    <div className="flex-1 flex flex-col gap-6 w-full max-w-[280px]">
-                        {/* Yellow Card */}
-                        <div className="p-5 rounded-xl bg-amber-100/80 border border-amber-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <WarningCircle className="w-4.5 h-4.5 text-amber-600" />
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-amber-950">Smart Priorities</h4>
-                                    <p className="text-[11px] text-amber-900/80 leading-normal mt-0.5 font-normal">
-                                        Surface critical deliverables and upcoming deadlines automatically.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Teal/Light Green Card */}
-                        <div className="p-5 rounded-xl bg-emerald-100/80 border border-emerald-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <NotePencil className="w-4.5 h-4.5 text-emerald-600" />
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-emerald-950">Detailed Briefs</h4>
-                                    <p className="text-[11px] text-emerald-900/80 leading-normal mt-0.5 font-normal">
-                                        Attach rich context, sub-tasks, and checklists to every item.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Middle Column - Mobile Phone Mockup */}
-                    <div className="shrink-0 relative">
-                        {/* Glowing shadow behind Mockup */}
-                        <div className="absolute inset-0 bg-primary/25 rounded-[36px] blur-3xl -z-10 transform scale-105" />
-
-                        {/* Phone Container */}
-                        <div className="w-[280px] h-[560px] rounded-[36px] border-[10px] border-stone-950 bg-white shadow-lg relative overflow-hidden flex flex-col shrink-0 crave-shadow select-none">
-                            {/* Dynamic Island Capsule Notch */}
-                            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-4.5 bg-stone-950 rounded-full z-40 flex items-center justify-center" />
-
-                            {/* Status Bar */}
-                            <div className="h-10 px-6 flex justify-between items-center text-[9px] font-semibold text-stone-900 z-30 pt-1">
-                                <span>9:41</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="w-2.5 h-2.5 bg-stone-900 rounded-full scale-[0.8]" />
-                                    <span className="w-3.5 h-2 border border-stone-900 rounded-sm" />
-                                </div>
-                            </div>
-
-                            {/* App UI Screen */}
-                            <div className="flex-1 flex flex-col p-4 text-left bg-stone-50/50 overflow-y-auto no-scrollbar pb-6 z-20">
-                                {/* Header */}
-                                <div className="flex items-center justify-between mb-4 mt-1">
-                                    <div>
-                                        <p className="text-[9px] text-muted-foreground font-medium">Hey Kristin ⚡</p>
-                                        <p className="text-[11px] font-semibold text-foreground">Good Afternoon!</p>
-                                    </div>
-                                    <div className="w-7 h-7 rounded-full bg-stone-200 flex items-center justify-center text-[10px] font-medium text-foreground border border-stone-300">
-                                        K
-                                    </div>
-                                </div>
-
-                                {/* Calendar dots */}
-                                <div className="grid grid-cols-7 gap-1.5 mb-4 border-b border-stone-200/40 pb-3">
-                                    {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-                                         <div key={i} className="flex flex-col items-center gap-0.5">
-                                             <span className="text-[7px] font-medium text-muted-foreground/60">{d}</span>
-                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-semibold ${i === 4 ? 'bg-primary text-primary-foreground' : 'bg-stone-200/50 text-foreground'}`}>
-                                                 {i + 2}
-                                             </span>
-                                         </div>
-                                    ))}
-                                </div>
-
-                                {/* Main Section Heading */}
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2.5">Active Sprint</p>
-                                
-                                {/* Yellow & Green Mini Cards Side-by-Side */}
-                                <div className="grid grid-cols-2 gap-2 mb-3">
-                                    <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-200/80">
-                                        <WarningCircle className="w-3.5 h-3.5 text-amber-700 mb-1" />
-                                        <p className="text-[8px] font-semibold text-amber-950">Urgent Task</p>
-                                    </div>
-                                    <div className="p-2.5 rounded-xl bg-[#8CE460]/20 border border-[#8CE460]/40">
-                                        <Sparkle className="w-3.5 h-3.5 text-green-700 mb-1" />
-                                        <p className="text-[8px] font-semibold text-green-950">Team Collab</p>
-                                    </div>
-                                </div>
-
-                                {/* Explore Gradient Card */}
-                                <div className="p-3.5 rounded-xl bg-[#eaf3ff] border border-[#b8d5ff] flex flex-col justify-between h-[85px] mb-4">
-                                    <p className="text-[9px] font-bold leading-tight text-[#153e70]">Explore interactive workflow playbooks</p>
-                                    <button className="w-max px-2.5 py-1 rounded bg-stone-950 text-white text-[7px] font-semibold uppercase tracking-wider">
-                                        Resources ↗
-                                    </button>
-                                </div>
-
-                                {/* My Habits Checklist */}
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">Today's Focus</p>
-                                <div className="space-y-2">
-                                    <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 flex items-center justify-between shadow-sm">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded bg-stone-100 flex items-center justify-center border border-stone-300">
-                                                <Check className="w-3 h-3 text-green-700" strokeWidth={2.5} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-semibold text-foreground">Design Wireframe</p>
-                                                <p className="text-[7px] text-muted-foreground font-normal">Completed • 1:00 PM</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 flex items-center justify-between shadow-sm">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded bg-stone-100 flex items-center justify-center border border-stone-300">
-                                                <Check className="w-3 h-3 text-green-700" strokeWidth={2.5} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-semibold text-foreground">Refactor Auth API</p>
-                                                <p className="text-[7px] text-muted-foreground font-normal">Completed • 2:15 PM</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Mobile App Bottom Navigation Bar */}
-                            <div className="h-12 border-t border-stone-200/80 bg-white flex items-center justify-around px-4 z-30 pb-2">
-                                <span className="text-[12px] opacity-80 cursor-pointer">🏠</span>
-                                <span className="text-[12px] opacity-40 cursor-pointer">📊</span>
-                                <div className="w-6.5 h-6.5 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-sm">
-                                    <span className="text-[10px] font-bold text-primary-foreground">+</span>
-                                </div>
-                                <span className="text-[12px] opacity-40 cursor-pointer">💬</span>
-                                <span className="text-[12px] opacity-40 cursor-pointer">⚙️</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column - Floating Cards */}
-                    <div className="flex-1 flex flex-col gap-6 w-full max-w-[280px]">
-                        {/* Green Card */}
-                        <div className="p-5 rounded-xl bg-[#8CE460]/20 border border-[#8CE460]/40 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <Sparkle className="w-4.5 h-4.5 text-green-700" />
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-green-950">Team Sync</h4>
-                                    <p className="text-[11px] text-green-900/80 leading-normal mt-0.5 font-normal">
-                                        Share project boards and assign owners with zero friction.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Blue Card */}
-                        <div className="p-5 rounded-xl bg-blue-100 border border-blue-200 text-left crave-shadow hover:scale-[1.02] transition-all duration-300">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                                    <BookOpen className="w-4.5 h-4.5 text-blue-600" />
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-blue-950">Velocity Insights</h4>
-                                    <p className="text-[11px] text-blue-900/80 leading-normal mt-0.5 font-normal">
-                                        Track team velocity and weekly completion trends effortlessly.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  return (
+    <section className="border-y border-border bg-white py-16">
+      <div className="mx-auto grid max-w-6xl gap-8 px-5 sm:px-8 lg:grid-cols-3">
+        {[
+          [Columns, "See the whole board", "Check every stage without opening another view."],
+          [Flag, "Keep priorities visible", "Mark urgent work without turning the board into a wall of color."],
+          [Check, "Close the loop", "Move finished work to done and keep the next step clear."],
+        ].map(([Icon, title, text]) => {
+          const ItemIcon = Icon as typeof Check;
+          return (
+            <div key={title as string} className="border-l border-border pl-5">
+              <ItemIcon size={18} className="text-primary" />
+              <h3 className="mt-4 text-sm font-semibold">{title as string}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{text as string}</p>
             </div>
-        </section>
-    );
+          );
+        })}
+      </div>
+    </section>
+  );
 }

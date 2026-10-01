@@ -139,7 +139,7 @@ export function DatePicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "w-full h-10 px-3 rounded-xl border border-border bg-background/50 hover:bg-background transition-all flex items-center justify-between text-xs font-medium shadow-2xs outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20",
+            "w-full h-10 px-3 rounded-lg border border-border bg-white hover:bg-background transition-colors flex items-center justify-between text-xs font-medium shadow-none outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20",
             !value && "text-muted-foreground",
             className
           )}
@@ -161,7 +161,7 @@ export function DatePicker({
         </button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-[280px] p-3 text-xs bg-card border border-border shadow-xl rounded-2xl">
+      <PopoverContent align="start" className="w-[280px] p-3 text-xs bg-card border border-border shadow-none rounded-lg">
         {/* Header navigation */}
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
           <button
@@ -212,9 +212,9 @@ export function DatePicker({
                 type="button"
                 onClick={() => handleSelectDay(item.day)}
                 className={cn(
-                  "h-8 rounded-lg flex items-center justify-center text-[11px] font-medium transition-all cursor-pointer",
+                  "h-8 rounded-lg flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer",
                   item.isSelected
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-none"
                     : item.isToday
                     ? "bg-primary/10 text-primary font-bold border border-primary/30"
                     : "hover:bg-muted text-foreground"

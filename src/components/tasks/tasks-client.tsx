@@ -61,29 +61,13 @@ import { cn } from "@/lib/utils";
 import { deleteTaskAction, updateTaskStatusAction } from "@/lib/actions";
 import type { Task, Project, TaskStatus, TaskActivity } from "@/types";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { TaskFormModal } from "./task-form-modal";
-import { MasterDataModal } from "@/components/settings/master-data-modal";
 import {
     getIssueTypeConfig,
     getPriorityConfig,
-    getMasterPriorities,
-    MasterPriorityItem,
 } from "@/lib/master-data";
-
-const PRIORITY_BADGES: Record<string, string> = {
-    Low: "bg-slate-50 text-slate-600 border-slate-200/80 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800",
-    Medium: "bg-sky-50 text-sky-700 border-sky-200/70 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40",
-    High: "bg-amber-50 text-amber-700 border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40",
-    Urgent: "bg-rose-50 text-rose-700 border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/40",
-};
-
-const STATUS_BADGES: Record<string, string> = {
-    "To Do": "bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300",
-    "In Progress": "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300",
-    "Review": "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
-    "Done": "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
-};
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 export function TasksClient({
     tasks: initialTasks,
@@ -96,6 +80,7 @@ export function TasksClient({
     activeProjectId?: string;
     activeProjectTitle?: string;
 }) {
+    const reduceMotion = useReducedMotion();
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
@@ -105,13 +90,12 @@ export function TasksClient({
 
     // Modal states
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isMasterDataOpen, setIsMasterDataOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [taskActivities, setTaskActivities] = useState<TaskActivity[]>([]);
     const [isLoadingActivities, setIsLoadingActivities] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [masterPriorities, setMasterPriorities] = useState<MasterPriorityItem[]>([]);
+    const { priorities: masterPriorities, statuses: masterStatuses, issueTypes: masterIssueTypes, loadAll } = useMasterDataStore();
     const [currentUserId, setCurrentUserId] = useState<string>("");
 
     useEffect(() => {
@@ -124,11 +108,8 @@ export function TasksClient({
             })
             .catch(() => {});
 
-        setMasterPriorities(getMasterPriorities());
-        const handleUpdate = () => setMasterPriorities(getMasterPriorities());
-        window.addEventListener("numpux_master_data_updated", handleUpdate);
-        return () => window.removeEventListener("numpux_master_data_updated", handleUpdate);
-    }, []);
+        void loadAll();
+    }, [loadAll]);
 
     // Load activities when selectedTask is opened
     useEffect(() => {
@@ -146,6 +127,12 @@ export function TasksClient({
             .finally(() => setIsLoadingActivities(false));
     }, [selectedTask]);
 
+    const completedStatusIds = new Set(masterStatuses.filter((status) => status.isCompleted).map((status) => status.id));
+    const completedStatus = masterStatuses.find((status) => status.isCompleted);
+    const openStatus = masterStatuses.find((status) => !status.isCompleted);
+    const maxPriorityLevel = Math.max(0, ...masterPriorities.map((priority) => priority.level));
+    const highPriorityIds = new Set(masterPriorities.filter((priority) => priority.level >= Math.max(1, maxPriorityLevel - 1)).map((priority) => priority.id));
+
     const filteredTasks = tasks.filter((task) => {
         const matchesSearch =
             task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -156,7 +143,7 @@ export function TasksClient({
         const matchesPriority = priorityFilter === "All" || task.priority === priorityFilter;
         const matchesUrgentFocus =
             !focusUrgentOnly ||
-            ((task.priority === "Urgent" || task.priority === "High") && task.status !== "Done");
+            (highPriorityIds.has(task.priority) && !completedStatusIds.has(task.status));
         const matchesAssignee =
             !filterAssignedToMe ||
             (currentUserId ? task.assigneeId === currentUserId : !!task.assigneeId);
@@ -197,14 +184,16 @@ export function TasksClient({
     };
 
     const handleToggleDone = async (task: Task) => {
-        const newStatus: TaskStatus = task.status === "Done" ? "To Do" : "Done";
+        const isCompleted = completedStatusIds.has(task.status);
+        const newStatus: TaskStatus = isCompleted ? (openStatus?.id || task.status) : (completedStatus?.id || task.status);
+        if (newStatus === task.status) return;
         setTasks((prev) =>
             prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
         );
         if (selectedTask?.id === task.id) {
             setSelectedTask((prev) => (prev ? { ...prev, status: newStatus } : null));
         }
-        toast.success(newStatus === "Done" ? "Task marked as completed! 🎉" : "Task marked as To Do");
+        toast.success(isCompleted ? `Task moved to ${openStatus?.name}` : `Task marked as ${completedStatus?.name}`);
         await updateTaskStatusAction(task.id, newStatus);
     };
 
@@ -220,6 +209,7 @@ export function TasksClient({
                     project: task.project,
                     priority: task.priority,
                     status: task.status,
+                    issueType: task.issueType || masterIssueTypes[0]?.id,
                     description: task.description || "",
                 }),
             });
@@ -227,7 +217,7 @@ export function TasksClient({
                 const json = await res.json();
                 if (json.data) {
                     setTasks((prev) => [json.data, ...prev]);
-                    toast.success("Task duplicated successfully! 📋");
+                    toast.success("Task duplicated 📋");
                 }
             } else {
                 toast.error("Failed to duplicate task");
@@ -262,22 +252,22 @@ export function TasksClient({
                     <p className="text-muted-foreground text-xs mt-1">
                         {activeProjectTitle
                             ? `Tasks in ${activeProjectTitle}`
-                            : "Keep track of what needs to be done next."}
+                            : "Review, filter, and update work across all projects."}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2.5 self-start sm:self-auto">
                     {/* View Switcher */}
-                    <div className="bg-muted/70 p-1 rounded-xl flex border border-border">
+                    <div className="bg-muted/70 p-1 rounded-lg flex border border-border">
                         <button
-                            title="List View"
-                            className="p-1.5 bg-card text-foreground font-semibold rounded-lg shadow-2xs border border-border/60"
+                            title="List view"
+                            className="p-1.5 bg-card text-foreground font-semibold rounded-lg shadow-none border border-border/60"
                         >
                             <ListDashes size={15} />
                         </button>
                         <Link href={activeProjectId ? `/tasks/kanban?projectId=${activeProjectId}` : "/tasks/kanban"}>
                             <button
-                                title="Kanban Board"
+                                title="Board view"
                                 className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-lg cursor-pointer hover:bg-background/60"
                             >
                                 <SquaresFour size={15} />
@@ -288,24 +278,24 @@ export function TasksClient({
                     {/* New Task Trigger Button (Modal) */}
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground font-semibold rounded-xl text-xs hover:opacity-90 active:scale-98 transition-all shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
-                        <span>New Task</span>
+                        <span>New task</span>
                     </button>
                 </div>
             </div>
 
             {/* Filter Bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/40 p-2.5 rounded-2xl border border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search tasks or keywords..."
+                        placeholder="Search tasks"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-xl focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
                     />
                     {searchQuery && (
                         <button
@@ -323,15 +313,15 @@ export function TasksClient({
                         type="button"
                         onClick={() => setFocusUrgentOnly((prev) => !prev)}
                         className={cn(
-                            "px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
+                            "px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5",
                             focusUrgentOnly
-                                ? "bg-rose-500 text-white border-rose-600 shadow-xs ring-2 ring-rose-500/20"
+                                ? "bg-rose-500 text-white border-rose-600 shadow-none ring-2 ring-rose-500/20"
                                 : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted/50"
                         )}
-                        title="Show only Urgent & High priority tasks needing attention"
+                        title="Show high and urgent priority tasks"
                     >
                         <Lightning size={12} weight={focusUrgentOnly ? "fill" : "regular"} className={focusUrgentOnly ? "text-white" : "text-amber-500"} />
-                        <span>Urgent Focus</span>
+                        <span>High priority</span>
                     </button>
 
                     {/* Jira-style Quick Filter: Assigned to Me */}
@@ -339,35 +329,32 @@ export function TasksClient({
                         type="button"
                         onClick={() => setFilterAssignedToMe((prev) => !prev)}
                         className={cn(
-                            "px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
+                            "px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5",
                             filterAssignedToMe
-                                ? "bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/20"
+                                ? "bg-primary text-primary-foreground border-primary shadow-none ring-2 ring-primary/20"
                                 : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted/50"
                         )}
-                        title="Show tasks assigned to a member"
+                        title="Show assigned tasks"
                     >
                         <UserIcon size={12} weight={filterAssignedToMe ? "bold" : "regular"} />
-                        <span>Assigned Tasks</span>
+                        <span>Assigned</span>
                     </button>
 
                     <div className="h-4 w-px bg-border/60 mx-1 hidden sm:block" />
 
                     <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Status:</span>
+                        <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">Status</span>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="h-8 w-[130px] text-xs rounded-xl bg-card border-border/80">
-                                <SelectValue placeholder="All Status" />
+                            <SelectTrigger className="h-8 w-[130px] text-xs rounded-lg bg-card border-border/80">
+                                <SelectValue placeholder="All statuses" />
                             </SelectTrigger>
                             <SelectContent className="text-xs">
                                 {[
-                                    { key: "All", label: "All Status" },
-                                    { key: "To Do", label: "To Do" },
-                                    { key: "In Progress", label: "In Progress" },
-                                    { key: "Review", label: "In Review" },
-                                    { key: "Done", label: "Done" },
+                                    { id: "All", name: "All statuses" },
+                                    ...masterStatuses,
                                 ].map((s) => (
-                                    <SelectItem key={s.key} value={s.key} className="text-xs cursor-pointer">
-                                        {s.label}
+                                    <SelectItem key={s.id} value={s.id} className="text-xs cursor-pointer">
+                                        {s.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -379,16 +366,21 @@ export function TasksClient({
             {/* Task List Cards */}
             <div className="space-y-2">
                 {filteredTasks.length > 0 ? (
-                    filteredTasks.map((task) => (
-                        <div
+                    filteredTasks.map((task, index) => (
+                        <motion.div
                             key={task.id}
+                            layout={!reduceMotion}
+                            initial={reduceMotion ? false : { opacity: 0, y: 7 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            whileHover={reduceMotion ? undefined : { x: 2 }}
+                            transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.2), ease: [0.16, 1, 0.3, 1] }}
                             onClick={() => setSelectedTask(task)}
-                            className="bg-card border border-border/80 hover:border-primary/40 hover:bg-card/90 px-4 py-3 rounded-xl flex items-center justify-between group transition-all cursor-pointer shadow-2xs"
+                            className="bg-card border border-border/80 hover:border-primary/40 hover:bg-card px-4 py-3 rounded-lg flex items-center justify-between group transition-colors cursor-pointer shadow-none"
                         >
                             <div className="flex items-center gap-3.5 min-w-0">
                                 <button
                                     type="button"
-                                    title={task.status === "Done" ? "Mark as To Do" : "Mark as Done"}
+                                    title={completedStatusIds.has(task.status) ? `Move to ${openStatus?.name || "open status"}` : `Mark as ${completedStatus?.name || "completed"}`}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleToggleDone(task);
@@ -397,10 +389,10 @@ export function TasksClient({
                                 >
                                     <CheckCircle
                                         size={17}
-                                        weight={task.status === "Done" ? "fill" : "regular"}
+                                        weight={completedStatusIds.has(task.status) ? "fill" : "regular"}
                                         className={cn(
                                             "transition-transform active:scale-90",
-                                            task.status === "Done"
+                                            completedStatusIds.has(task.status)
                                                 ? "text-emerald-500"
                                                 : "text-muted-foreground/50 group-hover/chk:text-primary"
                                         )}
@@ -410,7 +402,7 @@ export function TasksClient({
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         {/* Jira-style Issue Type & Key */}
                                         {(() => {
-                                            const issueTypeConf = getIssueTypeConfig(task.issueType);
+                                            const issueTypeConf = getIssueTypeConfig(masterIssueTypes, task.issueType);
                                             const TypeIcon = issueTypeConf.icon;
                                             return (
                                                 <div className="flex items-center gap-1 text-[10px] font-mono font-bold text-muted-foreground/90 bg-muted/60 px-1.5 py-0.5 rounded border border-border/60">
@@ -422,7 +414,7 @@ export function TasksClient({
 
                                         <h3 className={cn(
                                             "text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors",
-                                            task.status === "Done" && "line-through text-muted-foreground/70"
+                                            completedStatusIds.has(task.status) && "line-through text-muted-foreground/70"
                                         )}>
                                             {task.title}
                                         </h3>
@@ -468,7 +460,7 @@ export function TasksClient({
                                 )}
 
                                 {(() => {
-                                    const pConf = getPriorityConfig(task.priority);
+                                    const pConf = getPriorityConfig(masterPriorities, task.priority);
                                     return (
                                         <span
                                             className={cn(
@@ -490,7 +482,7 @@ export function TasksClient({
                                             title="Change Status"
                                             className={cn(
                                                 "text-[11px] font-medium px-2 py-0.5 rounded-lg border border-border/40 hover:opacity-85 transition-opacity flex items-center gap-1 cursor-pointer",
-                                                STATUS_BADGES[task.status] || STATUS_BADGES["To Do"]
+                                                masterStatuses.find((status) => status.id === task.status)?.badgeClass || "bg-muted text-muted-foreground"
                                             )}
                                         >
                                             <span>{task.status}</span>
@@ -498,17 +490,17 @@ export function TasksClient({
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-36 p-1 text-xs">
-                                        {(["To Do", "In Progress", "Review", "Done"] as TaskStatus[]).map((st) => (
+                                        {masterStatuses.map((status) => (
                                             <DropdownMenuItem
-                                                key={st}
-                                                onClick={() => handleQuickStatusChange(task.id, st)}
+                                                key={status.id}
+                                                onClick={() => handleQuickStatusChange(task.id, status.id)}
                                                 className={cn(
                                                     "cursor-pointer flex items-center justify-between py-1.5",
-                                                    task.status === st && "font-semibold bg-primary/10 text-primary"
+                                                    task.status === status.id && "font-semibold bg-primary/10 text-primary"
                                                 )}
                                             >
-                                                <span>{st}</span>
-                                                {task.status === st && <Check size={12} className="text-primary" />}
+                                                <span>{status.name}</span>
+                                                {task.status === status.id && <Check size={12} className="text-primary" />}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
@@ -525,19 +517,19 @@ export function TasksClient({
                                             onClick={() => setSelectedTask(task)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
-                                            <CheckCircle size={13} /> View Details
+                                            <CheckCircle size={13} /> View details
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             onClick={() => setEditingTask(task)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
-                                            <PencilSimple size={13} /> Edit Task
+                                            <PencilSimple size={13} /> Edit task
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             onClick={() => handleDuplicateTask(task)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
-                                            <Copy size={13} /> Clone Task
+                                            <Copy size={13} /> Duplicate task
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
@@ -549,10 +541,10 @@ export function TasksClient({
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                        </div>
+                        </motion.div>
                     ))
                 ) : (
-                    <div className="py-14 text-center bg-card/40 border border-dashed border-border rounded-2xl">
+                    <div className="py-14 text-center bg-card border border-dashed border-border rounded-lg">
                         <CheckCircle className="mx-auto text-muted-foreground/30 mb-2" size={28} />
                         <h4 className="text-xs font-semibold text-foreground">No tasks found</h4>
                         <p className="text-[11px] text-muted-foreground mt-0.5">Try refining your filter or create a new task.</p>
@@ -586,7 +578,7 @@ export function TasksClient({
 
             {/* Task Detail Sheet (Jira-style slide-over panel) */}
             <Sheet open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
-                <SheetContent side="right" className="sm:max-w-xl w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+                <SheetContent side="right" className="sm:max-w-xl w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-none">
                     {selectedTask && (
                         <div className="flex flex-col h-full">
                             {/* Header */}
@@ -595,25 +587,19 @@ export function TasksClient({
                                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                                         {/* Issue Type & Key */}
                                         <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-foreground bg-muted px-2.5 py-1 rounded-lg border border-border/60">
-                                            {selectedTask.issueType === "Bug" ? (
-                                                <Bug size={14} className="text-rose-500" weight="fill" />
-                                            ) : selectedTask.issueType === "Story" ? (
-                                                <BookmarkSimple size={14} className="text-emerald-500" weight="fill" />
-                                            ) : (
-                                                <CheckSquare size={14} className="text-blue-500" weight="bold" />
-                                            )}
+                                            {(() => { const config = getIssueTypeConfig(masterIssueTypes, selectedTask.issueType); const Icon = config.icon; return <Icon size={14} className={config.colorClass.split(" ")[0]} weight="bold" />; })()}
                                             <span>{selectedTask.key || `T-${selectedTask.id.slice(0, 4)}`}</span>
                                         </div>
 
                                         <span
                                             className={cn(
                                                 "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border",
-                                                PRIORITY_BADGES[selectedTask.priority] || PRIORITY_BADGES.Low
+                                                getPriorityConfig(masterPriorities, selectedTask.priority).badgeClass
                                             )}
                                         >
                                             {selectedTask.priority}
                                         </span>
-                                        <span className={cn("text-xs px-2.5 py-1 rounded-lg font-medium", STATUS_BADGES[selectedTask.status] || "bg-muted text-muted-foreground")}>
+                                        <span className={cn("text-xs px-2.5 py-1 rounded-lg font-medium", masterStatuses.find((status) => status.id === selectedTask.status)?.badgeClass || "bg-muted text-muted-foreground")}>
                                             {selectedTask.status}
                                         </span>
                                     </div>
@@ -628,7 +614,7 @@ export function TasksClient({
 
                             {/* Details Body */}
                             <div className="p-6 space-y-5 flex-1 overflow-y-auto">
-                                <div className="grid grid-cols-3 gap-3 p-4 bg-muted/30 rounded-xl border border-border/60 text-xs">
+                                <div className="grid grid-cols-3 gap-3 p-4 bg-muted/30 rounded-lg border border-border/60 text-xs">
                                     <div>
                                         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Project</span>
                                         <span className="font-semibold text-foreground mt-1 block truncate">{selectedTask.project}</span>
@@ -654,18 +640,18 @@ export function TasksClient({
 
                                     {isLoadingActivities ? (
                                         <div className="space-y-2.5">
-                                            <Skeleton className="h-14 w-full rounded-xl" />
-                                            <Skeleton className="h-14 w-full rounded-xl" />
-                                            <Skeleton className="h-14 w-full rounded-xl" />
+                                            <Skeleton className="h-14 w-full rounded-lg" />
+                                            <Skeleton className="h-14 w-full rounded-lg" />
+                                            <Skeleton className="h-14 w-full rounded-lg" />
                                         </div>
                                     ) : taskActivities.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground py-6 text-center bg-muted/20 border border-dashed border-border rounded-xl">
+                                        <p className="text-xs text-muted-foreground py-6 text-center bg-muted/20 border border-dashed border-border rounded-lg">
                                             No logged activities recorded yet.
                                         </p>
                                     ) : (
                                         <div className="space-y-2">
                                             {taskActivities.map((act) => (
-                                                <div key={act.id} className="text-xs flex items-start gap-2.5 bg-muted/30 p-3 rounded-xl border border-border/50">
+                                                <div key={act.id} className="text-xs flex items-start gap-2.5 bg-muted/30 p-3 rounded-lg border border-border/50">
                                                     <div className="w-2 h-2 rounded-full bg-primary mt-1 shrink-0" />
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-xs text-foreground font-medium">
@@ -692,7 +678,7 @@ export function TasksClient({
                                         setSelectedTask(null);
                                         setDeleteId(id);
                                     }}
-                                    className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                                    className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-lg hover:bg-rose-50 transition-colors"
                                 >
                                     <Trash size={14} />
                                     Delete Task
@@ -700,7 +686,7 @@ export function TasksClient({
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setSelectedTask(null)}
-                                        className="px-3.5 py-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-xl cursor-pointer hover:bg-muted transition-colors"
+                                        className="px-3.5 py-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
                                     >
                                         Close
                                     </button>
@@ -710,7 +696,7 @@ export function TasksClient({
                                             setSelectedTask(null);
                                             setEditingTask(t);
                                         }}
-                                        className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-xl hover:opacity-90 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                                        className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:opacity-90 flex items-center gap-1.5 cursor-pointer shadow-none transition-colors"
                                     >
                                         <PencilSimple size={14} />
                                         Edit Details
@@ -724,28 +710,28 @@ export function TasksClient({
 
             {/* Delete Confirmation Modal */}
             <Dialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent className="rounded-2xl border border-border p-6 font-sans shadow-xl bg-card max-w-sm">
+                <DialogContent className="rounded-lg border border-border p-6 font-sans shadow-none bg-card max-w-sm">
                     <DialogHeader className="space-y-2">
-                        <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
                             <Trash size={18} />
                         </div>
-                        <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete Task?</DialogTitle>
+                        <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete task?</DialogTitle>
                         <DialogDescription className="text-xs text-muted-foreground">
-                            This task will be permanently removed from your project workspace. This action cannot be undone.
+                            This task will be permanently deleted. This cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-4 flex gap-2">
                         <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 rounded-xl text-xs h-9 cursor-pointer"
+                            className="flex-1 rounded-lg text-xs h-9 cursor-pointer"
                             onClick={() => setDeleteId(null)}
                         >
                             Cancel
                         </Button>
                         <Button
                             size="sm"
-                            className="flex-1 rounded-xl text-xs h-9 bg-rose-600 hover:bg-rose-700 text-white font-medium cursor-pointer"
+                            className="flex-1 rounded-lg text-xs h-9 bg-rose-600 hover:bg-rose-700 text-white font-medium cursor-pointer"
                             onClick={handleDeleteConfirm}
                         >
                             Delete
@@ -754,12 +740,6 @@ export function TasksClient({
                 </DialogContent>
             </Dialog>
 
-            {/* Master Data Management Modal */}
-            <MasterDataModal
-                open={isMasterDataOpen}
-                onOpenChange={setIsMasterDataOpen}
-                initialTab="priorities"
-            />
         </div>
     );
 }

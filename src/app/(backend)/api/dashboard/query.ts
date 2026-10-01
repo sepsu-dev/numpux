@@ -1,17 +1,26 @@
 import { findProjects } from "@/app/(backend)/api/projects/query";
 import { findTasks } from "@/app/(backend)/api/tasks/query";
+import { findAllMasterData } from "@/app/(backend)/api/master-data/query";
 
 export async function getDashboardAggregateData(userId?: string, requestedProjectId?: string) {
   const projects = await findProjects(userId);
   const effectiveProjectId = requestedProjectId || (projects.length === 1 ? projects[0].id : undefined);
 
-  const tasks = await findTasks(userId, effectiveProjectId);
+  const [tasks, masterData] = await Promise.all([
+    findTasks(userId, effectiveProjectId),
+    findAllMasterData(),
+  ]);
   const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) || null : null;
 
-  const completedTasks = tasks.filter((t) => t.status === "Done").length;
-  const inProgressTasks = tasks.filter((t) => t.status === "In Progress").length;
-  const reviewTasks = tasks.filter((t) => t.status === "Review").length;
-  const pendingTasks = tasks.filter((t) => t.status === "To Do").length;
+  const completedStatusIds = new Set(masterData.statuses.filter((status) => status.isCompleted).map((status) => status.id));
+  const openStatuses = masterData.statuses.filter((status) => !status.isCompleted);
+  const activeStatus = openStatuses[1] || openStatuses[0];
+  const reviewStatus = openStatuses[2];
+  const pendingStatus = openStatuses[0];
+  const completedTasks = tasks.filter((task) => completedStatusIds.has(task.status)).length;
+  const inProgressTasks = tasks.filter((task) => task.status === activeStatus?.id).length;
+  const reviewTasks = tasks.filter((task) => task.status === reviewStatus?.id).length;
+  const pendingTasks = tasks.filter((task) => task.status === pendingStatus?.id).length;
   const totalTasks = tasks.length;
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -30,13 +39,13 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
           up: completedTasks > 0,
         },
         {
-          label: "In Progress",
+          label: activeStatus?.name || "Active work",
           value: String(inProgressTasks),
           change: `${reviewTasks} in review`,
           up: inProgressTasks > 0,
         },
         {
-          label: "To Do",
+          label: pendingStatus?.name || "Pending work",
           value: String(pendingTasks),
           change: `${totalTasks} total tasks`,
           up: pendingTasks === 0,
@@ -56,7 +65,7 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
           up: completedTasks > 0,
         },
         {
-          label: "In Progress",
+          label: activeStatus?.name || "Active work",
           value: String(inProgressTasks),
           change: `${reviewTasks} in review`,
           up: inProgressTasks > 0,
@@ -100,7 +109,8 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
     { day: "Sun", commits: activityMap.Sun },
   ];
 
-  const priorityWeight: Record<string, number> = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
+  const priorityWeight = Object.fromEntries(masterData.priorities.map((priority) => [priority.id, priority.level]));
+  const highPriorityThreshold = Math.max(1, ...masterData.priorities.map((priority) => priority.level - 1));
   const sortedTasks = [...tasks].sort((a, b) => {
     const pDiff = (priorityWeight[b.priority] || 1) - (priorityWeight[a.priority] || 1);
     if (pDiff !== 0) return pDiff;
@@ -111,16 +121,17 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
     id: t.id,
     title: t.title,
     project: t.project,
-    urgent: t.priority === "Urgent" || t.priority === "High",
+    priority: masterData.priorities.find((priority) => priority.id === t.priority)?.name || t.priority,
+    urgent: (priorityWeight[t.priority] || 0) >= highPriorityThreshold,
   }));
 
   const deadlines = tasks
-    .filter((t) => t.status !== "Done" && Boolean(t.date))
+    .filter((t) => !completedStatusIds.has(t.status) && Boolean(t.date))
     .slice(0, 5)
     .map((t) => ({
       title: t.title,
       due: t.date as string,
-      active: t.status === "In Progress",
+      active: t.status === activeStatus?.id,
     }));
 
   const sprintProgress = {

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { useMasterDataStore } from "@/stores/master-data-store";
 
 interface ProjectFormModalProps {
     open: boolean;
@@ -36,30 +37,36 @@ export function ProjectFormModal({
     open,
     onOpenChange,
     project,
-    categories = ["General", "System", "Web", "Product", "Design", "Mobile", "Backend"],
+    categories = [],
     onSuccess,
 }: ProjectFormModalProps) {
     const isEdit = !!project;
 
     const [title, setTitle] = useState("");
-    const [category, setCategory] = useState("General");
+    const [category, setCategory] = useState("");
+    const [status, setStatus] = useState("");
     const [isCustomCategory, setIsCustomCategory] = useState(false);
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { projectStatuses, loadAll } = useMasterDataStore();
+
+    useEffect(() => { if (open) void loadAll(); }, [open, loadAll]);
 
     useEffect(() => {
         if (project) {
             setTitle(project.title || "");
-            setCategory(project.category || "General");
+            setCategory(project.category || categories[0] || "");
+            setStatus(project.status || projectStatuses[0]?.id || "");
             setDescription(project.description || "");
-            setIsCustomCategory(!categories.includes(project.category || "General"));
+            setIsCustomCategory(!categories.includes(project.category || ""));
         } else {
             setTitle("");
-            setCategory("General");
+            setCategory(categories[0] || "");
+            setStatus(projectStatuses[0]?.id || "");
             setDescription("");
             setIsCustomCategory(false);
         }
-    }, [project, open, categories]);
+    }, [project, open, categories, projectStatuses]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,9 +83,9 @@ export function ProjectFormModal({
 
             const payload: any = {
                 title: title.trim(),
-                category: category.trim() || "General",
+                category: category.trim(),
                 description: description.trim(),
-                status: project?.status || "Active",
+                status,
             };
 
             const res = await apiFetch(endpoint, {
@@ -112,18 +119,18 @@ export function ProjectFormModal({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl">
+            <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col h-full bg-card border-l border-border shadow-none">
                 <form onSubmit={handleSubmit} className="flex flex-col h-full">
                     {/* Header */}
                     <div className="px-6 py-5 border-b border-border/60">
                         <SheetHeader className="p-0">
                             <SheetTitle className="text-lg font-bold text-foreground tracking-tight">
-                                {isEdit ? "Edit Project" : "New Project"}
+                                {isEdit ? "Edit project" : "New project"}
                             </SheetTitle>
                             <SheetDescription className="text-xs text-muted-foreground mt-0.5">
                                 {isEdit
-                                    ? "Update the name, category, or project description."
-                                    : "Create a project for personal work or your small team."}
+                                    ? "Update this project's name, category, and description."
+                                    : "Create a place for related tasks, owners, and dates."}
                             </SheetDescription>
                         </SheetHeader>
                     </div>
@@ -132,14 +139,14 @@ export function ProjectFormModal({
                     <div className="p-6 space-y-4 flex-1 overflow-y-auto">
                         <div className="space-y-1.5">
                             <Label htmlFor="proj-modal-title" className="text-xs font-semibold text-foreground">
-                                Project Name <span className="text-primary">*</span>
+                                Project name <span className="text-primary">*</span>
                             </Label>
                             <Input
                                 id="proj-modal-title"
                                 placeholder="e.g. Mobile App Redesign"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="h-10 text-xs rounded-xl bg-background/50 border-border focus:border-primary transition-all font-medium"
+                                className="h-10 text-xs rounded-lg bg-white border-border focus:border-primary transition-colors font-medium"
                                 autoFocus
                                 required
                             />
@@ -156,7 +163,7 @@ export function ProjectFormModal({
                                     onClick={() => {
                                         setIsCustomCategory(!isCustomCategory);
                                         if (isCustomCategory && !categories.includes(category)) {
-                                            setCategory("General");
+                                            setCategory(categories[0] || "");
                                         }
                                     }}
                                     className="text-[11px] text-primary hover:underline cursor-pointer"
@@ -168,17 +175,17 @@ export function ProjectFormModal({
                             {isCustomCategory ? (
                                 <Input
                                     id="proj-modal-cat"
-                                    placeholder="Type custom category name..."
+                                    placeholder="Enter a category name"
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value)}
-                                    className="h-10 text-xs rounded-xl bg-background/50 border-border focus:border-primary transition-all font-medium"
+                                    className="h-10 text-xs rounded-lg bg-white border-border focus:border-primary transition-colors font-medium"
                                 />
                             ) : (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="w-full h-10 px-3 flex items-center justify-between text-xs rounded-xl bg-background/50 border border-border hover:border-primary/60 transition-colors font-medium cursor-pointer"
+                                            className="w-full h-10 px-3 flex items-center justify-between text-xs rounded-lg bg-white border border-border hover:border-primary/60 transition-colors font-medium cursor-pointer"
                                         >
                                             <span>{category || "Select category"}</span>
                                             <CaretDown size={14} className="opacity-60" />
@@ -204,15 +211,25 @@ export function ProjectFormModal({
                         </div>
 
                         <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-foreground">Project status</Label>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild><button type="button" className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-white px-3 text-xs font-medium"><span>{projectStatuses.find((item) => item.id === status)?.name || "Select status"}</span><CaretDown size={14} className="opacity-60" /></button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width] p-1 text-xs">
+                                    {projectStatuses.map((item) => <DropdownMenuItem key={item.id} onClick={() => setStatus(item.id)} className="cursor-pointer py-2"><span className={`mr-2 rounded border px-1.5 py-0.5 ${item.colorClass}`}>{item.name}</span>{status === item.id && <Check size={14} className="ml-auto text-primary" />}</DropdownMenuItem>)}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+
+                        <div className="space-y-1.5">
                             <Label htmlFor="proj-modal-desc" className="text-xs font-semibold text-foreground">
                                 Description
                             </Label>
                             <Textarea
                                 id="proj-modal-desc"
-                                placeholder="What is this project about?"
+                                placeholder="What is this project for?"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="min-h-[90px] text-xs rounded-xl bg-background/50 border-border focus:border-primary transition-all font-normal resize-none"
+                                className="min-h-[90px] text-xs rounded-lg bg-white border-border focus:border-primary transition-colors font-normal resize-none"
                             />
                         </div>
                     </div>
@@ -224,17 +241,17 @@ export function ProjectFormModal({
                             variant="outline"
                             size="sm"
                             onClick={() => onOpenChange(false)}
-                            className="rounded-xl text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted"
+                            className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted"
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             size="sm"
-                            disabled={isSubmitting}
-                            className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs"
+                            disabled={isSubmitting || !category || !status}
+                            className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none"
                         >
-                            {isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create Project"}
+                            {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Create project"}
                         </Button>
                     </div>
                 </form>
