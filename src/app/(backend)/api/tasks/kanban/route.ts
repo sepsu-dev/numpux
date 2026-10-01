@@ -11,22 +11,17 @@ import { kanbanPatchSchema } from "../schema";
 import { findTasks, updateTaskById } from "../query";
 import { initDb } from "@/db";
 import { findAllMasterData } from "@/app/(backend)/api/master-data/query";
+import { recordAudit } from "@/lib/audit";
 
 export async function GET(request: Request) {
-  const { isValid } = validatePublicKey(request);
-  if (!isValid) {
-    return unauthorizedResponse(
-      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
-    );
-  }
-
-  const authUser = await getOptionalAuthUser(request);
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId") || undefined;
 
   await initDb();
   const [allTasks, masterData] = await Promise.all([
-    findTasks(authUser?.userId, projectId),
+    findTasks(auth.user.userId, projectId),
     findAllMasterData(),
   ]);
   const configuredIds = new Set(masterData.statuses.map((status) => status.id));
@@ -66,6 +61,8 @@ export async function PATCH(request: Request) {
     if (!updated) {
       return notFoundResponse(`Task #${taskId} not found or unauthorized`);
     }
+
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "status_changed", entityType: "task", entityId: taskId, summary: `Moved task ${updated.key || updated.title} to ${targetStatus}`, metadata: { status: targetStatus } });
 
     return successResponse(updated, `Task moved to ${targetStatus}`);
   } catch (error) {

@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { GlobalJiraHeader } from "@/components/dashboard/global-jira-header";
+import { MonitoringHeartbeat } from "@/components/dashboard/monitoring-heartbeat";
 
 export default function DashboardLayout({
     children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
 }) {
     return (
         <SidebarProvider>
+            <MonitoringHeartbeat />
             <div className="flex min-h-screen w-full bg-background text-foreground">
                 <Sidebar collapsible="icon" className="border-r border-border bg-white">
                     <Suspense fallback={<div className="p-4 text-xs text-muted-foreground">Loading navigation…</div>}>

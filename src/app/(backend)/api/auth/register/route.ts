@@ -3,9 +3,16 @@ import { initDb } from "@/db";
 import { badRequestResponse, conflictResponse, internalServerErrorResponse, successResponse } from "@/lib/response";
 import { registerSchema } from "./schema";
 import { findUserByEmailQuery, createNewUser } from "./query";
+import { getUserSessionVersion, markUserLogin } from "@/lib/user-db";
+import { checkRateLimit, getRequestFingerprint } from "@/lib/rate-limit";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = checkRateLimit(getRequestFingerprint(request, "register"), 5, 60 * 60_000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ status: "error", message: `Too many registration attempts. Try again in ${rateLimit.retryAfterSeconds} seconds.` }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
+    }
     await initDb();
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
@@ -17,19 +24,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, password } = parsed.data;
+    const { name, email, password, invitationToken } = parsed.data;
     const existingUser = await findUserByEmailQuery(email);
     if (existingUser) {
       return conflictResponse("An account with this email already exists");
     }
 
-    const newUser = await createNewUser(name.trim(), email.trim().toLowerCase(), password);
+    let invitation = null;
+    if (invitationToken) {
+      const { findInvitationByToken } = await import("@/lib/invitations");
+      invitation = await findInvitationByToken(invitationToken);
+      if (!invitation || invitation.status !== "pending" || new Date(invitation.expiresAt).getTime() <= Date.now()) return badRequestResponse("This invitation is invalid or has expired");
+      if (invitation.email.toLowerCase() !== email.trim().toLowerCase()) return badRequestResponse("Use the email address that received this invitation");
+    }
+    const newUser = invitation
+      ? await (await import("@/lib/user-db")).createUser(name.trim(), email.trim().toLowerCase(), password, "user", "invited", invitation.invitedBy)
+      : await createNewUser(name.trim(), email.trim().toLowerCase(), password, "admin");
+    if (invitationToken) {
+      const { acceptInvitation } = await import("@/lib/invitations");
+      await acceptInvitation(invitationToken, { id: newUser.id, email: newUser.email });
+    }
+    await markUserLogin(newUser.id);
+    const sessionVersion = await getUserSessionVersion(newUser.id);
 
     await createSession({
       userId: newUser.id,
       email: newUser.email,
       name: newUser.name,
       role: newUser.role || "user",
+      sessionVersion,
     });
 
     return successResponse(

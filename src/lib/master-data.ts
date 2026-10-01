@@ -20,7 +20,7 @@ export type IssueTypeIconName =
 
 export interface MasterCategoryItem { id: string; name: string; isDefault?: boolean; }
 export interface MasterIssueTypeItem { id: string; name: string; description?: string; iconName: IssueTypeIconName; colorClass: string; isDefault?: boolean; }
-export interface MasterPriorityItem { id: string; name: string; level: number; dotColor: string; badgeClass: string; isDefault?: boolean; }
+export interface MasterPriorityItem { id: string; name: string; level: number; dotColor: string; badgeClass: string; severityClass: string; isDefault?: boolean; }
 export interface MasterStatusItem { id: string; name: string; description?: string; order: number; dotColor: string; badgeClass: string; headerBorder: string; isCompleted: boolean; isDefault?: boolean; }
 export interface MasterProjectStatusItem { id: string; name: string; description?: string; colorClass: string; order: number; isCompleted: boolean; isDefault?: boolean; }
 

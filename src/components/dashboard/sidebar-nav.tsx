@@ -61,6 +61,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { ProfileModal } from "./profile-modal";
 import { SettingsModal } from "./settings-modal";
+import { MENU_ICONS as DATABASE_MENU_ICONS } from "@/lib/menu-icons";
 
 const MENU_ICONS: Record<string, any> = {
     SquaresFour,
@@ -403,7 +404,7 @@ export function SidebarNav() {
                                     }
 
                                     // Resolve icon
-                                    const IconComponent = MENU_ICONS[item.icon || ""] || MENU_ICONS[item.code] || SquaresFour;
+                                    const IconComponent = DATABASE_MENU_ICONS[item.icon || ""] || MENU_ICONS[item.code] || SquaresFour;
 
                                     if (hasSubItems) {
                                         return (

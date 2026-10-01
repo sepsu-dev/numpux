@@ -1,5 +1,6 @@
 import { deleteSession } from "@/lib/session";
-import { validateAdminAuth } from "@/lib/api-auth";
+import { getOptionalAuthUser, validateAdminAuth } from "@/lib/api-auth";
+import { markUserOffline } from "@/lib/user-db";
 import {
   badRequestResponse,
   errorResponse,
@@ -15,7 +16,9 @@ import {
   updateUserPasswordQuery,
 } from "./query";
 
-export async function POST() {
+export async function POST(request: Request) {
+  const user = await getOptionalAuthUser(request);
+  if (user?.userId) await markUserOffline(user.userId);
   await deleteSession();
   return successResponse(null, "Signed out successfully");
 }

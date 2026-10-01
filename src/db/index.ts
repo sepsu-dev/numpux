@@ -17,15 +17,11 @@ export const pool =
   globalForPg.pgPool ||
   new Pool({
     connectionString,
+    options: "-c search_path=numpux,public",
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
   });
-
-// Guarantee that every pooled connection uses schema numpux as primary
-pool.on("connect", (client) => {
-  client.query("SET search_path TO numpux, public;").catch(() => {});
-});
 
 if (process.env.NODE_ENV !== "production") {
   globalForPg.pgPool = pool;
@@ -71,6 +67,52 @@ export async function initDb() {
       END $$;
     `);
 
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(30) NOT NULL DEFAULT 'active';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INT NOT NULL DEFAULT 1;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS account_origin VARCHAR(30) NOT NULL DEFAULT 'system';
+      ALTER TABLE users ALTER COLUMN account_origin SET DEFAULT 'invited';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+      CREATE INDEX IF NOT EXISTS idx_users_last_seen_at ON users(last_seen_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_invited_by ON users(invited_by);
+    `);
+
+    // Workspace is the tenant boundary. System roles never replace membership checks.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS workspaces (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(120) UNIQUE NOT NULL,
+        created_by VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        status VARCHAR(30) NOT NULL DEFAULT 'active',
+        settings_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ
+      );
+
+      CREATE TABLE IF NOT EXISTS workspace_members (
+        id VARCHAR(64) PRIMARY KEY,
+        workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(30) NOT NULL DEFAULT 'member',
+        status VARCHAR(30) NOT NULL DEFAULT 'active',
+        joined_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ,
+        UNIQUE(workspace_id, user_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_workspace_members_user ON workspace_members(user_id, status);
+      CREATE INDEX IF NOT EXISTS idx_workspace_members_workspace ON workspace_members(workspace_id, status);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS active_workspace_id VARCHAR(64) REFERENCES workspaces(id) ON DELETE SET NULL;
+    `);
+
     // 2. Create projects table in numpux schema
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
@@ -98,6 +140,7 @@ export async function initDb() {
           ALTER TABLE projects ADD COLUMN user_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE;
         END IF;
       END $$;
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS workspace_id VARCHAR(64) REFERENCES workspaces(id) ON DELETE RESTRICT;
     `);
 
     // 3. Create tasks table in numpux schema (project_id is NOT NULL, due_date is optional/nullable)
@@ -121,6 +164,9 @@ export async function initDb() {
     // Ensure due_date is nullable if table already existed
     await client.query(`
       ALTER TABLE tasks ALTER COLUMN due_date DROP NOT NULL;
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      CREATE INDEX IF NOT EXISTS idx_projects_workspace ON projects(workspace_id, deleted_at);
     `).catch(() => {});
 
     // Add user_id column to tasks if migrating from previous schema
@@ -163,10 +209,16 @@ export async function initDb() {
         id VARCHAR(64) PRIMARY KEY,
         project_id VARCHAR(64) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        role VARCHAR(50) NOT NULL DEFAULT 'Member',
+        role VARCHAR(50) NOT NULL DEFAULT 'contributor',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(project_id, user_id)
       );
+      ALTER TABLE project_members ADD COLUMN IF NOT EXISTS invited_by VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL;
+      ALTER TABLE project_members ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE project_members ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE project_members ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE project_members ALTER COLUMN role SET DEFAULT 'contributor';
+      CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id, deleted_at);
     `);
 
     // 5. Create task_activities (History / Audit Log) table
@@ -180,6 +232,65 @@ export async function initDb() {
         details TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
+        user_name VARCHAR(255) NOT NULL DEFAULT 'System',
+        action VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(80) NOT NULL,
+        entity_id VARCHAR(64),
+        summary TEXT NOT NULL,
+        metadata JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+
+      CREATE TABLE IF NOT EXISTS notifications (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) NOT NULL DEFAULT 'info',
+        link VARCHAR(255),
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version VARCHAR(100) PRIMARY KEY,
+        description TEXT NOT NULL,
+        applied_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      INSERT INTO schema_migrations (version, description)
+      VALUES ('2026-10-admin-suite', 'Security, user management, audit logs, notifications, trash, and reporting foundation')
+      ON CONFLICT (version) DO NOTHING;
+
+      CREATE TABLE IF NOT EXISTS invitations (
+        id VARCHAR(64) PRIMARY KEY,
+        workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        project_id VARCHAR(64) REFERENCES projects(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        workspace_role VARCHAR(30) NOT NULL DEFAULT 'member',
+        project_role VARCHAR(50),
+        invited_by VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(64) UNIQUE NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'pending',
+        expires_at TIMESTAMPTZ NOT NULL,
+        accepted_by VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
+        accepted_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_invitations_email_status ON invitations(LOWER(email), status);
+      CREATE INDEX IF NOT EXISTS idx_invitations_workspace_status ON invitations(workspace_id, status);
+      CREATE INDEX IF NOT EXISTS idx_invitations_project_status ON invitations(project_id, status);
     `);
 
     // 6. Master Menus Table
@@ -193,8 +304,10 @@ export async function initDb() {
         section VARCHAR(50) DEFAULT 'Planning',
         sort_order INT DEFAULT 1,
         is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ
       );
+      ALTER TABLE master_menus ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
     `);
 
     // Ensure section and parent_id column exist
@@ -225,6 +338,7 @@ export async function initDb() {
         sort_order INT DEFAULT 1,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE master_sections ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
     `);
 
     // 6.6. Database-backed configurable master data
@@ -258,6 +372,7 @@ export async function initDb() {
         level INT NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 5),
         dot_color VARCHAR(100) NOT NULL,
         badge_class TEXT NOT NULL,
+        severity_class TEXT NOT NULL,
         sort_order INT DEFAULT 1,
         is_default BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
@@ -295,6 +410,12 @@ export async function initDb() {
     `);
 
     await client.query(`
+      ALTER TABLE master_priorities ADD COLUMN IF NOT EXISTS severity_class TEXT;
+      UPDATE master_priorities SET severity_class = badge_class WHERE severity_class IS NULL;
+      ALTER TABLE master_priorities ALTER COLUMN severity_class SET NOT NULL;
+    `);
+
+    await client.query(`
       INSERT INTO master_categories (id, name, sort_order, is_default)
       VALUES
         ('General', 'General', 1, true),
@@ -313,12 +434,12 @@ export async function initDb() {
         ('Improvement', 'Improvement', 'Refactoring, optimization, or UI polish', 'Lightning', 'text-purple-500 bg-purple-500/10 border-purple-200/50 dark:border-purple-900/50', 4, false)
       ON CONFLICT (id) DO NOTHING;
 
-      INSERT INTO master_priorities (id, name, level, dot_color, badge_class, sort_order, is_default)
+      INSERT INTO master_priorities (id, name, level, dot_color, badge_class, severity_class, sort_order, is_default)
       VALUES
-        ('Low', 'Low', 1, 'bg-primary', 'bg-primary/10 text-primary border-primary/20', 1, true),
-        ('Medium', 'Medium', 2, 'bg-[#2984f7]', 'bg-[#eef6ff] text-[#1768c5] border-[#c8e0ff]', 2, true),
-        ('High', 'High', 3, 'bg-[#f5a300]', 'bg-[#fff7e6] text-[#946000] border-[#ffe0a3]', 3, true),
-        ('Urgent', 'Urgent', 4, 'bg-rose-500', 'bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50', 4, true)
+        ('Low', 'Low', 1, 'bg-primary', 'bg-primary/10 text-primary border-primary/20', 'bg-slate-100 text-slate-700 border-slate-200/80', 1, true),
+        ('Medium', 'Medium', 2, 'bg-[#2984f7]', 'bg-[#eef6ff] text-[#1768c5] border-[#c8e0ff]', 'bg-[#eef6ff] text-[#1768c5] border-[#c8e0ff]', 2, true),
+        ('High', 'High', 3, 'bg-[#f5a300]', 'bg-[#fff7e6] text-[#946000] border-[#ffe0a3]', 'bg-[#fff7e6] text-[#946000] border-[#ffe0a3]', 3, true),
+        ('Urgent', 'Urgent', 4, 'bg-rose-500', 'bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50', 'bg-rose-50 text-rose-700 border-rose-200/80', 4, true)
       ON CONFLICT (id) DO NOTHING;
 
       INSERT INTO master_statuses (id, name, description, sort_order, dot_color, badge_class, header_border, is_completed, is_default)
@@ -377,15 +498,22 @@ export async function initDb() {
         ('10000000-0000-0000-0000-000000000001', 'board', 'Board', '/tasks/kanban', 'SquaresFour', 'Planning', 2, true),
         ('10000000-0000-0000-0000-000000000002', 'backlog', 'Backlog', '/tasks', 'ListDashes', 'Planning', 3, true),
         ('10000000-0000-0000-0000-000000000004', 'projects', 'Projects', '/projects', 'FolderSimple', 'Workspace', 4, true),
-        ('10000000-0000-0000-0000-000000000005', 'master_menus', 'Master Menus', '/master/menus', 'ListNumbers', 'Settings', 5, true),
-        ('10000000-0000-0000-0000-000000000006', 'user_privileges', 'User Privileges', '/master/user-privileges', 'ShieldCheck', 'Settings', 6, true),
-        ('10000000-0000-0000-0000-000000000007', 'project_privileges', 'Project Privileges', '/master/project-privileges', 'UsersThree', 'Settings', 7, true),
-        ('10000000-0000-0000-0000-000000000008', 'categories', 'Category Project', '/master/categories', 'Tag', 'Settings', 8, true),
-        ('10000000-0000-0000-0000-000000000009', 'issue_types', 'Issue Type', '/master/issue-types', 'CheckSquare', 'Settings', 9, true),
-        ('10000000-0000-0000-0000-000000000010', 'priorities', 'Priorities', '/master/priorities', 'Flag', 'Settings', 10, true),
-        ('10000000-0000-0000-0000-000000000012', 'statuses', 'Task Statuses', '/master/statuses', 'Columns', 'Settings', 11, true),
-        ('10000000-0000-0000-0000-000000000013', 'project_statuses', 'Project Statuses', '/master/project-statuses', 'Columns', 'Settings', 12, true),
-        ('10000000-0000-0000-0000-000000000011', 'master_sections', 'Master Sections', '/master/sections', 'Rows', 'Settings', 13, true)
+        ('10000000-0000-0000-0000-000000000020', 'workspace_settings', 'Workspace', '/workspace', 'Stack', 'Workspace', 5, true),
+        ('10000000-0000-0000-0000-000000000014', 'monitoring', 'Monitoring', '/monitoring', 'ChartBar', 'Workspace', 6, true),
+        ('10000000-0000-0000-0000-000000000015', 'reports', 'Reports', '/reports', 'ChartBar', 'Workspace', 6, true),
+        ('10000000-0000-0000-0000-000000000016', 'notifications', 'Notifications', '/notifications', 'Bell', 'Workspace', 7, true),
+        ('10000000-0000-0000-0000-000000000005', 'master_menus', 'Master Menus', '/master/menus', 'ListNumbers', 'Settings', 6, true),
+        ('10000000-0000-0000-0000-000000000006', 'user_privileges', 'User Privileges', '/master/user-privileges', 'ShieldCheck', 'Settings', 7, true),
+        ('10000000-0000-0000-0000-000000000007', 'project_privileges', 'Project Privileges', '/master/project-privileges', 'UsersThree', 'Settings', 8, true),
+        ('10000000-0000-0000-0000-000000000008', 'categories', 'Category Project', '/master/categories', 'Tag', 'Settings', 9, true),
+        ('10000000-0000-0000-0000-000000000009', 'issue_types', 'Issue Type', '/master/issue-types', 'CheckSquare', 'Settings', 10, true),
+        ('10000000-0000-0000-0000-000000000010', 'priorities', 'Priorities', '/master/priorities', 'Flag', 'Settings', 11, true),
+        ('10000000-0000-0000-0000-000000000012', 'statuses', 'Task Statuses', '/master/statuses', 'Columns', 'Settings', 12, true),
+        ('10000000-0000-0000-0000-000000000013', 'project_statuses', 'Project Statuses', '/master/project-statuses', 'Columns', 'Settings', 13, true),
+        ('10000000-0000-0000-0000-000000000011', 'master_sections', 'Master Sections', '/master/sections', 'Rows', 'Settings', 14, true),
+        ('10000000-0000-0000-0000-000000000017', 'users', 'User Management', '/master/users', 'UsersThree', 'Settings', 15, true),
+        ('10000000-0000-0000-0000-000000000018', 'audit_log', 'Audit Log', '/master/audit-log', 'ListDashes', 'Settings', 16, true),
+        ('10000000-0000-0000-0000-000000000019', 'trash', 'Trash', '/master/trash', 'Trash', 'Settings', 17, true)
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
         section = EXCLUDED.section,
@@ -401,57 +529,85 @@ export async function initDb() {
     await client.query(`
       INSERT INTO user_groups (id, name, description)
       VALUES 
-        ('20000000-0000-0000-0000-000000000001', 'admin', 'Administrator group with full menu visibility'),
-        ('20000000-0000-0000-0000-000000000002', 'user', 'Regular user group with restricted menu access'),
-        ('20000000-0000-0000-0000-000000000003', 'superadmin', 'Super administrator with unrestricted system access')
-      ON CONFLICT (name) DO NOTHING;
+        ('20000000-0000-0000-0000-000000000001', 'admin', 'Self-registered workspace administrator with operational management access'),
+        ('20000000-0000-0000-0000-000000000002', 'user', 'Invited workspace user with transactional access'),
+        ('20000000-0000-0000-0000-000000000003', 'superadmin', 'Application owner with unrestricted system access')
+      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description;
     `);
 
-    // Seed Default Privileges
-    // Admin group sees all menus
+    // Seed new role/menu pairs with safe defaults. Existing choices remain editable.
     await client.query(`
       INSERT INTO user_privileges (id, group_id, menu_id, can_view)
       SELECT 
         gen_random_uuid(),
         ug.id,
         mm.id,
-        true
+        CASE
+          WHEN ug.name = 'superadmin' THEN true
+          WHEN ug.name = 'admin' THEN mm.code IN ('summary', 'board', 'backlog', 'projects', 'workspace_settings', 'reports', 'notifications')
+          WHEN ug.name = 'user' THEN mm.code IN ('summary', 'board', 'backlog', 'projects', 'workspace_settings', 'notifications')
+          ELSE false
+        END
       FROM user_groups ug
       CROSS JOIN master_menus mm
-      WHERE ug.name = 'admin'
+      WHERE ug.name IN ('superadmin', 'admin', 'user')
       ON CONFLICT DO NOTHING;
     `);
 
-    // Superadmin always sees every active menu
+    // One-time role model migration:
+    // superadmin = application owner, admin = registered workspace owner,
+    // user = invited transactional user.
     await client.query(`
-      INSERT INTO user_privileges (id, group_id, menu_id, can_view)
-      SELECT gen_random_uuid(), ug.id, mm.id, true
-      FROM user_groups ug
-      CROSS JOIN master_menus mm
-      WHERE ug.name = 'superadmin'
-      ON CONFLICT DO NOTHING;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = '2026-10-role-model-v2') THEN
+          UPDATE user_privileges up
+          SET can_view = CASE
+            WHEN ug.name = 'superadmin' THEN true
+            WHEN ug.name = 'admin' THEN mm.code IN ('summary', 'board', 'backlog', 'projects', 'reports', 'notifications', 'users')
+            WHEN ug.name = 'user' THEN mm.code IN ('summary', 'board', 'backlog', 'projects', 'notifications')
+            ELSE false
+          END
+          FROM user_groups ug, master_menus mm
+          WHERE up.group_id = ug.id AND up.menu_id = mm.id;
 
+          INSERT INTO schema_migrations (version, description)
+          VALUES ('2026-10-role-model-v2', 'Align superadmin, registered admin, and invited user privileges');
+        END IF;
+      END $$;
+    `);
+
+    // Move customer administration from global accounts to workspace membership.
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = '2026-10-workspace-acl-v1') THEN
+          UPDATE user_privileges up
+          SET can_view = CASE
+            WHEN mm.code = 'workspace_settings' THEN true
+            WHEN mm.code = 'users' THEN false
+            ELSE up.can_view
+          END
+          FROM user_groups ug, master_menus mm
+          WHERE up.group_id = ug.id AND up.menu_id = mm.id AND ug.name IN ('admin', 'user');
+
+          INSERT INTO schema_migrations (version, description)
+          VALUES ('2026-10-workspace-acl-v1', 'Move customer member management to workspace scope');
+        END IF;
+      END $$;
+    `);
+
+    // The application owner must always retain access. Admin/user choices are not
+    // overwritten here because the privilege matrix is managed dynamically.
+    await client.query(`
       UPDATE user_privileges up
       SET can_view = true
       FROM user_groups ug
-      WHERE up.group_id = ug.id AND ug.name = 'superadmin';
+      WHERE up.group_id = ug.id
+        AND ug.name = 'superadmin';
     `);
 
-    // User group: Settings section is hidden by default for regular user
-    await client.query(`
-      INSERT INTO user_privileges (id, group_id, menu_id, can_view)
-      SELECT 
-        gen_random_uuid(),
-        ug.id,
-        mm.id,
-        CASE WHEN mm.section = 'Settings' THEN false ELSE true END
-      FROM user_groups ug
-      CROSS JOIN master_menus mm
-      WHERE ug.name = 'user'
-      ON CONFLICT DO NOTHING;
-    `);
-
-    // 9. Project Groups Table (Project-level roles: Owner, Admin, Member)
+    // 9. Project Groups Table (Project-level roles: Owner, Admin, Contributor, Viewer)
     await client.query(`
       CREATE TABLE IF NOT EXISTS project_groups (
         id VARCHAR(64) PRIMARY KEY,
@@ -474,14 +630,20 @@ export async function initDb() {
       );
     `);
 
-    // Seed Default Project Groups (Owner, Admin, Member)
+    // Seed default project roles.
     await client.query(`
+      UPDATE project_groups
+      SET name = 'contributor', display_name = 'Contributor', description = 'Project contributor who can work on tasks'
+      WHERE name = 'member'
+        AND NOT EXISTS (SELECT 1 FROM project_groups WHERE name = 'contributor');
+
       INSERT INTO project_groups (id, name, display_name, description)
       VALUES 
         ('50000000-0000-0000-0000-000000000001', 'owner', 'Owner', 'Project creator with full project control'),
         ('50000000-0000-0000-0000-000000000002', 'admin', 'Project Admin', 'Project administrator who can manage tasks and members'),
-        ('50000000-0000-0000-0000-000000000003', 'member', 'Member', 'Team member with standard contribution access')
-      ON CONFLICT (name) DO NOTHING;
+        ('50000000-0000-0000-0000-000000000003', 'contributor', 'Contributor', 'Project contributor who can create and update tasks'),
+        ('50000000-0000-0000-0000-000000000004', 'viewer', 'Viewer', 'Read-only project stakeholder')
+      ON CONFLICT (name) DO UPDATE SET display_name = EXCLUDED.display_name, description = EXCLUDED.description;
     `);
 
     // Seed Default Project Privileges:
@@ -513,7 +675,7 @@ export async function initDb() {
       ON CONFLICT DO NOTHING;
     `);
 
-    // - Member sees board, backlog, summary, projects, but NOT settings section
+    // - Contributors and viewers see project planning menus, while mutations remain API-protected
     await client.query(`
       INSERT INTO project_privileges (id, group_id, menu_id, can_view)
       SELECT 
@@ -523,20 +685,43 @@ export async function initDb() {
         CASE WHEN mm.section = 'Settings' THEN false ELSE true END
       FROM project_groups pg
       CROSS JOIN master_menus mm
-      WHERE pg.name = 'member'
+      WHERE pg.name IN ('contributor', 'viewer')
       ON CONFLICT DO NOTHING;
     `);
 
-    // Seed default Admin User (admin@numpux.com / admin123)
+    await client.query(`
+      UPDATE project_members SET role = 'contributor' WHERE LOWER(role) = 'member';
+    `);
+
+    // Seed the application owner (admin@numpux.com / admin123)
     const ADMIN_USER_ID = "00000000-0000-0000-0000-000000000001";
     // SHA-256 for 'admin123'
     const ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
     const INVALID_LEGACY_ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa82280f1a30e1ea6";
 
     await client.query(`
-      INSERT INTO users (id, name, email, password_hash, role)
-      VALUES ('${ADMIN_USER_ID}', 'Admin Numpux', 'admin@numpux.com', '${ADMIN_PASS_HASH}', 'admin')
-      ON CONFLICT (email) DO UPDATE SET role = 'admin';
+      INSERT INTO users (id, name, email, password_hash, role, account_origin)
+      VALUES ('${ADMIN_USER_ID}', 'Admin Numpux', 'admin@numpux.com', '${ADMIN_PASS_HASH}', 'superadmin', 'system')
+      ON CONFLICT (email) DO UPDATE SET role = 'superadmin', account_origin = 'system';
+    `);
+
+    // Classify accounts created before account-origin tracking was introduced.
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = '2026-10-account-origin-v1') THEN
+          UPDATE users
+          SET account_origin = CASE
+            WHEN role = 'superadmin' THEN 'system'
+            WHEN role = 'admin' THEN 'self_registered'
+            ELSE 'invited'
+          END
+          WHERE account_origin = 'system';
+
+          INSERT INTO schema_migrations (version, description)
+          VALUES ('2026-10-account-origin-v1', 'Classify legacy accounts by role origin');
+        END IF;
+      END $$;
     `);
 
     // Repair only the invalid hash shipped by older versions. A successful login
@@ -583,6 +768,69 @@ export async function initDb() {
         ON CONFLICT (id) DO NOTHING;
       `);
     }
+
+    // Backfill tenant boundaries for legacy users and projects. This is idempotent
+    // and keeps the current project owner as the workspace owner.
+    await client.query(`
+      INSERT INTO workspaces (id, name, slug, created_by)
+      SELECT
+        gen_random_uuid()::text,
+        CASE WHEN u.name IS NULL OR BTRIM(u.name) = '' THEN 'My Workspace' ELSE u.name || '''s Workspace' END,
+        'workspace-' || SUBSTRING(MD5(u.id) FROM 1 FOR 16),
+        u.id
+      FROM users u
+      WHERE u.deleted_at IS NULL
+        AND (u.role IN ('superadmin', 'admin') OR EXISTS (SELECT 1 FROM projects p WHERE p.user_id = u.id))
+        AND NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.created_by = u.id AND w.deleted_at IS NULL)
+      ON CONFLICT (slug) DO NOTHING;
+
+      INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
+      SELECT gen_random_uuid()::text, w.id, w.created_by, 'owner', 'active'
+      FROM workspaces w
+      WHERE w.deleted_at IS NULL
+      ON CONFLICT (workspace_id, user_id) DO UPDATE
+      SET role = 'owner', status = 'active', deleted_at = NULL, updated_at = NOW();
+
+      UPDATE users u
+      SET active_workspace_id = selected.workspace_id
+      FROM (
+        SELECT DISTINCT ON (wm.user_id) wm.user_id, wm.workspace_id
+        FROM workspace_members wm
+        WHERE wm.status = 'active' AND wm.deleted_at IS NULL
+        ORDER BY wm.user_id, CASE wm.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 ELSE 3 END, wm.joined_at
+      ) selected
+      WHERE u.id = selected.user_id AND u.active_workspace_id IS NULL;
+
+      UPDATE projects p
+      SET workspace_id = w.id
+      FROM workspaces w
+      WHERE p.workspace_id IS NULL AND w.created_by = p.user_id AND w.deleted_at IS NULL;
+
+      INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
+      SELECT gen_random_uuid()::text, membership.workspace_id, membership.user_id, 'member', 'active'
+      FROM (
+        SELECT DISTINCT p.workspace_id, pm.user_id
+        FROM project_members pm
+        JOIN projects p ON p.id = pm.project_id
+        WHERE p.workspace_id IS NOT NULL AND pm.deleted_at IS NULL
+      ) membership
+      ON CONFLICT (workspace_id, user_id) DO UPDATE
+      SET status = 'active', deleted_at = NULL, updated_at = NOW();
+
+      UPDATE users u
+      SET active_workspace_id = selected.workspace_id
+      FROM (
+        SELECT DISTINCT ON (wm.user_id) wm.user_id, wm.workspace_id
+        FROM workspace_members wm
+        WHERE wm.status = 'active' AND wm.deleted_at IS NULL
+        ORDER BY wm.user_id, CASE wm.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 ELSE 3 END, wm.joined_at
+      ) selected
+      WHERE u.id = selected.user_id AND u.active_workspace_id IS NULL;
+
+      INSERT INTO schema_migrations (version, description)
+      VALUES ('2026-10-workspace-foundation-v1', 'Workspace tenancy, project roles, and invitation foundation')
+      ON CONFLICT (version) DO NOTHING;
+    `);
 
     isInitialized = true;
   } finally {

@@ -9,16 +9,11 @@ import {
 } from "@/lib/response";
 import { createProjectSchema, listProjectsQuerySchema } from "./schema";
 import { findProjects, insertProject } from "./query";
+import { recordAudit } from "@/lib/audit";
 
 export async function GET(request: Request) {
-  const { isValid } = validatePublicKey(request);
-  if (!isValid) {
-    return unauthorizedResponse(
-      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
-    );
-  }
-
-  const authUser = await getOptionalAuthUser(request);
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   const { searchParams } = new URL(request.url);
   const parsed = listProjectsQuerySchema.safeParse({
     status: searchParams.get("status") || undefined,
@@ -30,7 +25,7 @@ export async function GET(request: Request) {
   }
 
   const { status, category } = parsed.data;
-  let projects = await findProjects(authUser?.userId);
+  let projects = await findProjects(auth.user.userId);
 
   if (status) {
     projects = projects.filter((p) => p.status.toLowerCase() === status.toLowerCase());
@@ -60,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     const newProject = await insertProject(parsed.data, auth.user?.userId);
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "created", entityType: "project", entityId: newProject.id, summary: `Created project ${newProject.title}` });
     return successResponse(newProject, "Project created successfully", { status: 201 });
   } catch (error) {
     console.error("POST /api/projects error:", error);

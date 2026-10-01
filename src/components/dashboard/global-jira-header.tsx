@@ -11,6 +11,9 @@ import { SettingsModal } from "@/components/dashboard/settings-modal";
 function getPageTitle(pathname: string) {
   if (pathname === "/dashboard") return "Dashboard";
   if (pathname === "/projects") return "Projects";
+  if (pathname === "/monitoring") return "Monitoring";
+  if (pathname === "/reports") return "Reports";
+  if (pathname === "/notifications") return "Notifications";
   if (pathname.startsWith("/projects/new")) return "New project";
   if (pathname.startsWith("/projects/edit")) return "Edit project";
   if (pathname === "/tasks") return "Tasks";

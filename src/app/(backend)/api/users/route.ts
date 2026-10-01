@@ -13,6 +13,9 @@ import { findUsers, insertUser } from "./query";
 import { findUserByEmail } from "@/lib/user-db";
 
 export async function GET(request: Request) {
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
+  if (auth.user.role !== "superadmin") return errorResponse("Only the application owner can manage global accounts", 403);
   try {
     await initDb();
     const { searchParams } = new URL(request.url);
@@ -42,8 +45,8 @@ export async function POST(request: Request) {
     return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
-  if (!auth.user?.role || !["admin", "superadmin"].includes(auth.user.role)) {
-    return errorResponse("Forbidden. Only administrators can create users.", 403);
+  if (auth.user.role !== "superadmin") {
+    return errorResponse("Only the application owner can create global accounts.", 403);
   }
 
   try {
@@ -67,7 +70,10 @@ export async function POST(request: Request) {
       return conflictResponse("A user with this email already exists");
     }
 
-    const newUser = await insertUser(name.trim(), email.trim().toLowerCase(), password, role);
+    const newUser = await insertUser(name.trim(), email.trim().toLowerCase(), password, role, auth.user.userId);
+
+    const { recordAudit } = await import("@/lib/audit");
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "created", entityType: "user", entityId: newUser.id, summary: `Created user ${newUser.email}`, metadata: { role: newUser.role } });
 
     return successResponse(newUser, "User created successfully", { status: 201 });
   } catch (error) {

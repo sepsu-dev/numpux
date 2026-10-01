@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { UsersThree, ArrowClockwise, MagnifyingGlass, X, Plus, Trash } from "@phosphor-icons/react";
+import { UsersThree, ArrowClockwise, MagnifyingGlass, X, Plus, Trash, PencilSimple } from "@phosphor-icons/react";
+import type { ProjectGroup } from "@/types";
 import { cn } from "@/lib/utils";
 import { usePrivilegesStore } from "@/stores/privileges-store";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetFooter,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -31,6 +32,7 @@ export default function ProjectPrivilegesPage() {
         toggleProjectPrivilege,
         addProjectGroup,
         removeProjectGroup,
+        updateProjectGroup,
     } = usePrivilegesStore();
 
     const [selectedProjectGroup, setSelectedProjectGroup] = useState<string>("member");
@@ -39,6 +41,7 @@ export default function ProjectPrivilegesPage() {
     const [newRoleName, setNewRoleName] = useState("");
     const [newRoleDisplayName, setNewRoleDisplayName] = useState("");
     const [newRoleDescription, setNewRoleDescription] = useState("");
+    const [editingRole, setEditingRole] = useState<ProjectGroup | null>(null);
 
     useEffect(() => {
         loadAllPrivileges();
@@ -60,29 +63,31 @@ export default function ProjectPrivilegesPage() {
         await toggleProjectPrivilege(groupName, menuId, currentVal);
     };
 
-    const handleCreateRole = async (e: React.FormEvent) => {
+    const handleSaveRole = async (e: React.FormEvent) => {
         e.preventDefault();
         const code = newRoleName.trim().toLowerCase().replace(/\s+/g, "_");
         const display = newRoleDisplayName.trim() || newRoleName.trim();
         if (!code) return;
 
-        const success = await addProjectGroup({
-            name: code,
-            displayName: display,
-            description: newRoleDescription.trim() || undefined,
-        });
+        const success = editingRole
+            ? await updateProjectGroup(editingRole.id, { displayName: display, description: newRoleDescription.trim() || undefined })
+            : await addProjectGroup({ name: code, displayName: display, description: newRoleDescription.trim() || undefined });
 
         if (success) {
-            setSelectedProjectGroup(code);
+            setSelectedProjectGroup(editingRole?.name || code);
             setNewRoleName("");
             setNewRoleDisplayName("");
             setNewRoleDescription("");
             setIsCreateRoleModalOpen(false);
+            setEditingRole(null);
         }
     };
 
+    const openCreateRole = () => { setEditingRole(null); setNewRoleName(""); setNewRoleDisplayName(""); setNewRoleDescription(""); setIsCreateRoleModalOpen(true); };
+    const openEditRole = (role: ProjectGroup) => { setEditingRole(role); setNewRoleName(role.name); setNewRoleDisplayName(role.displayName); setNewRoleDescription(role.description || ""); setIsCreateRoleModalOpen(true); };
+
     const handleRemoveRole = async (groupId: string, roleName: string) => {
-        if (confirm(`Hapus role project "${roleName}"?`)) {
+        if (confirm(`Delete project role "${roleName}"?`)) {
             const success = await removeProjectGroup(groupId);
             if (success && selectedProjectGroup === roleName) {
                 setSelectedProjectGroup("member");
@@ -108,7 +113,7 @@ export default function ProjectPrivilegesPage() {
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setIsCreateRoleModalOpen(true)}
+                        onClick={openCreateRole}
                         className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
                     >
                         <Plus size={14} className="stroke-[2.5]" />
@@ -165,8 +170,17 @@ export default function ProjectPrivilegesPage() {
                     {(() => {
                         const currentGroup = projectGroups.find((g) => g.name === selectedProjectGroup);
                         const isSystemRole = currentGroup && ["owner", "admin", "member"].includes(currentGroup.name.toLowerCase());
-                        if (currentGroup && !isSystemRole) {
-                            return (
+                        if (!currentGroup) return null;
+                        return (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => openEditRole(currentGroup)}
+                                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                    title="Edit selected role"
+                                >
+                                    <PencilSimple size={14} />
+                                </button>
+                                {!isSystemRole && (
                                 <button
                                     onClick={() => handleRemoveRole(currentGroup.id, currentGroup.displayName || currentGroup.name)}
                                     className="p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
@@ -174,9 +188,9 @@ export default function ProjectPrivilegesPage() {
                                 >
                                     <Trash size={14} />
                                 </button>
-                            );
-                        }
-                        return null;
+                                )}
+                            </div>
+                        );
                     })()}
                 </div>
             </div>
@@ -271,14 +285,14 @@ export default function ProjectPrivilegesPage() {
             </div>
 
             {/* Create Project Role Modal */}
-            <Dialog open={isCreateRoleModalOpen} onOpenChange={setIsCreateRoleModalOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold text-foreground">
-                            Add Project Role
-                        </DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateRole} className="space-y-4 pt-2">
+            <Sheet open={isCreateRoleModalOpen} onOpenChange={(value) => { setIsCreateRoleModalOpen(value); if (!value) setEditingRole(null); }}>
+                <SheetContent side="right" className="h-full w-full overflow-y-auto border-l border-border bg-card p-6 shadow-none sm:max-w-md">
+                    <SheetHeader className="px-0 pt-0">
+                        <SheetTitle className="text-base font-bold text-foreground">
+                            {editingRole ? "Edit Project Role" : "Add Project Role"}
+                        </SheetTitle>
+                    </SheetHeader>
+                    <form onSubmit={handleSaveRole} className="space-y-4 pt-2">
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-muted-foreground">
                                 Role Code / Name
@@ -290,6 +304,7 @@ export default function ProjectPrivilegesPage() {
                                 placeholder="e.g. viewer, contributor, reviewer..."
                                 autoFocus
                                 required
+                                disabled={!!editingRole}
                                 className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
@@ -317,7 +332,7 @@ export default function ProjectPrivilegesPage() {
                                 className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
-                        <DialogFooter className="gap-2 pt-2">
+                        <SheetFooter className="gap-2 px-0 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateRoleModalOpen(false)}
@@ -329,12 +344,12 @@ export default function ProjectPrivilegesPage() {
                                 type="submit"
                                 className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
                             >
-                                Save Role
+                                {editingRole ? "Save Changes" : "Save Role"}
                             </button>
-                        </DialogFooter>
+                        </SheetFooter>
                     </form>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

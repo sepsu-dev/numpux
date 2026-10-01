@@ -190,11 +190,11 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                     })()}
                                     {project.userRole && (
                                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                                            project.userRole === "Owner"
+                                            project.userRole.toLowerCase() === "owner"
                                                 ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
                                                 : "bg-muted text-muted-foreground border-border/60"
                                         }`}>
-                                            {project.userRole}
+                                            {project.userRole.charAt(0).toUpperCase() + project.userRole.slice(1)}
                                         </span>
                                     )}
                                     {project.membersCount !== undefined && project.membersCount > 0 && (
@@ -215,24 +215,24 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-40 p-1 text-xs">
-                                        <DropdownMenuItem
+                                        {["owner", "admin"].includes((project.userRole || "").toLowerCase()) && <DropdownMenuItem
                                             onClick={() => setMembersProject(project)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
                                             <Users size={13} /> Manage members
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
+                                        </DropdownMenuItem>}
+                                        {["owner", "admin"].includes((project.userRole || "").toLowerCase()) && <DropdownMenuItem
                                             onClick={() => setEditingProject(project)}
                                             className="cursor-pointer flex items-center gap-2"
                                         >
                                             <PencilSimple size={13} /> Edit project
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
+                                        </DropdownMenuItem>}
+                                        {(project.userRole || "").toLowerCase() === "owner" && <DropdownMenuItem
                                             className="text-rose-600 focus:text-rose-600 cursor-pointer flex items-center gap-2"
                                             onClick={() => setDeleteId(project.id)}
                                         >
                                             <Trash size={13} /> Delete
-                                        </DropdownMenuItem>
+                                        </DropdownMenuItem>}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>

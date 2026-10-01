@@ -1,17 +1,11 @@
-import { validatePublicKey, getOptionalAuthUser } from "@/lib/api-auth";
-import { badRequestResponse, successResponse, unauthorizedResponse } from "@/lib/response";
+import { validateAdminAuth } from "@/lib/api-auth";
+import { badRequestResponse, errorResponse, successResponse } from "@/lib/response";
 import { getDashboardQuerySchema } from "./schema";
 import { getDashboardAggregateData } from "./query";
 
 export async function GET(request: Request) {
-  const { isValid } = validatePublicKey(request);
-  if (!isValid) {
-    return unauthorizedResponse(
-      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
-    );
-  }
-
-  const authUser = await getOptionalAuthUser(request);
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   const { searchParams } = new URL(request.url);
   const parsed = getDashboardQuerySchema.safeParse({
     projectId: searchParams.get("projectId") || undefined,
@@ -21,6 +15,6 @@ export async function GET(request: Request) {
     return badRequestResponse("Invalid query parameters", parsed.error.flatten().fieldErrors);
   }
 
-  const data = await getDashboardAggregateData(authUser?.userId, parsed.data.projectId);
+  const data = await getDashboardAggregateData(auth.user.userId, parsed.data.projectId);
   return successResponse(data);
 }

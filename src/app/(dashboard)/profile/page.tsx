@@ -145,14 +145,14 @@ export default function ProfilePage() {
                       : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
                   }`}
                 >
-                  {role === "superadmin" ? "Super Administrator" : role === "admin" ? "Administrator" : "Standard User"}
+                  {role === "superadmin" ? "Application Owner" : role === "admin" ? "Workspace Owner" : "Workspace Member"}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
                   {role === "superadmin"
-                    ? "Unrestricted access to system configuration and all menus."
+                    ? "Application owner with monitoring, configuration, and unrestricted system access."
                     : role === "admin"
-                    ? "Full system administrative privileges."
-                      : "Access is based on your assigned workspace role."}
+                    ? "Workspace owner who can manage projects, reports, and invited members."
+                      : "Invited workspace user with transactional access to projects and tasks."}
                 </span>
               </div>
             </div>

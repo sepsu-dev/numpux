@@ -33,6 +33,7 @@ export const createMasterDataSchema = z.discriminatedUnion("resource", [
       level: z.number().int().min(1).max(5),
       dotColor: z.string().min(1).max(100),
       badgeClass: z.string().min(1).max(500),
+      severityClass: z.string().min(1).max(500),
     }),
   }),
   z.object({

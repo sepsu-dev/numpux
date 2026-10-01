@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { initDb } from "@/db";
-import { findOrCreateOAuthUser } from "@/lib/user-db";
+import { findOrCreateOAuthUser, getUserSessionVersion, markUserLogin } from "@/lib/user-db";
 import { createSession } from "@/lib/session";
 
 export async function GET(request: Request) {
@@ -80,6 +80,10 @@ export async function GET(request: Request) {
       googleUser.name || googleUser.email.split("@")[0],
       googleUser.email
     );
+    const { pool } = await import("@/db");
+    await pool.query("UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1", [user.id]);
+    await markUserLogin(user.id);
+    const sessionVersion = await getUserSessionVersion(user.id);
 
     // 4. Establish Numpux session cookie
     await createSession({
@@ -87,6 +91,7 @@ export async function GET(request: Request) {
       email: user.email,
       name: user.name,
       role: user.role || "user",
+      sessionVersion,
     });
 
     // 5. Redirect successfully to dashboard

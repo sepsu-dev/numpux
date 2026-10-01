@@ -1,4 +1,4 @@
-import { findUserByEmail, createUser } from "@/lib/user-db";
+import { pool } from "@/db";
 import { validateAdminAuth } from "@/lib/api-auth";
 import { findProjectById } from "@/app/(backend)/api/projects/query";
 import {
@@ -6,12 +6,14 @@ import {
   errorResponse,
   internalServerErrorResponse,
   notFoundResponse,
-  paginatedResponse,
   successResponse,
 } from "@/lib/response";
-import type { User } from "@/types";
 import { addProjectMemberSchema } from "./schema";
-import { findProjectMembers, insertProjectMember } from "./query";
+import { findProjectMembers, projectGroupExists } from "./query";
+import { recordAudit } from "@/lib/audit";
+import { createNotification } from "@/lib/notifications";
+import { createProjectInvitation, findPendingProjectInvitations } from "@/lib/invitations";
+import { canManageProject, canManageWorkspace, findProjectAccess } from "@/lib/workspace";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -29,9 +31,12 @@ export async function GET(request: Request, { params }: Props) {
     if (!project) {
       return notFoundResponse("Project not found or unauthorized");
     }
-
-    const members = await findProjectMembers(projectId);
-    return paginatedResponse(members, { total: members.length });
+    const access = await findProjectAccess(auth.user.userId, projectId);
+    const [members, invitations] = await Promise.all([
+      findProjectMembers(projectId),
+      access && canManageProject(access.projectRole) ? findPendingProjectInvitations(projectId) : Promise.resolve([]),
+    ]);
+    return successResponse({ members, invitations, total: members.length });
   } catch (error: any) {
     return internalServerErrorResponse(error?.message || "Failed to fetch project members");
   }
@@ -49,6 +54,10 @@ export async function POST(request: Request, { params }: Props) {
     if (!project) {
       return notFoundResponse("Project not found or unauthorized");
     }
+    const access = await findProjectAccess(auth.user.userId, projectId);
+    if (!access || !canManageProject(access.projectRole)) {
+      return errorResponse("Only project owners and administrators can add members", 403);
+    }
 
     const body = await request.json();
     const parsed = addProjectMemberSchema.safeParse(body);
@@ -60,24 +69,44 @@ export async function POST(request: Request, { params }: Props) {
       );
     }
 
-    const { email, role } = parsed.data;
+    const { email } = parsed.data;
+    const role = parsed.data.role.trim().toLowerCase();
+    if (role === "owner") return badRequestResponse("Ownership can only be assigned through the transfer ownership action");
+    if (access.projectRole === "admin" && role === "admin") return errorResponse("Only the project owner can assign project administrators", 403);
+    if (!(await projectGroupExists(role))) return badRequestResponse("Selected project role does not exist");
 
-    let targetUser: User | null = await findUserByEmail(email.trim().toLowerCase());
-    if (!targetUser) {
-      const defaultName = email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
-      const tempPass = crypto.randomUUID() + "-" + Date.now();
-      targetUser = await createUser(defaultName, email.trim().toLowerCase(), tempPass);
+    if (!access.workspaceId) return badRequestResponse("Project is not connected to a workspace");
+    const target = await pool.query(
+      `SELECT u.id, EXISTS (
+         SELECT 1 FROM workspace_members wm
+         WHERE wm.workspace_id = $2 AND wm.user_id = u.id
+           AND wm.status = 'active' AND wm.deleted_at IS NULL
+       ) AS is_workspace_member
+       FROM users u WHERE LOWER(u.email) = LOWER($1) AND u.deleted_at IS NULL LIMIT 1`,
+      [email.trim(), access.workspaceId]
+    );
+    if ((!target.rows.length || !target.rows[0].is_workspace_member)
+      && auth.user.role !== "superadmin"
+      && !canManageWorkspace(access.workspaceRole)) {
+      return errorResponse("Only workspace owners and administrators can invite a new email address", 403);
     }
 
-    if (!targetUser) {
-      return internalServerErrorResponse("Failed to resolve user account");
+    const invitation = await createProjectInvitation({
+      projectId,
+      workspaceId: access.workspaceId,
+      email,
+      projectRole: role,
+      invitedBy: auth.user.userId,
+    });
+    const acceptPath = `/invitations/accept?token=${encodeURIComponent(invitation.token)}`;
+    if (target.rows[0]?.id) {
+      await createNotification({ userId: target.rows[0].id, title: "Project invitation", message: `${auth.user.name} invited you to ${project.title}`, link: acceptPath });
     }
-
-    const newMember = await insertProjectMember(projectId, targetUser.id, role);
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "invitation_created", entityType: "project", entityId: projectId, summary: `Invited ${email.trim().toLowerCase()} to ${project.title}`, metadata: { role, invitationId: invitation.id } });
 
     return successResponse(
-      newMember,
-      `${targetUser.name || email} (${email}) added to project!`,
+      { invitation: { id: invitation.id, email: invitation.email, projectRole: invitation.project_role, expiresAt: invitation.expires_at }, acceptPath },
+      "Invitation created successfully",
       { status: 201 }
     );
   } catch (error: any) {

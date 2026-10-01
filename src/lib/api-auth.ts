@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { getEncodedSessionSecret } from "@/lib/session-secret";
+import { pool } from "@/db";
 
 // Dynamic resolver to read environment variables at runtime
 export function getValidPublicKeys(): Set<string> {
@@ -89,11 +90,19 @@ export async function getOptionalAuthUser(request: Request | NextRequest): Promi
       algorithms: ["HS256"],
     });
 
+    const userId = String(payload.userId || "");
+    if (!userId) return null;
+    const account = await pool.query(
+      "SELECT name, email, role, account_status, session_version FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1",
+      [userId]
+    );
+    if (!account.rows.length || account.rows[0].account_status === "suspended") return null;
+    if (Number(payload.sessionVersion || 1) !== Number(account.rows[0].session_version || 1)) return null;
     return {
-      userId: String(payload.userId || ""),
-      email: String(payload.email || ""),
-      name: String(payload.name || ""),
-      role: (payload.role as "superadmin" | "admin" | "user") || "user",
+      userId,
+      email: String(account.rows[0].email || ""),
+      name: String(account.rows[0].name || ""),
+      role: (account.rows[0].role as "superadmin" | "admin" | "user") || "user",
     };
   } catch {
     return null;

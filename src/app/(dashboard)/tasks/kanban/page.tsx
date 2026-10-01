@@ -19,6 +19,8 @@ import {
     X,
     Check,
     CaretDown,
+    CaretLeft,
+    CaretRight,
     Copy,
     Lightning,
     User as UserIcon,
@@ -408,6 +410,34 @@ export default function KanbanPage() {
             .map(statusToColumn);
     }, [masterStatuses, tasks]);
 
+    const boardScrollRef = useRef<HTMLDivElement | null>(null);
+    const [canScrollBoardLeft, setCanScrollBoardLeft] = useState(false);
+    const [canScrollBoardRight, setCanScrollBoardRight] = useState(false);
+
+    useEffect(() => {
+        const board = boardScrollRef.current;
+        if (!board) return;
+        const syncScrollButtons = () => {
+            setCanScrollBoardLeft(board.scrollLeft > 2);
+            setCanScrollBoardRight(board.scrollLeft + board.clientWidth < board.scrollWidth - 2);
+        };
+        syncScrollButtons();
+        board.addEventListener("scroll", syncScrollButtons, { passive: true });
+        const resizeObserver = new ResizeObserver(syncScrollButtons);
+        resizeObserver.observe(board);
+        return () => {
+            board.removeEventListener("scroll", syncScrollButtons);
+            resizeObserver.disconnect();
+        };
+    }, [statusColumns.length]);
+
+    const scrollBoard = (direction: "left" | "right") => {
+        boardScrollRef.current?.scrollBy({
+            left: direction === "left" ? -340 : 340,
+            behavior: "smooth",
+        });
+    };
+
     const router = useRouter();
 
     const handleSelectProject = (newId: string) => {
@@ -553,8 +583,34 @@ export default function KanbanPage() {
                 </div>
             </div>
 
+            <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card px-3 py-2">
+                <p className="text-[11px] font-medium text-muted-foreground">Scroll to view additional status columns</p>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => scrollBoard("left")}
+                        disabled={!canScrollBoardLeft}
+                        aria-label="Scroll board left"
+                        title="Scroll left"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        <CaretLeft size={15} weight="bold" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => scrollBoard("right")}
+                        disabled={!canScrollBoardRight}
+                        aria-label="Scroll board right"
+                        title="Scroll right"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        <CaretRight size={15} weight="bold" />
+                    </button>
+                </div>
+            </div>
+
             {/* Kanban Columns Grid powered by Framer Motion */}
-            <div className="flex items-start gap-5 overflow-x-auto pb-3">
+            <div ref={boardScrollRef} className="flex scroll-smooth items-start gap-5 overflow-x-auto pb-4">
                 {statusColumns.map((column) => {
                     const colTasks = filteredTasks.filter((t) => t.status === column.id);
                     const ColumnIcon = column.icon;

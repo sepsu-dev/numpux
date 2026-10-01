@@ -5,7 +5,7 @@ import { MagnifyingGlass, PencilSimple, Plus, Trash, X } from "@phosphor-icons/r
 import type { MasterProjectStatusItem } from "@/lib/master-data";
 import { useMasterDataStore } from "@/stores/master-data-store";
 import { MasterDataNotice } from "@/components/settings/master-data-notice";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const COLORS = [
@@ -79,16 +79,16 @@ export default function MasterProjectStatusesPage() {
                 <td className="px-5 py-3.5"><span className={`inline-flex rounded-md border px-2.5 py-1 font-semibold ${item.colorClass}`}>{item.name}</span>{item.isDefault && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">Default</span>}</td>
                 <td className="hidden px-5 py-3.5 text-muted-foreground sm:table-cell">{item.description || "-"}</td>
                 <td className="px-5 py-3.5 text-center text-muted-foreground">{item.isCompleted ? "Completed" : "Open"}</td>
-                <td className="px-5 py-3.5 text-right"><button onClick={() => showEdit(item)} className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"><PencilSimple size={14} /></button>{!item.isDefault && <button onClick={() => void removeProjectStatus(item.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"><Trash size={14} /></button>}</td>
+                <td className="px-5 py-3.5 text-right"><button onClick={() => showEdit(item)} className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"><PencilSimple size={14} /></button><button onClick={() => void removeProjectStatus(item.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"><Trash size={14} /></button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="text-base font-bold">{editing ? "Edit project status" : "Create project status"}</DialogTitle></DialogHeader>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="h-full w-full overflow-y-auto border-l border-border bg-card p-6 shadow-none sm:max-w-md">
+          <SheetHeader className="px-0 pt-0"><SheetTitle className="text-base font-bold">{editing ? "Edit project status" : "Create project status"}</SheetTitle></SheetHeader>
           <form onSubmit={save} className="space-y-4 pt-2">
             <div className="space-y-1.5"><label className="text-xs font-semibold text-muted-foreground">Name</label><input value={name} onChange={(event) => setName(event.target.value)} required autoFocus className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></div>
             <div className="space-y-1.5"><label className="text-xs font-semibold text-muted-foreground">Description</label><input value={description} onChange={(event) => setDescription(event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></div>
@@ -96,10 +96,10 @@ export default function MasterProjectStatusesPage() {
               <div className="space-y-1.5"><label className="text-xs font-semibold text-muted-foreground">Color</label><Select value={colorClass} onValueChange={setColorClass}><SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger><SelectContent>{COLORS.map((color) => <SelectItem key={color.label} value={color.value} className="text-xs">{color.label}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-1.5"><label className="text-xs font-semibold text-muted-foreground">Type</label><Select value={isCompleted ? "completed" : "open"} onValueChange={(value) => setIsCompleted(value === "completed")}><SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="completed">Completed</SelectItem></SelectContent></Select></div>
             </div>
-            <DialogFooter className="gap-2 pt-2"><button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-muted-foreground">Cancel</button><button type="submit" disabled={isSaving} className="rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">{isSaving ? "Saving..." : "Save status"}</button></DialogFooter>
+            <SheetFooter className="gap-2 px-0 pt-2"><button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-muted-foreground">Cancel</button><button type="submit" disabled={isSaving} className="rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">{isSaving ? "Saving..." : "Save status"}</button></SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

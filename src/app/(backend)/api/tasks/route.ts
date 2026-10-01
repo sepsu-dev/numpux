@@ -9,16 +9,12 @@ import {
 } from "@/lib/response";
 import { createTaskSchema, listTasksQuerySchema } from "./schema";
 import { findTasks, insertTask } from "./query";
+import { recordAudit } from "@/lib/audit";
+import { canContributeToProject, findProjectAccess } from "@/lib/workspace";
 
 export async function GET(request: Request) {
-  const { isValid } = validatePublicKey(request);
-  if (!isValid) {
-    return unauthorizedResponse(
-      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
-    );
-  }
-
-  const authUser = await getOptionalAuthUser(request);
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   const { searchParams } = new URL(request.url);
   const parsed = listTasksQuerySchema.safeParse({
     status: searchParams.get("status") || undefined,
@@ -34,7 +30,7 @@ export async function GET(request: Request) {
   const { status, priority, project, projectId } = parsed.data;
 
   // Scoped to authenticated user
-  let tasks = await findTasks(authUser?.userId, projectId || undefined);
+  let tasks = await findTasks(auth.user.userId, projectId || undefined);
 
   if (status) {
     tasks = tasks.filter((t) => t.status.toLowerCase() === status.toLowerCase());
@@ -66,7 +62,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const access = await findProjectAccess(auth.user.userId, parsed.data.projectId);
+    if (!access || !canContributeToProject(access.projectRole)) {
+      return errorResponse("You do not have permission to create tasks in this project", 403);
+    }
+
     const newTask = await insertTask(parsed.data, auth.user?.userId);
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "created", entityType: "task", entityId: newTask.id, summary: `Created task ${newTask.key || newTask.title}`, metadata: { projectId: newTask.projectId } });
     return successResponse(newTask, "Task created successfully", { status: 201 });
   } catch (error: any) {
     console.error("POST /api/tasks error:", error);

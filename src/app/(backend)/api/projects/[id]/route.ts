@@ -9,22 +9,18 @@ import {
 } from "@/lib/response";
 import { updateProjectSchema } from "../schema";
 import { findProjectById, updateProjectById, deleteProjectById } from "../query";
+import { recordAudit } from "@/lib/audit";
+import { canManageProject, findProjectAccess } from "@/lib/workspace";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 export async function GET(request: Request, { params }: Props) {
-  const { isValid } = validatePublicKey(request);
-  if (!isValid) {
-    return unauthorizedResponse(
-      "Unauthorized. Missing or invalid public key. Provide 'X-Public-Key' header or '?public_key=' query parameter."
-    );
-  }
-
-  const authUser = await getOptionalAuthUser(request);
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   const { id } = await params;
-  const project = await findProjectById(id, authUser?.userId);
+  const project = await findProjectById(id, auth.user.userId);
 
   if (!project) {
     return notFoundResponse(`Project #${id} not found`);
@@ -41,6 +37,8 @@ export async function PUT(request: Request, { params }: Props) {
 
   const { id } = await params;
   try {
+    const access = await findProjectAccess(auth.user.userId, id);
+    if (!access || !canManageProject(access.projectRole)) return errorResponse("Only project owners and administrators can update project settings", 403);
     const body = await request.json();
     const parsed = updateProjectSchema.safeParse(body);
 
@@ -57,6 +55,8 @@ export async function PUT(request: Request, { params }: Props) {
       return notFoundResponse(`Project #${id} not found or unauthorized`);
     }
 
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "updated", entityType: "project", entityId: id, summary: `Updated project ${updated.title}`, metadata: parsed.data });
+
     return successResponse(updated, "Project updated successfully");
   } catch (error) {
     console.error(`PUT /api/projects/${id} error:`, error);
@@ -72,10 +72,14 @@ export async function DELETE(request: Request, { params }: Props) {
 
   const { id } = await params;
   try {
+    const access = await findProjectAccess(auth.user.userId, id);
+    if (!access || access.projectRole !== "owner") return errorResponse("Only the project owner can delete this project", 403);
     const deleted = await deleteProjectById(id, auth.user?.userId);
     if (!deleted) {
       return notFoundResponse(`Project #${id} not found or unauthorized`);
     }
+
+    await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "deleted", entityType: "project", entityId: id, summary: `Moved project ${id} to trash` });
 
     return successResponse({ id }, `Project #${id} deleted successfully`);
   } catch (error) {

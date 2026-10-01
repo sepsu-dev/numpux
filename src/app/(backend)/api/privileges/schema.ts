@@ -38,6 +38,13 @@ export const createProjectGroupSchema = z.object({
   description: z.string().optional(),
 });
 
+export const updateProjectGroupSchema = z.object({
+  type: z.literal("update_project_group"),
+  id: z.string().min(1),
+  displayName: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+});
+
 export const createSectionSchema = z.object({
   name: z.string().min(1).max(100),
 });
@@ -52,5 +59,6 @@ export type UpdatePrivilegeInput = z.infer<typeof updatePrivilegeSchema>;
 export type UpdateProjectPrivilegeInput = z.infer<typeof updateProjectPrivilegeSchema>;
 export type UpdateMenuInput = z.infer<typeof updateMenuSchema>;
 export type CreateProjectGroupInput = z.infer<typeof createProjectGroupSchema>;
+export type UpdateProjectGroupInput = z.infer<typeof updateProjectGroupSchema>;
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;

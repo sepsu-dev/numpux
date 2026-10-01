@@ -19,12 +19,12 @@ import { type MasterIssueTypeItem } from "@/lib/master-data";
 import { useMasterDataStore } from "@/stores/master-data-store";
 import { MasterDataNotice } from "@/components/settings/master-data-notice";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetFooter,
+} from "@/components/ui/sheet";
 import {
     Select,
     SelectContent,
@@ -233,7 +233,6 @@ export default function MasterIssueTypesPage() {
                                                 >
                                                     <PencilSimple size={14} />
                                                 </button>
-                                                {!type.isDefault ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemove(type.id)}
@@ -242,7 +241,6 @@ export default function MasterIssueTypesPage() {
                                                 >
                                                     <Trash size={14} />
                                                 </button>
-                                                ) : null}
                                             </div>
                                         </td>
                                     </tr>
@@ -254,19 +252,19 @@ export default function MasterIssueTypesPage() {
             </div>
 
             {/* Create Issue Type Modal */}
-            <Dialog
+            <Sheet
                 open={isCreateModalOpen}
                 onOpenChange={(open) => {
                     setIsCreateModalOpen(open);
                     if (!open) setEditingType(null);
                 }}
             >
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold text-foreground">
+                <SheetContent side="right" className="h-full w-full overflow-y-auto border-l border-border bg-card p-6 shadow-none sm:max-w-md">
+                    <SheetHeader className="px-0 pt-0">
+                        <SheetTitle className="text-base font-bold text-foreground">
                             {editingType ? "Edit task type" : "Create task type"}
-                        </DialogTitle>
-                    </DialogHeader>
+                        </SheetTitle>
+                    </SheetHeader>
                     <form onSubmit={handleAdd} className="space-y-4 pt-2">
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-muted-foreground">
@@ -344,7 +342,7 @@ export default function MasterIssueTypesPage() {
                                 </Select>
                             </div>
                         </div>
-                        <DialogFooter className="gap-2 pt-2">
+                        <SheetFooter className="gap-2 px-0 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateModalOpen(false)}
@@ -358,10 +356,10 @@ export default function MasterIssueTypesPage() {
                             >
                                 {editingType ? "Save changes" : "Save task type"}
                             </button>
-                        </DialogFooter>
+                        </SheetFooter>
                     </form>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

@@ -1,513 +1,74 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import {
-    ListNumbers,
-    MagnifyingGlass,
-    X,
-    CaretUp,
-    CaretDown,
-    ArrowClockwise,
-    Plus,
-    Trash,
-} from "@phosphor-icons/react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowClockwise, CaretDown, CaretUp, MagnifyingGlass, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
 import type { MasterMenu } from "@/types";
+import { MENU_ICON_OPTIONS, getMenuIcon } from "@/lib/menu-icons";
 import { usePrivilegesStore } from "@/stores/privileges-store";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 
 export default function MasterMenusPage() {
-    const { menus: dbMenus, sections: dbSections, isLoading, loadAllPrivileges, updateMenu, reorderMenus, addMenu, removeMenu } = usePrivilegesStore();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedSection, setSelectedSection] = useState<string>("All");
-    const [isCreateMenuModalOpen, setIsCreateMenuModalOpen] = useState(false);
-    const [newMenuName, setNewMenuName] = useState("");
-    const [newMenuPath, setNewMenuPath] = useState("");
-    const [newMenuSection, setNewMenuSection] = useState("Planning");
-    const [newMenuIcon, setNewMenuIcon] = useState("SquaresFour");
-    const [newMenuParentId, setNewMenuParentId] = useState<string>("");
+  const { menus, sections, isLoading, loadAllPrivileges, updateMenu, reorderMenus, addMenu, removeMenu } = usePrivilegesStore();
+  const [query, setQuery] = useState("");
+  const [sectionFilter, setSectionFilter] = useState("All");
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<MasterMenu | null>(null);
+  const [name, setName] = useState("");
+  const [path, setPath] = useState("");
+  const [icon, setIcon] = useState("SquaresFour");
+  const [section, setSection] = useState("");
+  const [parentId, setParentId] = useState("");
+  const [isActive, setIsActive] = useState(true);
 
-    useEffect(() => {
-        loadAllPrivileges();
-        const handleUpdate = () => loadAllPrivileges();
-        window.addEventListener("numpux_master_data_updated", handleUpdate);
-        return () => window.removeEventListener("numpux_master_data_updated", handleUpdate);
-    }, [loadAllPrivileges]);
+  useEffect(() => { void loadAllPrivileges(); }, [loadAllPrivileges]);
+  const sectionNames = useMemo(() => Array.from(new Set(sections.map((item) => item.name))), [sections]);
+  const parentCandidates = useMemo(() => menus.filter((item) => !item.parentId), [menus]);
+  const filtered = useMemo(() => menus.filter((item) => (sectionFilter === "All" || item.section === sectionFilter) && `${item.name} ${item.path}`.toLowerCase().includes(query.toLowerCase())), [menus, query, sectionFilter]);
 
-    // Parent candidates are menus that are not submenus themselves (top-level menus)
-    const parentCandidates = useMemo(() => {
-        return dbMenus.filter((m) => !m.parentId);
-    }, [dbMenus]);
+  const openCreate = () => {
+    setEditing(null); setName(""); setPath(""); setIcon("SquaresFour"); setSection(sectionNames[0] || ""); setParentId(""); setIsActive(true); setOpen(true);
+  };
+  const openEdit = (item: MasterMenu) => {
+    setEditing(item); setName(item.name); setPath(item.path); setIcon(item.icon || "SquaresFour"); setSection(item.section || sectionNames[0] || ""); setParentId(item.parentId || ""); setIsActive(item.isActive); setOpen(true);
+  };
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const normalizedPath = path.trim().startsWith("/") ? path.trim() : `/${path.trim()}`;
+    const values = { name: name.trim(), path: normalizedPath, icon, section, parentId: parentId || null, isActive };
+    const ok = editing ? await updateMenu(editing.id, values) : await addMenu(values);
+    if (ok) setOpen(false);
+  };
+  const move = async (item: MasterMenu, direction: "up" | "down") => {
+    const index = menus.findIndex((menu) => menu.id === item.id);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= menus.length) return;
+    const copy = [...menus]; const [moved] = copy.splice(index, 1); copy.splice(target, 0, moved); await reorderMenus(copy);
+  };
+  const remove = async (item: MasterMenu) => {
+    if (confirm(`Delete menu "${item.name}"?`)) await removeMenu(item.id);
+  };
 
-    const sections = useMemo(() => {
-        const set = new Set<string>(["All"]);
-        dbSections.forEach((s) => set.add(s.name));
-        dbMenus.forEach((m) => {
-            if (m.section) set.add(m.section);
-        });
-        return Array.from(set);
-    }, [dbMenus, dbSections]);
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2.5"><h2 className="text-2xl font-bold tracking-tight">Navigation</h2><span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs font-semibold text-muted-foreground">{filtered.length} menus</span></div><p className="mt-1 text-xs text-muted-foreground">Manage sidebar labels, routes, icons, hierarchy, and visibility.</p></div><div className="flex gap-2"><button onClick={openCreate} className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"><Plus size={14} weight="bold" /> Add menu</button><button onClick={() => void loadAllPrivileges()} disabled={isLoading} className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs font-semibold disabled:opacity-50"><ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} /> Refresh</button></div></div>
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card p-2.5 sm:flex-row sm:items-center sm:justify-between"><div className="relative w-full max-w-sm"><MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search menus" className="w-full rounded-lg border border-border bg-card py-1.5 pl-9 pr-8 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />{query && <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={13} /></button>}</div><Select value={sectionFilter} onValueChange={setSectionFilter}><SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All sections</SelectItem>{sectionNames.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div>
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-card"><table className="w-full text-left text-xs"><thead><tr className="border-b border-border/60 bg-muted/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Menu</th><th className="hidden px-4 py-3 sm:table-cell">Route</th><th className="hidden px-4 py-3 md:table-cell">Section</th><th className="px-4 py-3 text-center">Order</th><th className="px-4 py-3 text-center">Visible</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-border/50">
+        {isLoading && menus.length === 0 ? Array.from({ length: 6 }).map((_, index) => <tr key={index}><td className="px-4 py-3"><Skeleton className="h-5 w-36" /></td><td className="hidden px-4 py-3 sm:table-cell"><Skeleton className="h-5 w-24" /></td><td className="hidden px-4 py-3 md:table-cell"><Skeleton className="h-5 w-20" /></td><td colSpan={3} /></tr>) : filtered.length === 0 ? <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">No menus found.</td></tr> : filtered.map((item) => { const Icon = getMenuIcon(item.icon); const absoluteIndex = menus.findIndex((menu) => menu.id === item.id); return <tr key={item.id} className="hover:bg-muted/20"><td className="px-4 py-3.5"><div className="flex items-center gap-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon size={16} /></span><div><p className="font-semibold">{item.name}</p>{item.parentId && <p className="text-[10px] text-muted-foreground">Submenu</p>}</div></div></td><td className="hidden px-4 py-3.5 sm:table-cell"><code className="rounded bg-muted px-2 py-1 text-[11px] text-muted-foreground">{item.path}</code></td><td className="hidden px-4 py-3.5 text-muted-foreground md:table-cell">{item.section}</td><td className="px-4 py-3.5"><div className="flex justify-center gap-1"><button disabled={absoluteIndex === 0} onClick={() => void move(item, "up")} className="rounded p-1 text-muted-foreground disabled:opacity-25"><CaretUp size={14} /></button><button disabled={absoluteIndex === menus.length - 1} onClick={() => void move(item, "down")} className="rounded p-1 text-muted-foreground disabled:opacity-25"><CaretDown size={14} /></button></div></td><td className="px-4 py-3.5 text-center"><Switch checked={item.isActive} onCheckedChange={() => void updateMenu(item.id, { isActive: !item.isActive })} /></td><td className="px-4 py-3.5 text-right"><button onClick={() => openEdit(item)} className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"><PencilSimple size={14} /></button><button onClick={() => void remove(item)} className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"><Trash size={14} /></button></td></tr>; })}
+      </tbody></table></div>
 
-    const filteredMenus = useMemo(() => {
-        return dbMenus.filter((m) => {
-            const matchesSearch =
-                m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                m.path.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesSection =
-                selectedSection === "All" || m.section === selectedSection;
-            return matchesSearch && matchesSection;
-        });
-    }, [dbMenus, searchQuery, selectedSection]);
-
-    const handleCreateMenu = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const name = newMenuName.trim();
-        let path = newMenuPath.trim();
-        if (!name || !path) return;
-        if (!path.startsWith("/")) path = "/" + path;
-
-        const success = await addMenu({
-            name,
-            path,
-            section: newMenuSection,
-            icon: newMenuIcon,
-            parentId: newMenuParentId ? newMenuParentId : null,
-        });
-
-        if (success) {
-            setNewMenuName("");
-            setNewMenuPath("");
-            setNewMenuSection("Planning");
-            setNewMenuParentId("");
-            setIsCreateMenuModalOpen(false);
-        }
-    };
-
-    const handleDeleteMenu = async (id: string, name: string) => {
-        if (confirm(`Yakin ingin menghapus menu "${name}"? Menu ini akan dihapus dari sidebar dan daftar privilege.`)) {
-            await removeMenu(id);
-        }
-    };
-
-    const handleParentChange = async (id: string, parentIdValue: string) => {
-        const target = dbMenus.find((i) => i.id === id);
-        if (!target) return;
-        const val = parentIdValue === "none" || !parentIdValue ? null : parentIdValue;
-        await updateMenu(target.id, { parentId: val });
-    };
-
-    const handleMoveMenu = async (index: number, direction: "up" | "down") => {
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= dbMenus.length) return;
-        const copy = [...dbMenus];
-        const [moved] = copy.splice(index, 1);
-        copy.splice(targetIndex, 0, moved);
-
-        const ok = await reorderMenus(copy);
-        if (ok) {
-            toast.success(`Menu "${moved.name}" moved ${direction}!`);
-        }
-    };
-
-    const handleToggleMenu = async (id: string, currentActive: boolean) => {
-        const target = dbMenus.find((i) => i.id === id);
-        if (!target) return;
-        const newActive = !currentActive;
-
-        const ok = await updateMenu(target.id, { isActive: newActive });
-        if (ok) {
-            toast.success(`Menu "${target.name}" is now ${newActive ? "visible" : "hidden"}`);
-        } else {
-            toast.error("Failed to toggle menu status");
-        }
-    };
-
-    const handleRenameMenu = async (id: string, newLabel: string) => {
-        const target = dbMenus.find((i) => i.id === id);
-        if (!target) return;
-        await updateMenu(target.id, { name: newLabel });
-    };
-
-    return (
-        <div className="space-y-6">
-            {/* Header matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Navigation</h2>
-                        <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
-                            {filteredMenus.length} {filteredMenus.length === 1 ? "menu" : "menus"}
-                        </span>
-                    </div>
-                    <p className="text-muted-foreground text-xs mt-1">
-                        Control the order, labels, grouping, and visibility of sidebar links.
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsCreateMenuModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
-                    >
-                        <Plus size={14} className="stroke-[2.5]" />
-                        <span>Add Menu</span>
-                    </button>
-                    <button
-                        onClick={loadAllPrivileges}
-                        disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer disabled:opacity-50"
-                        title="Refresh Data"
-                    >
-                        <ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} />
-                        <span>Refresh</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Search & Filter Bar matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
-                <div className="relative flex-1 max-w-sm">
-                    <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
-                    <input
-                        type="text"
-                        placeholder="Search links"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
-                    />
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                            <X size={13} />
-                        </button>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Section:</span>
-                    <Select value={selectedSection} onValueChange={setSelectedSection}>
-                        <SelectTrigger className="h-8 w-[140px] text-xs rounded-lg bg-card border-border/80">
-                            <SelectValue placeholder="All sections" />
-                        </SelectTrigger>
-                        <SelectContent className="text-xs">
-                            {sections.map((sec) => (
-                                <SelectItem key={sec} value={sec} className="text-xs cursor-pointer">
-                                    {sec === "All" ? "All Sections" : sec}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
-            {/* Clean Table Container */}
-            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
-                <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                        <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
-                            <th className="py-3 px-4 w-12 text-center">#</th>
-                            <th className="py-3 px-4">Menu Name</th>
-                            <th className="py-3 px-4 hidden sm:table-cell">Path Route</th>
-                            <th className="py-3 px-4 hidden md:table-cell">Parent Menu</th>
-                            <th className="py-3 px-4 hidden lg:table-cell">Section</th>
-                            <th className="py-3 px-4 text-center w-28">Order</th>
-                            <th className="py-3 px-4 text-center w-20">Visible</th>
-                            <th className="py-3 px-4 text-right pr-6 w-16">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50 bg-card">
-                        {isLoading && dbMenus.length === 0 ? (
-                            Array.from({ length: 6 }).map((_, i) => (
-                                <tr key={i} className="animate-pulse">
-                                    <td className="py-3.5 px-4 text-center">
-                                        <Skeleton className="h-4 w-4 mx-auto rounded" />
-                                    </td>
-                                    <td className="py-3.5 px-4">
-                                        <div className="flex items-center gap-2.5">
-                                            <Skeleton className="h-4 w-4 rounded" />
-                                            <Skeleton className="h-4 w-32 rounded" />
-                                        </div>
-                                    </td>
-                                    <td className="py-3.5 px-4 hidden sm:table-cell">
-                                        <Skeleton className="h-4 w-24 rounded" />
-                                    </td>
-                                    <td className="py-3.5 px-4 hidden md:table-cell">
-                                        <Skeleton className="h-6 w-28 rounded-lg" />
-                                    </td>
-                                    <td className="py-3.5 px-4 hidden lg:table-cell">
-                                        <Skeleton className="h-6 w-20 rounded-lg" />
-                                    </td>
-                                    <td className="py-3.5 px-4 text-center">
-                                        <Skeleton className="h-4 w-12 mx-auto rounded" />
-                                    </td>
-                                    <td className="py-3.5 px-4 text-center">
-                                        <Skeleton className="h-5 w-8 mx-auto rounded-full" />
-                                    </td>
-                                    <td className="py-3.5 px-4 text-right pr-6">
-                                        <Skeleton className="h-6 w-6 ml-auto rounded-md" />
-                                    </td>
-                                </tr>
-                            ))
-                        ) : filteredMenus.length === 0 ? (
-                            <tr>
-                                <td colSpan={8} className="py-12 text-center text-muted-foreground">
-                                    No menus found matching your criteria.
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredMenus.map((item, idx) => {
-                                const isSubmenu = !!item.parentId;
-                                const parent = dbMenus.find((p) => p.id === item.parentId);
-
-                                return (
-                                    <tr key={item.id} className="hover:bg-muted/20 transition-colors">
-                                        <td className="py-3 px-4 text-center font-mono text-muted-foreground">
-                                            {idx + 1}
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-2">
-                                                {isSubmenu ? (
-                                                    <span className="text-muted-foreground text-xs pl-3 select-none text-primary font-bold">↳</span>
-                                                ) : (
-                                                    <span className="text-muted-foreground text-sm select-none">📁</span>
-                                                )}
-                                                <input
-                                                    type="text"
-                                                    value={item.name}
-                                                    onChange={(e) => handleRenameMenu(item.id, e.target.value)}
-                                                    className={cn(
-                                                        "text-xs bg-transparent border border-transparent hover:border-border focus:border-primary focus:bg-background rounded-lg px-2 py-1 transition-colors outline-none",
-                                                        isSubmenu ? "font-normal text-foreground/90" : "font-semibold text-foreground"
-                                                    )}
-                                                />
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 hidden sm:table-cell">
-                                            <code className="text-[11px] text-muted-foreground font-mono bg-muted/60 px-2 py-0.5 rounded-md border border-border/40">
-                                                {item.path}
-                                            </code>
-                                        </td>
-                                        <td className="py-3 px-4 hidden md:table-cell">
-                                            <Select
-                                                value={item.parentId || "none"}
-                                                onValueChange={(val) => handleParentChange(item.id, val)}
-                                            >
-                                                <SelectTrigger className="h-7 w-[130px] text-[11px] rounded-lg bg-muted/30 border-border/60">
-                                                    <SelectValue placeholder="Parent link" />
-                                                </SelectTrigger>
-                                                <SelectContent className="text-xs">
-                                                    <SelectItem value="none" className="text-xs">None (Top-level)</SelectItem>
-                                                    {parentCandidates
-                                                        .filter((p) => p.id !== item.id)
-                                                        .map((p) => (
-                                                            <SelectItem key={p.id} value={p.id} className="text-xs">
-                                                                {p.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </td>
-                                        <td className="py-3 px-4 hidden lg:table-cell">
-                                            <Select
-                                                value={item.section || "General"}
-                                                onValueChange={(val) => updateMenu(item.id, { section: val })}
-                                            >
-                                                <SelectTrigger className="h-7 w-[120px] text-[11px] rounded-lg bg-muted/30 border-border/60">
-                                                    <SelectValue placeholder="Section" />
-                                                </SelectTrigger>
-                                                <SelectContent className="text-xs">
-                                                    {sections
-                                                        .filter((s) => s !== "All")
-                                                        .map((sec) => (
-                                                            <SelectItem key={sec} value={sec} className="text-xs">
-                                                                {sec}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    disabled={idx === 0}
-                                                    onClick={() => handleMoveMenu(idx, "up")}
-                                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-                                                    title="Move Up"
-                                                >
-                                                    <CaretUp size={14} weight="bold" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    disabled={idx === dbMenus.length - 1}
-                                                    onClick={() => handleMoveMenu(idx, "down")}
-                                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-                                                    title="Move Down"
-                                                >
-                                                    <CaretDown size={14} weight="bold" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 text-center">
-                                            <div className="flex items-center justify-center">
-                                                <Switch
-                                                    checked={item.isActive}
-                                                    onCheckedChange={() => handleToggleMenu(item.id, item.isActive)}
-                                                    aria-label={item.isActive ? "Visible in sidebar" : "Hidden in sidebar"}
-                                                />
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 text-right pr-6">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeleteMenu(item.id, item.name)}
-                                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
-                                                title="Delete Menu"
-                                            >
-                                                <Trash size={14} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Create Menu Dialog */}
-            <Dialog open={isCreateMenuModalOpen} onOpenChange={setIsCreateMenuModalOpen}>
-                <DialogContent className="sm:max-w-[420px] rounded-lg bg-card border border-border p-6 shadow-none">
-                    <DialogHeader className="space-y-1">
-                        <DialogTitle className="text-lg font-bold text-foreground tracking-tight">
-                            Add Master Menu
-                        </DialogTitle>
-                        <p className="text-xs text-muted-foreground">
-                            Tambah menu atau submenu baru ke sistem navigasi aplikasi.
-                        </p>
-                    </DialogHeader>
-
-                    <form onSubmit={handleCreateMenu} className="space-y-4 pt-3">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-foreground">
-                                Menu Name <span className="text-destructive">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="e.g. Analytics, Milestones, Reports"
-                                value={newMenuName}
-                                onChange={(e) => setNewMenuName(e.target.value)}
-                                required
-                                className="w-full px-3 py-2 text-xs bg-muted/30 border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors text-foreground"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-foreground">
-                                Route Path <span className="text-destructive">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="e.g. /analytics or /master/milestones"
-                                value={newMenuPath}
-                                onChange={(e) => setNewMenuPath(e.target.value)}
-                                required
-                                className="w-full px-3 py-2 text-xs font-mono bg-muted/30 border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors text-foreground"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-foreground">
-                                Parent Menu (Opsional untuk Submenu)
-                            </label>
-                            <Select
-                                value={newMenuParentId || "none"}
-                                onValueChange={(val) => setNewMenuParentId(val === "none" ? "" : val)}
-                            >
-                                <SelectTrigger className="h-9 w-full text-xs rounded-lg bg-card border-border">
-                                    <SelectValue placeholder="None (top-level link)" />
-                                </SelectTrigger>
-                                <SelectContent className="text-xs">
-                                    <SelectItem value="none" className="text-xs">None (Jadikan Menu Utama / Top-level)</SelectItem>
-                                    {parentCandidates.map((p) => (
-                                        <SelectItem key={p.id} value={p.id} className="text-xs">
-                                            {p.name} ({p.section || "General"})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">Section</label>
-                                <Select
-                                    value={newMenuSection}
-                                    onValueChange={setNewMenuSection}
-                                >
-                                    <SelectTrigger className="h-9 w-full text-xs rounded-lg bg-card border-border">
-                                        <SelectValue placeholder="Select section" />
-                                    </SelectTrigger>
-                                    <SelectContent className="text-xs">
-                                        {sections
-                                            .filter((s) => s !== "All")
-                                            .map((sec) => (
-                                                <SelectItem key={sec} value={sec} className="text-xs">
-                                                    {sec}
-                                                </SelectItem>
-                                            ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-foreground">Icon Code</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. ChartBar, Folder"
-                                    value={newMenuIcon}
-                                    onChange={(e) => setNewMenuIcon(e.target.value)}
-                                    className="w-full px-3 py-2 text-xs bg-muted/30 border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors text-foreground"
-                                />
-                            </div>
-                        </div>
-
-                        <DialogFooter className="pt-3 flex items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setIsCreateMenuModalOpen(false)}
-                                className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={!newMenuName.trim() || !newMenuPath.trim()}
-                                className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 rounded-lg transition-colors shadow-none cursor-pointer disabled:opacity-50"
-                            >
-                                Create Menu
-                            </button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
+      <Sheet open={open} onOpenChange={setOpen}><SheetContent side="right" className="flex h-full w-full flex-col border-l border-border bg-card p-0 shadow-none sm:max-w-md"><form onSubmit={save} className="flex h-full flex-col"><div className="border-b border-border/60 px-6 py-5"><SheetHeader><SheetTitle className="text-lg font-bold">{editing ? "Edit menu" : "Add menu"}</SheetTitle><SheetDescription className="text-xs">Configure the route and sidebar presentation.</SheetDescription></SheetHeader></div><div className="flex-1 space-y-4 overflow-y-auto p-6">
+        <Field label="Menu name"><input value={name} onChange={(event) => setName(event.target.value)} required autoFocus className="h-10 w-full rounded-lg border border-border bg-background px-3 text-xs outline-none focus:border-primary" /></Field>
+        <Field label="Route path"><input value={path} onChange={(event) => setPath(event.target.value)} required placeholder="/reports" className="h-10 w-full rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-primary" /></Field>
+        <Field label="Icon"><Select value={icon} onValueChange={setIcon}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent>{MENU_ICON_OPTIONS.map((item) => { const Icon = item.icon; return <SelectItem key={item.name} value={item.name} className="text-xs"><div className="flex items-center gap-2"><Icon size={15} /><span>{item.label}</span></div></SelectItem>; })}</SelectContent></Select></Field>
+        <div className="grid grid-cols-2 gap-3"><Field label="Section"><Select value={section} onValueChange={setSection}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Select section" /></SelectTrigger><SelectContent>{sectionNames.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></Field><Field label="Parent menu"><Select value={parentId || "none"} onValueChange={(value) => setParentId(value === "none" ? "" : value)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Top-level</SelectItem>{parentCandidates.filter((item) => item.id !== editing?.id).map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select></Field></div>
+        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 p-3"><div><p className="text-xs font-semibold">Visible in sidebar</p><p className="text-[11px] text-muted-foreground">Users still need the matching privilege.</p></div><Switch checked={isActive} onCheckedChange={setIsActive} /></div>
+        <div className="rounded-lg border border-border/60 p-4"><p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Preview</p><div className="flex items-center gap-2.5 rounded-lg bg-primary/10 px-3 py-2.5 text-primary">{(() => { const Icon = getMenuIcon(icon); return <Icon size={17} weight="bold" />; })()}<span className="text-sm font-semibold">{name || "Menu name"}</span></div></div>
+      </div><div className="flex justify-end gap-2.5 border-t border-border/60 bg-muted/20 px-6 py-4"><button type="button" onClick={() => setOpen(false)} className="h-9 rounded-lg border border-border px-4 text-xs font-semibold text-muted-foreground">Cancel</button><button type="submit" disabled={!name.trim() || !path.trim() || !section} className="h-9 rounded-lg bg-primary px-5 text-xs font-semibold text-primary-foreground disabled:opacity-50">Save menu</button></div></form></SheetContent></Sheet>
+    </div>
+  );
 }
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-1.5"><label className="text-xs font-semibold">{label}</label>{children}</div>; }

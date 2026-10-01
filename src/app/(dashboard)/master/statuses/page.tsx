@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MagnifyingGlass, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, MagnifyingGlass, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
 import { useMasterDataStore } from "@/stores/master-data-store";
 import { MasterDataNotice } from "@/components/settings/master-data-notice";
 import type { MasterStatusItem } from "@/lib/master-data";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+    Sheet,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
 import {
     Select,
     SelectContent,
@@ -60,7 +60,7 @@ const STATUS_COLORS = [
 ] as const;
 
 export default function MasterStatusesPage() {
-    const { statuses, loadStatuses, addStatus, updateStatus, removeStatus, isLoading, error } = useMasterDataStore();
+    const { statuses, loadStatuses, addStatus, updateStatus, reorderStatuses, removeStatus, isLoading, isSaving, error } = useMasterDataStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [name, setName] = useState("");
@@ -144,6 +144,15 @@ export default function MasterStatusesPage() {
         setIsCreateOpen(true);
     };
 
+    const moveStatus = async (statusId: string, direction: "up" | "down") => {
+        const currentIndex = statuses.findIndex((status) => status.id === statusId);
+        const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= statuses.length) return;
+        const reordered = [...statuses];
+        [reordered[currentIndex], reordered[targetIndex]] = [reordered[targetIndex], reordered[currentIndex]];
+        await reorderStatuses(reordered);
+    };
+
     return (
         <div className="space-y-6">
             <MasterDataNotice isLoading={isLoading} error={error} />
@@ -198,6 +207,7 @@ export default function MasterStatusesPage() {
                             <th className="px-5 py-3">Workflow status</th>
                             <th className="hidden px-5 py-3 sm:table-cell">Description</th>
                             <th className="w-28 px-5 py-3 text-center">Type</th>
+                            <th className="w-28 px-5 py-3 text-center">Order</th>
                             <th className="w-24 px-5 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -225,6 +235,29 @@ export default function MasterStatusesPage() {
                                         {status.isCompleted ? "Completed" : "Open"}
                                     </span>
                                 </td>
+                                <td className="px-5 py-3.5">
+                                    <div className="flex items-center justify-center gap-1">
+                                        <button
+                                            type="button"
+                                            disabled={statuses.findIndex((item) => item.id === status.id) === 0 || isSaving}
+                                            onClick={() => void moveStatus(status.id, "up")}
+                                            title={`Move ${status.name} up`}
+                                            className="rounded-md border border-border/60 p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                                        >
+                                            <CaretUp size={13} weight="bold" />
+                                        </button>
+                                        <span className="min-w-6 text-center text-[11px] font-semibold text-muted-foreground">{status.order}</span>
+                                        <button
+                                            type="button"
+                                            disabled={statuses.findIndex((item) => item.id === status.id) === statuses.length - 1 || isSaving}
+                                            onClick={() => void moveStatus(status.id, "down")}
+                                            title={`Move ${status.name} down`}
+                                            className="rounded-md border border-border/60 p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                                        >
+                                            <CaretDown size={13} weight="bold" />
+                                        </button>
+                                    </div>
+                                </td>
                                 <td className="px-5 py-3.5 text-right">
                                     <div className="flex items-center justify-end gap-1">
                                         <button
@@ -235,7 +268,6 @@ export default function MasterStatusesPage() {
                                         >
                                             <PencilSimple size={14} />
                                         </button>
-                                        {!status.isDefault ? (
                                         <button
                                             type="button"
                                             onClick={() => removeStatus(status.id)}
@@ -244,7 +276,6 @@ export default function MasterStatusesPage() {
                                         >
                                             <Trash size={14} />
                                         </button>
-                                        ) : null}
                                     </div>
                                 </td>
                             </tr>
@@ -253,19 +284,19 @@ export default function MasterStatusesPage() {
                 </table>
             </div>
 
-            <Dialog
+            <Sheet
                 open={isCreateOpen}
                 onOpenChange={(open) => {
                     setIsCreateOpen(open);
                     if (!open) setEditingStatus(null);
                 }}
             >
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold">
+                <SheetContent side="right" className="h-full w-full overflow-y-auto border-l border-border bg-card p-6 shadow-none sm:max-w-md">
+                    <SheetHeader className="px-0 pt-0">
+                        <SheetTitle className="text-base font-bold">
                             {editingStatus ? "Edit task status" : "Create task status"}
-                        </DialogTitle>
-                    </DialogHeader>
+                        </SheetTitle>
+                    </SheetHeader>
                     <form onSubmit={handleAdd} className="space-y-4 pt-2">
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-muted-foreground">Status name</label>
@@ -320,7 +351,7 @@ export default function MasterStatusesPage() {
                                 </Select>
                             </div>
                         </div>
-                        <DialogFooter className="gap-2 pt-2">
+                        <SheetFooter className="gap-2 px-0 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCreateOpen(false)}
@@ -334,10 +365,10 @@ export default function MasterStatusesPage() {
                             >
                                 {editingStatus ? "Save changes" : "Save status"}
                             </button>
-                        </DialogFooter>
+                        </SheetFooter>
                     </form>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

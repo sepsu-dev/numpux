@@ -2,6 +2,7 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getEncodedSessionSecret } from "@/lib/session-secret";
+import { pool } from "@/db";
 
 const encodedKey = getEncodedSessionSecret();
 const SESSION_COOKIE = "session";
@@ -12,6 +13,7 @@ export type SessionPayload = {
   email: string;
   name: string;
   role?: "superadmin" | "admin" | "user";
+  sessionVersion?: number;
 };
 
 export async function encrypt(payload: SessionPayload) {
@@ -47,7 +49,21 @@ export async function createSession(payload: SessionPayload) {
 
 export async function getSession(): Promise<SessionPayload | null> {
   const session = (await cookies()).get(SESSION_COOKIE)?.value;
-  return decrypt(session);
+  const payload = await decrypt(session);
+  if (!payload?.userId) return null;
+  const account = await pool.query(
+    "SELECT name, email, role, account_status, session_version FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1",
+    [payload.userId]
+  );
+  if (!account.rows.length || account.rows[0].account_status !== "active") return null;
+  if (Number(payload.sessionVersion || 1) !== Number(account.rows[0].session_version || 1)) return null;
+  return {
+    userId: payload.userId,
+    name: account.rows[0].name,
+    email: account.rows[0].email,
+    role: account.rows[0].role || "user",
+    sessionVersion: Number(account.rows[0].session_version || 1),
+  };
 }
 
 export async function deleteSession() {

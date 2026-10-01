@@ -20,7 +20,7 @@ export async function findAllMasterData(): Promise<MasterDataPayload> {
   const [categories, issueTypes, priorities, statuses, projectStatuses] = await Promise.all([
     pool.query("SELECT id, name, is_default FROM master_categories WHERE is_active = true ORDER BY sort_order, name"),
     pool.query("SELECT id, name, description, icon_name, color_class, is_default FROM master_issue_types WHERE is_active = true ORDER BY sort_order, name"),
-    pool.query("SELECT id, name, level, dot_color, badge_class, is_default FROM master_priorities WHERE is_active = true ORDER BY sort_order, level, name"),
+    pool.query("SELECT id, name, level, dot_color, badge_class, severity_class, is_default FROM master_priorities WHERE is_active = true ORDER BY sort_order, level, name"),
     pool.query("SELECT id, name, description, sort_order, dot_color, badge_class, header_border, is_completed, is_default FROM master_statuses WHERE is_active = true ORDER BY sort_order, name"),
     pool.query("SELECT id, name, description, color_class, sort_order, is_completed, is_default FROM master_project_statuses WHERE is_active = true ORDER BY sort_order, name"),
   ]);
@@ -41,6 +41,7 @@ export async function findAllMasterData(): Promise<MasterDataPayload> {
       level: row.level,
       dotColor: row.dot_color,
       badgeClass: row.badge_class,
+      severityClass: row.severity_class,
       isDefault: row.is_default,
     })),
     statuses: statuses.rows.map((row) => ({
@@ -83,8 +84,8 @@ export async function createMasterData(resource: string, item: Record<string, un
   } else if (resource === "priorities") {
     const max = await pool.query("SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM master_priorities");
     await pool.query(
-      "INSERT INTO master_priorities (id, name, level, dot_color, badge_class, sort_order) VALUES ($1, $2, $3, $4, $5, $6)",
-      [id, item.name, item.level, item.dotColor, item.badgeClass, max.rows[0].next]
+      "INSERT INTO master_priorities (id, name, level, dot_color, badge_class, severity_class, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [id, item.name, item.level, item.dotColor, item.badgeClass, item.severityClass, max.rows[0].next]
     );
   } else if (resource === "statuses") {
     await pool.query(
@@ -103,7 +104,7 @@ export async function updateMasterData(resource: string, id: string, updates: Re
   const maps: Record<string, Record<string, string>> = {
     categories: { name: "name" },
     issueTypes: { name: "name", description: "description", iconName: "icon_name", colorClass: "color_class" },
-    priorities: { name: "name", level: "level", dotColor: "dot_color", badgeClass: "badge_class" },
+    priorities: { name: "name", level: "level", dotColor: "dot_color", badgeClass: "badge_class", severityClass: "severity_class" },
     statuses: { name: "name", description: "description", order: "sort_order", dotColor: "dot_color", badgeClass: "badge_class", headerBorder: "header_border", isCompleted: "is_completed" },
     projectStatuses: { name: "name", description: "description", order: "sort_order", colorClass: "color_class", isCompleted: "is_completed" },
   };
@@ -159,14 +160,13 @@ export async function deleteMasterData(resource: string, id: string) {
   };
   const target = config[resource];
   const current = await pool.query(`SELECT is_default, name FROM ${target.table} WHERE id = $1`, [id]);
-  if (!current.rows.length) return { ok: false, reason: "Data tidak ditemukan" };
-  if (current.rows[0].is_default) return { ok: false, reason: "Data bawaan sistem tidak dapat dihapus" };
+  if (!current.rows.length) return { ok: false, reason: "Data not found" };
   if (target.usage && target.valueColumn) {
     const usageValue = resource === "categories" ? current.rows[0].name : id;
     const usage = await pool.query(`SELECT COUNT(*)::int AS count FROM ${target.usage} WHERE ${target.valueColumn} = $1`, [usageValue]);
-    if (usage.rows[0].count > 0) return { ok: false, reason: "Data masih digunakan dan tidak dapat dihapus" };
+    if (usage.rows[0].count > 0) return { ok: false, reason: "This item is still in use and cannot be deleted" };
   }
-  const result = await pool.query(`DELETE FROM ${target.table} WHERE id = $1`, [id]);
+  const result = await pool.query(`UPDATE ${target.table} SET is_active = false, updated_at = NOW() WHERE id = $1`, [id]);
   return { ok: (result.rowCount ?? 0) > 0 };
 }
 

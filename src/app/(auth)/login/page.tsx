@@ -30,6 +30,11 @@ function LoginErrorBanner() {
   );
 }
 
+function LoginRedirectField() {
+  const next = useSearchParams().get("next") || "";
+  return <input type="hidden" name="redirectTo" value={next} />;
+}
+
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(login, undefined);
 
@@ -64,6 +69,7 @@ export default function LoginPage() {
             </div>
 
             <form action={formAction} className="space-y-4">
+              <Suspense fallback={null}><LoginRedirectField /></Suspense>
               <label className="block space-y-1.5 text-xs font-medium">
                 <span>Email address</span>
                 <input type="email" name="email" autoComplete="email" required placeholder="you@company.com" className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15" />

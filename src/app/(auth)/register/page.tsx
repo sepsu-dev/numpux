@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, SpinnerGap } from "@phosphor-icons/react";
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { register } from "@/lib/actions";
 
 function GoogleIcon() {
@@ -15,6 +16,27 @@ function GoogleIcon() {
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.58 10.58 0 0 0 12 1a11 11 0 0 0-9.82 6.06L5.84 9.9c.87-2.6 3.3-4.52 6.16-4.52Z" />
     </svg>
   );
+}
+
+function RegistrationContext() {
+  const invitation = useSearchParams().get("invitation") || "";
+  return <>
+    <input type="hidden" name="invitationToken" value={invitation} />
+    {invitation && <p className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700">Create an account with the email address that received the invitation.</p>}
+  </>;
+}
+
+function GoogleRegistration() {
+  const invitation = useSearchParams().get("invitation");
+  if (invitation) return null;
+  return <>
+    <button type="button" onClick={() => { window.location.href = "/api/auth/google"; }} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-md border border-input bg-white text-sm font-medium hover:bg-muted">
+      <GoogleIcon /> Continue with Google
+    </button>
+    <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+      <span className="h-px flex-1 bg-border" /> or use email <span className="h-px flex-1 bg-border" />
+    </div>
+  </>;
 }
 
 export default function RegisterPage() {
@@ -36,19 +58,14 @@ export default function RegisterPage() {
         <div className="w-full max-w-sm">
           <div className="mb-7">
             <h1 className="text-2xl font-semibold tracking-[-0.03em]">Create your account</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Set up your workspace and add your first project.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Create your workspace, become its owner, and add your first project.</p>
           </div>
 
           <div className="border border-border bg-white p-6">
-            <button type="button" onClick={() => { window.location.href = "/api/auth/google"; }} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-md border border-input bg-white text-sm font-medium hover:bg-muted">
-              <GoogleIcon /> Continue with Google
-            </button>
-
-            <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-              <span className="h-px flex-1 bg-border" /> or use email <span className="h-px flex-1 bg-border" />
-            </div>
+            <Suspense fallback={null}><GoogleRegistration /></Suspense>
 
             <form action={formAction} className="space-y-4">
+              <Suspense fallback={null}><RegistrationContext /></Suspense>
               <label className="block space-y-1.5 text-xs font-medium">
                 <span>Full name</span>
                 <input name="name" autoComplete="name" required placeholder="Your name" className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15" />
@@ -59,7 +76,7 @@ export default function RegisterPage() {
               </label>
               <label className="block space-y-1.5 text-xs font-medium">
                 <span>Password</span>
-                <input type="password" name="password" autoComplete="new-password" minLength={6} required placeholder="At least 6 characters" className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                <input type="password" name="password" autoComplete="new-password" minLength={8} required placeholder="At least 8 characters" className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15" />
               </label>
 
               {state?.message && <p className="border border-red-200 bg-red-50 p-3 text-xs text-destructive">{state.message}</p>}

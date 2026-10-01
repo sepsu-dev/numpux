@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, UserPlus, Trash, Shield, Crown, Eye, User as UserIcon } from "@phosphor-icons/react";
+import { Users, UserPlus, Trash, Crown } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import type { Project, ProjectMember, ProjectMemberRole } from "@/types";
@@ -21,6 +21,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProjectMembersModalProps {
     open: boolean;
@@ -28,16 +29,13 @@ interface ProjectMembersModalProps {
     project: Project | null;
 }
 
-const ROLES: { id: ProjectMemberRole; label: string; desc: string; icon: any }[] = [
-    { id: "Admin", label: "Admin", desc: "Can manage tasks, members, and settings", icon: Shield },
-    { id: "Member", label: "Member", desc: "Can create and edit tasks", icon: UserIcon },
-    { id: "Viewer", label: "Viewer", desc: "Read-only access to the project", icon: Eye },
-];
-
 export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMembersModalProps) {
+    const canManage = ["owner", "admin"].includes((project?.userRole || "").toLowerCase());
     const [members, setMembers] = useState<ProjectMember[]>([]);
+    const [invitations, setInvitations] = useState<Array<{ id: string; email: string; projectRole: string; status: string; expiresAt: string }>>([]);
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState<ProjectMemberRole>("Member");
+    const [role, setRole] = useState<ProjectMemberRole>("contributor");
+    const [roles, setRoles] = useState<Array<{ name: string; displayName: string }>>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -48,7 +46,8 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
             const res = await apiFetch(`/api/projects/${project.id}/members`);
             const data = await res.json();
             if (data.data) {
-                setMembers(data.data);
+                setMembers(data.data.members || []);
+                setInvitations(data.data.invitations || []);
             }
         } catch {
             toast.error("Failed to load members");
@@ -61,7 +60,8 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
         if (open && project) {
             fetchMembers();
             setEmail("");
-            setRole("Member");
+            setRole("contributor");
+            apiFetch("/api/privileges?mode=project-groups").then((res) => res.json()).then((body) => setRoles(body.data || [])).catch(() => setRoles([]));
         }
     }, [open, project]);
 
@@ -80,7 +80,9 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
             if (!res.ok || data.status === "error") {
                 toast.error(data.message || "Failed to invite member");
             } else {
-                toast.success(data.message || "Member invited successfully!");
+                const link = data.data?.acceptPath ? `${window.location.origin}${data.data.acceptPath}` : "";
+                if (link) await navigator.clipboard.writeText(link).catch(() => undefined);
+                toast.success(link ? "Invitation created and link copied" : (data.message || "Invitation created"));
                 setEmail("");
                 fetchMembers();
             }
@@ -89,6 +91,15 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleRevokeInvitation = async (invitationId: string) => {
+        if (!project) return;
+        const response = await apiFetch(`/api/projects/${project.id}/invitations/${invitationId}`, { method: "DELETE" });
+        const body = await response.json();
+        if (!response.ok) return toast.error(body.message || "Failed to revoke invitation");
+        toast.success("Invitation revoked");
+        setInvitations((current) => current.filter((item) => item.id !== invitationId));
     };
 
     const handleRemove = async (member: ProjectMember) => {
@@ -107,6 +118,24 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
         } catch {
             toast.error("Failed to remove member");
         }
+    };
+
+    const handleRoleChange = async (member: ProjectMember, nextRole: string) => {
+        if (!project) return;
+        const res = await apiFetch(`/api/projects/${project.id}/members/${member.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) });
+        const body = await res.json();
+        if (!res.ok) return toast.error(body.message || "Failed to update member role");
+        toast.success("Member role updated");
+        await fetchMembers();
+    };
+
+    const handleTransferOwnership = async (member: ProjectMember) => {
+        if (!project || !confirm(`Transfer ownership of ${project.title} to ${member.name}?`)) return;
+        const res = await apiFetch(`/api/projects/${project.id}/members/${member.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "transfer_ownership" }) });
+        const body = await res.json();
+        if (!res.ok) return toast.error(body.message || "Failed to transfer ownership");
+        toast.success("Project ownership transferred");
+        await fetchMembers();
     };
 
     return (
@@ -133,7 +162,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                     {/* Body */}
                     <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                         {/* Invite Form */}
-                        <form onSubmit={handleInvite} className="space-y-2">
+                        {canManage && <form onSubmit={handleInvite} className="space-y-2">
                             <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                                 Invite by Email
                             </div>
@@ -146,6 +175,10 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                     className="h-10 text-xs rounded-lg bg-white border-border focus:border-primary flex-1 font-medium"
                                     required
                                 />
+                                <Select value={role} onValueChange={(value) => setRole(value as ProjectMemberRole)}>
+                                    <SelectTrigger className="h-10 w-32 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+                                    <SelectContent>{roles.filter((item) => item.name.toLowerCase() !== "owner").map((item) => <SelectItem key={item.name} value={item.name}>{item.displayName || item.name}</SelectItem>)}</SelectContent>
+                                </Select>
                                 <Button
                                     type="submit"
                                     size="sm"
@@ -157,9 +190,9 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                 </Button>
                             </div>
                             <p className="text-[11px] text-muted-foreground">
-                                Enter a teammate's email to add them to this project.
+                                The recipient must accept the invitation before access is granted.
                             </p>
-                        </form>
+                        </form>}
 
                         {/* Member List */}
                         <div className="space-y-3 pt-3 border-t border-border/60">
@@ -200,26 +233,27 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                {member.role === "Owner" ? (
+                                                {member.role.toLowerCase() === "owner" ? (
                                                     <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-md">
                                                         <Crown size={12} weight="fill" />
                                                         Owner
                                                     </span>
-                                                ) : (
-                                                    <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                                                        {member.role}
-                                                    </span>
-                                                )}
+                                                ) : canManage ? (
+                                                    <Select value={member.role.toLowerCase()} onValueChange={(value) => void handleRoleChange(member, value)}>
+                                                        <SelectTrigger className="h-7 w-28 text-[10px]"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>{roles.filter((item) => item.name.toLowerCase() !== "owner").map((item) => <SelectItem key={item.name} value={item.name}>{item.displayName || item.name}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                ) : <span className="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold capitalize">{member.role}</span>}
 
-                                                {member.role !== "Owner" && (
-                                                    <button
+                                                {canManage && member.role.toLowerCase() !== "owner" && (
+                                                    <>{project?.userRole?.toLowerCase() === "owner" && <button type="button" onClick={() => void handleTransferOwnership(member)} className="rounded-md p-1 text-muted-foreground opacity-60 transition-colors hover:text-amber-600 group-hover:opacity-100" title={`Transfer ownership to ${member.name}`}><Crown size={14} /></button>}<button
                                                         type="button"
                                                         onClick={() => handleRemove(member)}
                                                         className="text-muted-foreground hover:text-rose-600 p-1 rounded-md opacity-60 group-hover:opacity-100 transition-colors cursor-pointer"
                                                         title={`Remove ${member.name}`}
                                                     >
                                                         <Trash size={14} />
-                                                    </button>
+                                                    </button></>
                                                 )}
                                             </div>
                                         </div>
@@ -227,6 +261,14 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                 </div>
                             )}
                         </div>
+
+                        {canManage && invitations.length > 0 && <div className="space-y-3 border-t border-border/60 pt-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pending Invitations ({invitations.length})</div>
+                            <div className="space-y-2">{invitations.map((invitation) => <div key={invitation.id} className="flex items-center justify-between rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs">
+                                <div className="min-w-0"><p className="truncate font-semibold">{invitation.email}</p><p className="mt-0.5 text-[11px] capitalize text-muted-foreground">{invitation.projectRole} · expires {new Date(invitation.expiresAt).toLocaleDateString("en-US")}</p></div>
+                                <button type="button" onClick={() => void handleRevokeInvitation(invitation.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-50 hover:text-rose-600" title="Revoke invitation"><Trash size={14} /></button>
+                            </div>)}</div>
+                        </div>}
                     </div>
 
                     {/* Footer */}

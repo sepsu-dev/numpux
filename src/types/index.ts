@@ -4,7 +4,7 @@ export type TaskStatus = "To Do" | "In Progress" | "Review" | "Done" | (string &
 
 export type IssueType = "Task" | "Bug" | "Story" | (string & {});
 
-export type ProjectMemberRole = "Owner" | "Admin" | "Member" | "Viewer";
+export type ProjectMemberRole = "owner" | "admin" | "contributor" | "viewer" | "Owner" | "Admin" | "Member" | "Viewer" | (string & {});
 
 export type UserRole = "superadmin" | "admin" | "user";
 
@@ -14,6 +14,8 @@ export type User = {
   email: string;
   role?: UserRole;
   createdAt?: string;
+  accountStatus?: "active" | "suspended";
+  lastLoginAt?: string | null;
 };
 
 export type MasterMenu = {
@@ -53,7 +55,7 @@ export type UserPrivilege = {
 
 export type ProjectGroup = {
   id: string;
-  name: string; // 'owner' | 'admin' | 'member'
+  name: string; // 'owner' | 'admin' | 'contributor' | 'viewer'
   displayName: string;
   description?: string;
   createdAt?: string;
@@ -110,6 +112,7 @@ export type Task = {
 export type Project = {
   id: string;
   userId?: string;
+  workspaceId?: string;
   title: string;
   description: string;
   category: string;

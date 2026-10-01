@@ -11,6 +11,7 @@ import {
   updateMenuSchema,
   createMenuSchema,
   createProjectGroupSchema,
+  updateProjectGroupSchema,
   createSectionSchema,
   updateSectionSchema,
 } from "./schema";
@@ -29,6 +30,7 @@ import {
   findAllowedMenusByProjectRole,
   createProjectGroup,
   deleteProjectGroup,
+  updateProjectGroup,
   findMasterSections,
   createMasterSection,
   updateMasterSection,
@@ -41,10 +43,17 @@ export async function GET(request: Request) {
     const authUser = await getOptionalAuthUser(request);
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get("mode");
+    if (!authUser) return errorResponse("Unauthorized", 401);
 
     // Mode "my-menus": return allowed menus and sections for currently logged-in user
     if (mode === "my-menus") {
-      const role = authUser?.role || "user";
+      const { findPrimaryWorkspace } = await import("@/lib/workspace");
+      const workspace = await findPrimaryWorkspace(authUser.userId);
+      const role = authUser.role === "superadmin"
+        ? "superadmin"
+        : workspace && ["owner", "admin"].includes(String(workspace.role).toLowerCase())
+          ? "admin"
+          : "user";
       const [menus, dbSections] = await Promise.all([
         findAllowedMenusByRole(role),
         findMasterSections(),
@@ -52,6 +61,7 @@ export async function GET(request: Request) {
       return successResponse({
         menus,
         sections: dbSections.map((s) => s.name),
+        workspace: workspace ? { id: workspace.id, name: workspace.name, role: workspace.role } : null,
       });
     }
 
@@ -61,6 +71,12 @@ export async function GET(request: Request) {
       const menus = await findAllowedMenusByProjectRole(projectRole);
       return successResponse(menus);
     }
+
+    if (mode === "project-groups") {
+      return successResponse(await findProjectGroups());
+    }
+
+    if (authUser.role !== "superadmin") return errorResponse("Forbidden", 403);
 
     // Default: full privilege management data (master menus, user groups, project groups, matrices, sections)
     const [menus, groups, privileges, projectGroups, projectPrivileges, sections] = await Promise.all([
@@ -92,8 +108,8 @@ export async function POST(request: Request) {
     return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
   }
 
-  if (!auth.user?.role || !["admin", "superadmin"].includes(auth.user.role)) {
-    return errorResponse("Forbidden. Only administrators can configure privileges.", 403);
+  if (auth.user.role !== "superadmin") {
+    return errorResponse("Forbidden. Only the application owner can configure privileges.", 403);
   }
 
   try {
@@ -190,6 +206,14 @@ export async function POST(request: Request) {
         return badRequestResponse("Project group with this name already exists");
       }
       return successResponse(newGroup, "Project group created successfully");
+    }
+
+    if (body.type === "update_project_group") {
+      const parsed = updateProjectGroupSchema.safeParse(body);
+      if (!parsed.success) return badRequestResponse("Invalid project group data", parsed.error.flatten().fieldErrors);
+      const ok = await updateProjectGroup(parsed.data.id, parsed.data);
+      if (!ok) return badRequestResponse("Project group not found");
+      return successResponse(null, "Project group updated successfully");
     }
 
     // Check if deleting a custom project group

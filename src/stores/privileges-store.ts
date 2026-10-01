@@ -18,6 +18,7 @@ interface PrivilegesState {
   toggleProjectPrivilege: (groupName: string, menuId: string, currentVal: boolean) => Promise<boolean>;
   addProjectGroup: (data: { name: string; displayName: string; description?: string }) => Promise<boolean>;
   removeProjectGroup: (id: string) => Promise<boolean>;
+  updateProjectGroup: (id: string, data: { displayName: string; description?: string }) => Promise<boolean>;
   addMenu: (data: { name: string; path: string; icon?: string; section?: string; parentId?: string | null }) => Promise<boolean>;
   removeMenu: (id: string) => Promise<boolean>;
   updateMenu: (id: string, updates: Partial<MasterMenu>) => Promise<boolean>;
@@ -92,13 +93,13 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const data = await res.json();
       if (res.ok && data.status === "success") {
-        toast.success(`Akses diperbarui untuk ${groupName}`);
+        toast.success(`Access updated for ${groupName}`);
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
         // Revert on error
         set({ userPrivileges: currentPrivs });
-        toast.error(data.message || "Gagal memperbarui privilege");
+        toast.error(data.message || "Failed to update access");
         return false;
       }
     } catch {
@@ -138,13 +139,13 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const data = await res.json();
       if (res.ok && data.status === "success") {
-        toast.success(`Akses project diperbarui untuk ${groupName}`);
+        toast.success(`Project access updated for ${groupName}`);
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
         // Revert on error
         set({ projectPrivileges: currentPrivs });
-        toast.error(data.message || "Gagal memperbarui privilege project");
+        toast.error(data.message || "Failed to update project access");
         return false;
       }
     } catch {
@@ -169,12 +170,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success(`Role "${data.displayName}" berhasil ditambahkan`);
+        toast.success(`Role "${data.displayName}" was added`);
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal membuat role project");
+        toast.error(json.message || "Failed to create project role");
         return false;
       }
     } catch {
@@ -195,18 +196,29 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success("Role project berhasil dihapus");
+        toast.success("Project role was deleted");
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal menghapus role project");
+        toast.error(json.message || "Failed to delete project role");
         return false;
       }
     } catch {
       toast.error("Network error while deleting project role");
       return false;
     }
+  },
+
+  updateProjectGroup: async (id, data) => {
+    try {
+      const res = await apiFetch("/api/privileges", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "update_project_group", id, ...data }) });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.message || "Failed to update project role"); return false; }
+      toast.success("Project role was updated");
+      await get().loadAllPrivileges();
+      return true;
+    } catch { toast.error("Network error while updating project role"); return false; }
   },
 
   addMenu: async (data: { name: string; path: string; icon?: string; section?: string; parentId?: string | null }) => {
@@ -225,12 +237,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success(`Menu "${data.name}" berhasil dibuat`);
+        toast.success(`Menu "${data.name}" was created`);
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal membuat menu baru");
+        toast.error(json.message || "Failed to create menu");
         return false;
       }
     } catch {
@@ -251,12 +263,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success("Menu berhasil dihapus");
+        toast.success("Menu was deleted");
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal menghapus menu");
+        toast.error(json.message || "Failed to delete menu");
         return false;
       }
     } catch {
@@ -325,12 +337,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success(`Section "${name}" berhasil dibuat`);
+        toast.success(`Section "${name}" was created`);
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal membuat section baru");
+        toast.error(json.message || "Failed to create section");
         return false;
       }
     } catch {
@@ -352,12 +364,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success("Section berhasil diperbarui");
+        toast.success("Section was updated");
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal memperbarui section");
+        toast.error(json.message || "Failed to update section");
         return false;
       }
     } catch {
@@ -378,12 +390,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        toast.success("Section berhasil dihapus");
+        toast.success("Section was deleted");
         await get().loadAllPrivileges();
         window.dispatchEvent(new Event("numpux_master_data_updated"));
         return true;
       } else {
-        toast.error(json.message || "Gagal menghapus section");
+        toast.error(json.message || "Failed to delete section");
         return false;
       }
     } catch {
@@ -413,7 +425,7 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
       window.dispatchEvent(new Event("numpux_master_data_updated"));
       return true;
     } catch {
-      toast.error("Gagal mengubah urutan section");
+      toast.error("Failed to reorder sections");
       return false;
     }
   },

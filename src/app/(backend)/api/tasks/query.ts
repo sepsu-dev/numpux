@@ -1,6 +1,7 @@
 import { pool } from "@/db";
 import type { Task, Priority, TaskStatus, IssueType, TaskActivity } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "./schema";
+import { createNotification } from "@/lib/notifications";
 
 export async function findTasks(userId?: string, projectId?: string): Promise<Task[]> {
   let query = `
@@ -25,11 +26,13 @@ export async function findTasks(userId?: string, projectId?: string): Promise<Ta
   `;
   const params: any[] = [];
   const whereClauses: string[] = [];
+  whereClauses.push("t.deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects active_project WHERE active_project.id = t.project_id AND active_project.deleted_at IS NULL)");
 
   if (userId) {
     whereClauses.push(`(
       t.user_id = $${params.length + 1} 
-      OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = $${params.length + 1})
+      OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = $${params.length + 1} AND deleted_at IS NULL)
+      OR t.project_id IN (SELECT p.id FROM projects p JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = $${params.length + 1} AND wm.role IN ('owner', 'admin') AND wm.status = 'active' AND wm.deleted_at IS NULL)
     )`);
     params.push(userId);
   }
@@ -90,14 +93,15 @@ export async function findTaskById(id: string, userId?: string): Promise<Task | 
       u.email as assignee_email
     FROM tasks t
     LEFT JOIN users u ON u.id = t.assignee_id
-    WHERE t.id = $1
+    WHERE t.id = $1 AND t.deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects active_project WHERE active_project.id = t.project_id AND active_project.deleted_at IS NULL)
   `;
   const params: any[] = [id];
 
   if (userId) {
     query += ` AND (
       t.user_id = $2 
-      OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = $2)
+      OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = $2 AND deleted_at IS NULL)
+      OR t.project_id IN (SELECT p.id FROM projects p JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = $2 AND wm.role IN ('owner', 'admin') AND wm.status = 'active' AND wm.deleted_at IS NULL)
     )`;
     params.push(userId);
   }
@@ -166,6 +170,9 @@ export async function insertTask(data: CreateTaskInput, userId?: string): Promis
   );
 
   await recordTaskActivity(id, userId, "created", `Created issue ${taskKey}: "${data.title}"`);
+  if (data.assigneeId && data.assigneeId !== userId) {
+    await createNotification({ userId: data.assigneeId, title: "Task assigned to you", message: `${taskKey}: ${data.title}`, type: "info", link: `/tasks/kanban?projectId=${data.projectId}` });
+  }
   return (await findTaskById(id, userId))!;
 }
 
@@ -176,6 +183,15 @@ export async function updateTaskById(
 ): Promise<Task | null> {
   const existing = await findTaskById(id, userId);
   if (!existing) return null;
+  if (userId) {
+    const access = await pool.query(
+      `SELECT CASE WHEN p.user_id = $1 THEN 'owner' ELSE LOWER(pm.role) END AS role
+       FROM projects p LEFT JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = $1 AND pm.deleted_at IS NULL
+       WHERE p.id = $2`,
+      [userId, existing.projectId]
+    );
+    if (access.rows[0]?.role === "viewer") return null;
+  }
 
   const fields: string[] = [];
   const params: any[] = [id];
@@ -223,19 +239,29 @@ export async function updateTaskById(
 
   if (data.status && data.status !== existing.status) {
     await recordTaskActivity(id, userId, "status_changed", `Changed status from "${existing.status}" to "${data.status}"`);
+    if (existing.assigneeId && existing.assigneeId !== userId) {
+      await createNotification({ userId: existing.assigneeId, title: "Task status updated", message: `${existing.key || "Task"} moved to ${data.status}`, type: "info", link: `/tasks/kanban?projectId=${existing.projectId}` });
+    }
+  }
+  if (data.assigneeId && data.assigneeId !== existing.assigneeId && data.assigneeId !== userId) {
+    await createNotification({ userId: data.assigneeId, title: "Task assigned to you", message: `${existing.key || "Task"}: ${data.title || existing.title}`, type: "info", link: `/tasks/kanban?projectId=${data.projectId || existing.projectId}` });
   }
 
   return findTaskById(id, userId);
 }
 
 export async function deleteTaskById(id: string, userId?: string): Promise<boolean> {
-  let query = "DELETE FROM tasks WHERE id = $1";
-  const params: any[] = [id];
   if (userId) {
-    query += " AND user_id = $2";
-    params.push(userId);
+    const task = await findTaskById(id, userId);
+    if (!task) return false;
+    const { canManageProject, findProjectAccess } = await import("@/lib/workspace");
+    const access = await findProjectAccess(userId, task.projectId);
+    if (!access || !canManageProject(access.projectRole)) return false;
   }
-  const res = await pool.query(query, params);
+  const res = await pool.query(
+    "UPDATE tasks SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL",
+    [id]
+  );
   return (res.rowCount ?? 0) > 0;
 }
 

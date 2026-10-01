@@ -6,6 +6,7 @@ function mapProjectRow(row: any): Project {
   return {
     id: row.id,
     userId: row.user_id || undefined,
+    workspaceId: row.workspace_id || undefined,
     title: row.title,
     description: row.description || "",
     category: row.category || "General",
@@ -67,11 +68,13 @@ async function recalculateProjectStats(projectId?: string) {
 
 export async function listTasks(userId?: string, projectId?: string): Promise<Task[]> {
   await initDb();
+  if (!userId) return [];
   let query = `
     SELECT t.*, u.name as assignee_name, u.email as assignee_email
     FROM tasks t
     LEFT JOIN users u ON t.assignee_id = u.id
-    WHERE 1=1
+    WHERE t.deleted_at IS NULL
+      AND EXISTS (SELECT 1 FROM projects p WHERE p.id = t.project_id AND p.deleted_at IS NULL)
   `;
   const params: any[] = [];
 
@@ -79,7 +82,10 @@ export async function listTasks(userId?: string, projectId?: string): Promise<Ta
     params.push(userId);
     // User can see tasks they created, tasks in projects they belong to, or tasks assigned to them
     query += ` AND (t.user_id = $${params.length} OR t.assignee_id = $${params.length} OR t.project_id IN (
-      SELECT project_id FROM project_members WHERE user_id = $${params.length}
+      SELECT project_id FROM project_members WHERE user_id = $${params.length} AND deleted_at IS NULL
+    ) OR t.project_id IN (
+      SELECT p.id FROM projects p JOIN workspace_members wm ON wm.workspace_id = p.workspace_id
+      WHERE wm.user_id = $${params.length} AND wm.role IN ('owner', 'admin') AND wm.status = 'active' AND wm.deleted_at IS NULL
     ))`;
   }
 
@@ -100,14 +106,18 @@ export async function getTask(id: string, userId?: string): Promise<Task | undef
     SELECT t.*, u.name as assignee_name, u.email as assignee_email
     FROM tasks t
     LEFT JOIN users u ON t.assignee_id = u.id
-    WHERE t.id = $1
+    WHERE t.id = $1 AND t.deleted_at IS NULL
+      AND EXISTS (SELECT 1 FROM projects p WHERE p.id = t.project_id AND p.deleted_at IS NULL)
   `;
   const params: any[] = [id];
 
   if (userId) {
     params.push(userId);
     query += ` AND (t.user_id = $2 OR t.assignee_id = $2 OR t.project_id IN (
-      SELECT project_id FROM project_members WHERE user_id = $2
+      SELECT project_id FROM project_members WHERE user_id = $2 AND deleted_at IS NULL
+    ) OR t.project_id IN (
+      SELECT p.id FROM projects p JOIN workspace_members wm ON wm.workspace_id = p.workspace_id
+      WHERE wm.user_id = $2 AND wm.role IN ('owner', 'admin') AND wm.status = 'active' AND wm.deleted_at IS NULL
     ))`;
   }
 
@@ -260,7 +270,13 @@ export async function deleteTask(id: string, userId?: string): Promise<void> {
   const existing = await getTask(id, userId);
   if (!existing) return;
 
-  await pool.query("DELETE FROM tasks WHERE id = $1", [id]);
+  if (userId) {
+    const { canManageProject, findProjectAccess } = await import("@/lib/workspace");
+    const access = await findProjectAccess(userId, existing.projectId);
+    if (!access || !canManageProject(access.projectRole)) return;
+  }
+
+  await pool.query("UPDATE tasks SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL", [id]);
   if (existing.projectId) {
     await recalculateProjectStats(existing.projectId);
   }
@@ -268,11 +284,12 @@ export async function deleteTask(id: string, userId?: string): Promise<void> {
 
 export async function listProjects(userId?: string): Promise<Project[]> {
   await initDb();
+  if (!userId) return [];
   let query = `
     SELECT p.*, COUNT(DISTINCT pm.id) as members_count
     FROM projects p
-    LEFT JOIN project_members pm ON p.id = pm.project_id
-    WHERE 1=1
+    LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.deleted_at IS NULL
+    WHERE p.deleted_at IS NULL
   `;
   const params: any[] = [];
 
@@ -280,7 +297,9 @@ export async function listProjects(userId?: string): Promise<Project[]> {
     params.push(userId);
     // User sees projects where they are owner OR member
     query += ` AND (p.user_id = $${params.length} OR p.id IN (
-      SELECT project_id FROM project_members WHERE user_id = $${params.length}
+      SELECT project_id FROM project_members WHERE user_id = $${params.length} AND deleted_at IS NULL
+    ) OR p.workspace_id IN (
+      SELECT workspace_id FROM workspace_members WHERE user_id = $${params.length} AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
     ))`;
   }
 
@@ -297,15 +316,17 @@ export async function getProject(id: string, userId?: string): Promise<Project |
   let query = `
     SELECT p.*, COUNT(DISTINCT pm.id) as members_count
     FROM projects p
-    LEFT JOIN project_members pm ON p.id = pm.project_id
-    WHERE p.id = $1
+    LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.deleted_at IS NULL
+    WHERE p.id = $1 AND p.deleted_at IS NULL
   `;
   const params: any[] = [id];
 
   if (userId) {
     params.push(userId);
     query += ` AND (p.user_id = $2 OR p.id IN (
-      SELECT project_id FROM project_members WHERE user_id = $2
+      SELECT project_id FROM project_members WHERE user_id = $2 AND deleted_at IS NULL
+    ) OR p.workspace_id IN (
+      SELECT workspace_id FROM workspace_members WHERE user_id = $2 AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
     ))`;
   }
 
@@ -321,14 +342,21 @@ export async function getProject(id: string, userId?: string): Promise<Project |
 export async function createProject(input: Omit<Project, "id">, userId?: string): Promise<Project> {
   await initDb();
   const id = crypto.randomUUID();
+  let workspaceId: string | null = null;
+  if (userId) {
+    const { ensurePrimaryWorkspace } = await import("@/lib/workspace");
+    const userResult = await pool.query("SELECT name FROM users WHERE id = $1", [userId]);
+    workspaceId = (await ensurePrimaryWorkspace(userId, userResult.rows[0]?.name || "My")).id;
+  }
 
   const res = await pool.query(
-    `INSERT INTO projects (id, user_id, title, description, category, status, tasks_count, progress)
-     VALUES ($1, $2, $3, $4, $5, $6, 0, 0)
+    `INSERT INTO projects (id, user_id, workspace_id, title, description, category, status, tasks_count, progress)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 0)
      RETURNING *`,
     [
       id,
       userId || null,
+      workspaceId,
       input.title,
       input.description || "",
       input.category || "General",
@@ -341,7 +369,7 @@ export async function createProject(input: Omit<Project, "id">, userId?: string)
     const memberId = crypto.randomUUID();
     await pool.query(
       `INSERT INTO project_members (id, project_id, user_id, role)
-       VALUES ($1, $2, $3, 'Owner')
+       VALUES ($1, $2, $3, 'owner')
        ON CONFLICT (project_id, user_id) DO NOTHING`,
       [memberId, id, userId]
     ).catch(() => {});
@@ -382,7 +410,13 @@ export async function deleteProject(id: string, userId?: string): Promise<void> 
   const existing = await getProject(id, userId);
   if (!existing) return;
 
-  await pool.query("DELETE FROM projects WHERE id = $1", [id]);
+  if (userId) {
+    const { findProjectAccess } = await import("@/lib/workspace");
+    const access = await findProjectAccess(userId, id);
+    if (!access || access.projectRole !== "owner") return;
+  }
+
+  await pool.query("UPDATE projects SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL", [id]);
 }
 
 // ==================== PROJECT MEMBERS MANAGEMENT ====================

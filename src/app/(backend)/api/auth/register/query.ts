@@ -22,19 +22,21 @@ export async function createNewUser(
   name: string,
   email: string,
   passwordPlain: string,
-  role: "superadmin" | "admin" | "user" = "user"
+  role: "superadmin" | "admin" | "user" = "admin"
 ): Promise<User> {
   const id = crypto.randomUUID();
   const passwordHash = hashPassword(passwordPlain);
 
   const res = await pool.query(
-    `INSERT INTO users (id, name, email, password_hash, role)
-     VALUES ($1, $2, LOWER($3), $4, $5)
+    `INSERT INTO users (id, name, email, password_hash, role, account_origin)
+     VALUES ($1, $2, LOWER($3), $4, $5, 'self_registered')
      RETURNING id, name, email, role, created_at`,
     [id, name, email, passwordHash, role]
   );
 
   const row = res.rows[0];
+  const { createPersonalWorkspace } = await import("@/lib/workspace");
+  await createPersonalWorkspace(row.id, row.name);
   return {
     id: row.id,
     name: row.name,

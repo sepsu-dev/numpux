@@ -3,7 +3,7 @@ import type { MasterMenu, UserGroup, UserPrivilege } from "@/types";
 
 export async function findMasterMenus(): Promise<MasterMenu[]> {
   const res = await pool.query(
-    "SELECT id, code, name, path, icon, section, parent_id, sort_order, is_active FROM master_menus ORDER BY CASE WHEN path = '/dashboard' THEN 0 ELSE 1 END, sort_order ASC;"
+    "SELECT id, code, name, path, icon, section, parent_id, sort_order, is_active FROM master_menus WHERE deleted_at IS NULL ORDER BY CASE WHEN path = '/dashboard' THEN 0 ELSE 1 END, sort_order ASC;"
   );
   return res.rows.map((r) => ({
     id: r.id,
@@ -182,17 +182,17 @@ export async function createMasterMenu(data: {
   if (res.rows.length === 0) return null;
   const created = res.rows[0];
 
-  // Grant privileges to system administrators and Owner/Admin project groups
+  // New system menus are visible to the application owner by default.
   await pool.query(
     `INSERT INTO user_privileges (id, group_id, menu_id, can_view)
      SELECT gen_random_uuid(), id, $1, true
-     FROM user_groups WHERE name IN ('admin', 'superadmin');`,
+     FROM user_groups WHERE name = 'superadmin';`,
     [id]
   );
   await pool.query(
     `INSERT INTO user_privileges (id, group_id, menu_id, can_view)
      SELECT gen_random_uuid(), id, $1, false
-     FROM user_groups WHERE name = 'user';`,
+     FROM user_groups WHERE name IN ('admin', 'user');`,
     [id]
   );
   await pool.query(
@@ -222,7 +222,7 @@ export async function createMasterMenu(data: {
 }
 
 export async function deleteMasterMenu(id: string): Promise<boolean> {
-  const res = await pool.query("DELETE FROM master_menus WHERE id = $1", [id]);
+  const res = await pool.query("UPDATE master_menus SET deleted_at = NOW(), is_active = false WHERE id = $1 AND deleted_at IS NULL", [id]);
   return (res.rowCount ?? 0) > 0;
 }
 
@@ -309,16 +309,24 @@ export async function createProjectGroup(data: {
 }
 
 export async function deleteProjectGroup(id: string): Promise<boolean> {
-  // Prevent deleting system baseline groups (owner, admin, member)
+  // Prevent deleting system baseline project roles.
   const check = await pool.query("SELECT name FROM project_groups WHERE id = $1", [id]);
   if (check.rows.length === 0) return false;
   const name = check.rows[0].name.toLowerCase();
-  if (["owner", "admin", "member"].includes(name)) {
+  if (["owner", "admin", "contributor", "viewer"].includes(name)) {
     return false;
   }
 
   const res = await pool.query("DELETE FROM project_groups WHERE id = $1", [id]);
   return (res.rowCount ?? 0) > 0;
+}
+
+export async function updateProjectGroup(id: string, data: { displayName: string; description?: string }): Promise<boolean> {
+  const result = await pool.query(
+    "UPDATE project_groups SET display_name = $2, description = $3 WHERE id = $1",
+    [id, data.displayName.trim(), data.description?.trim() || null]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function setProjectGroupMenuPrivilege(
@@ -375,7 +383,7 @@ export async function findAllowedMenusByProjectRole(role = "member"): Promise<Ma
 
 export async function findMasterSections(): Promise<Array<{ id: string; name: string; sortOrder: number; createdAt?: string }>> {
   const res = await pool.query(
-    "SELECT id, name, sort_order, created_at FROM master_sections ORDER BY sort_order ASC;"
+    "SELECT id, name, sort_order, created_at FROM master_sections WHERE deleted_at IS NULL ORDER BY sort_order ASC;"
   );
   return res.rows.map((r) => ({
     id: r.id,
@@ -450,6 +458,6 @@ export async function deleteMasterSection(id: string): Promise<boolean> {
   // Move existing menus under this section to 'General'
   await pool.query("UPDATE master_menus SET section = 'General' WHERE section = $1", [name]);
 
-  const res = await pool.query("DELETE FROM master_sections WHERE id = $1", [id]);
+  const res = await pool.query("UPDATE master_sections SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL", [id]);
   return (res.rowCount ?? 0) > 0;
 }
