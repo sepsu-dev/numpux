@@ -109,11 +109,13 @@ export function TaskFormModal({
             return;
         }
         apiFetch(`/api/projects/${selectedProjectId}/members`)
-            .then((r) => r.json())
-            .then((res) => {
-                if (res.data) {
-                    setProjectMembers(res.data);
-                }
+            .then(async (response) => {
+                const body = await response.json();
+                if (!response.ok) throw new Error(body.message || "Failed to load project members");
+                return body;
+            })
+            .then((body) => {
+                setProjectMembers(Array.isArray(body.data?.members) ? body.data.members : []);
             })
             .catch(() => setProjectMembers([]));
     }, [selectedProjectId]);

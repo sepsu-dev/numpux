@@ -2,7 +2,7 @@ import { findProjects } from "@/app/(backend)/api/projects/query";
 import { findTasks } from "@/app/(backend)/api/tasks/query";
 import { findAllMasterData } from "@/app/(backend)/api/master-data/query";
 
-export async function getDashboardAggregateData(userId?: string, requestedProjectId?: string) {
+export async function getDashboardAggregateData(userId: string, requestedProjectId?: string) {
   const projects = await findProjects(userId);
   const effectiveProjectId = requestedProjectId || (projects.length === 1 ? projects[0].id : undefined);
 
@@ -27,10 +27,10 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
   const metrics = currentProject
     ? [
         {
-          label: "Project Status",
-          value: currentProject.status,
-          change: currentProject.category || "Active",
-          up: currentProject.status === "Active" || currentProject.status === "Completed",
+          label: "Total Tasks",
+          value: String(totalTasks),
+          change: currentProject.category || "Uncategorized",
+          up: totalTasks > 0,
         },
         {
           label: "Completed Tasks",
@@ -55,7 +55,7 @@ export async function getDashboardAggregateData(userId?: string, requestedProjec
         {
           label: "Total Projects",
           value: String(projects.length),
-          change: projects.length > 0 ? `${projects.filter((p) => p.status === "Active").length} active` : "No projects",
+          change: projects.length > 0 ? `${totalTasks} total tasks` : "No projects",
           up: projects.length > 0,
         },
         {

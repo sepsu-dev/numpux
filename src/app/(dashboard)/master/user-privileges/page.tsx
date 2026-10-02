@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ShieldCheck, ArrowClockwise, MagnifyingGlass, X } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
+import { ArrowClockwise, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { getMenuIcon } from "@/lib/menu-icons";
 import { usePrivilegesStore } from "@/stores/privileges-store";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,156 +49,92 @@ export default function UserPrivilegesPage() {
 
     return (
         <div className="space-y-6">
-            {/* Header matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">User access</h2>
-                        <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
-                            {filteredMenus.length} {filteredMenus.length === 1 ? "menu item" : "menu items"}
+                        <h2 className="text-2xl font-bold tracking-tight">User Access</h2>
+                        <span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                            {filteredMenus.length} {filteredMenus.length === 1 ? "menu" : "menus"}
                         </span>
                     </div>
-                    <p className="text-muted-foreground text-xs mt-1">
-                        Choose which navigation links each system role can access.
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Choose which navigation links each system role can access.</p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={loadAllPrivileges}
-                        disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer disabled:opacity-50"
-                        title="Refresh Data"
-                    >
-                        <ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} />
-                        <span>Refresh</span>
-                    </button>
-                </div>
+                <button
+                    onClick={() => void loadAllPrivileges()}
+                    disabled={isLoading}
+                    className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                >
+                    <ArrowClockwise size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+                </button>
             </div>
 
-            {/* Search & Role Filter Bar matching Projects page */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-2.5 rounded-lg border border-border/60">
-                <div className="relative flex-1 max-w-sm">
-                    <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
+            <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative w-full max-w-sm">
+                    <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
-                        type="text"
-                        placeholder="Search links"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search menus"
+                        className="w-full rounded-lg border border-border bg-card py-1.5 pl-9 pr-8 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                            <X size={13} />
-                        </button>
-                    )}
+                    {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={13} /></button>}
                 </div>
-
-                {/* Role Switcher Select */}
-                <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Role Group:</span>
-                    <Select value={selectedUserGroup} onValueChange={setSelectedUserGroup}>
-                        <SelectTrigger className="h-8 w-[160px] text-xs rounded-lg bg-card border-border/80">
-                            <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent className="text-xs">
-                            {userGroups.map((g) => (
-                                <SelectItem key={g.id} value={g.name} className="text-xs cursor-pointer">
-                                    {g.displayName || (g.name === "superadmin" ? "Super Administrator" : g.name === "admin" ? "Administrator" : g.name.charAt(0).toUpperCase() + g.name.slice(1))}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                <Select value={selectedUserGroup} onValueChange={setSelectedUserGroup}>
+                    <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Select role" /></SelectTrigger>
+                    <SelectContent>
+                        {userGroups.map((group) => (
+                            <SelectItem key={group.id} value={group.name} className="text-xs">
+                                {group.displayName || (group.name === "superadmin" ? "Super Administrator" : group.name === "admin" ? "Administrator" : group.name.charAt(0).toUpperCase() + group.name.slice(1))}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
-            {/* Clean Table Container */}
-            <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-none">
-                <table className="w-full text-left text-xs border-collapse">
+            <div className="overflow-hidden rounded-lg border border-border/60 bg-card">
+                <table className="w-full text-left text-xs">
                     <thead>
-                        <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase font-bold text-[11px] tracking-wider">
-                            <th className="py-3 px-5 w-2/3">MENU</th>
-                            <th className="py-3 px-5 w-1/3 text-right pr-6">ACTION</th>
+                        <tr className="border-b border-border/60 bg-muted/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                            <th className="px-4 py-3">Menu</th>
+                            <th className="hidden px-4 py-3 sm:table-cell">Route</th>
+                            <th className="px-4 py-3 text-center">Access</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/50 bg-card">
-                        {isLoading && dbMenus.length === 0 ? (
-                            Array.from({ length: 6 }).map((_, i) => (
-                                <tr key={i} className="animate-pulse">
-                                    <td className="py-3.5 px-5">
+                    <tbody className="divide-y divide-border/50">
+                        {isLoading && dbMenus.length === 0 ? Array.from({ length: 6 }).map((_, index) => (
+                            <tr key={index}>
+                                <td className="px-4 py-3"><Skeleton className="h-5 w-36" /></td>
+                                <td className="hidden px-4 py-3 sm:table-cell"><Skeleton className="h-5 w-24" /></td>
+                                <td className="px-4 py-3"><Skeleton className="mx-auto h-5 w-8 rounded-full" /></td>
+                            </tr>
+                        )) : filteredMenus.length === 0 ? (
+                            <tr><td colSpan={3} className="py-12 text-center text-muted-foreground">{dbMenus.length === 0 ? "No menus found." : "No menus match your search."}</td></tr>
+                        ) : filteredMenus.map((menu) => {
+                            const currentGroup = userGroups.find((group) => group.name.toLowerCase() === selectedUserGroup.toLowerCase());
+                            const privilege = privileges.find((item) => item.groupId === currentGroup?.id && item.menuId === menu.id);
+                            const canView = privilege?.canView ?? false;
+                            const Icon = getMenuIcon(menu.icon);
+
+                            return (
+                                <tr key={menu.id} className="hover:bg-muted/20">
+                                    <td className="px-4 py-3.5">
                                         <div className="flex items-center gap-2.5">
-                                            <Skeleton className="h-4 w-4 rounded" />
-                                            <Skeleton className="h-4 w-36 rounded" />
-                                            <Skeleton className="h-3 w-20 rounded" />
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon size={16} /></span>
+                                            <div><p className="font-semibold">{menu.name}</p>{menu.parentId && <p className="text-[10px] text-muted-foreground">Submenu</p>}</div>
                                         </div>
                                     </td>
-                                    <td className="py-3.5 px-5 text-right pr-6">
-                                        <div className="inline-flex items-center gap-2.5">
-                                            <Skeleton className="h-3 w-8 rounded" />
-                                            <Skeleton className="h-5 w-8 rounded-full" />
-                                        </div>
+                                    <td className="hidden px-4 py-3.5 sm:table-cell"><code className="rounded bg-muted px-2 py-1 text-[11px] text-muted-foreground">{menu.path}</code></td>
+                                    <td className="px-4 py-3.5 text-center">
+                                        <Switch
+                                            checked={canView}
+                                            disabled={selectedUserGroup.toLowerCase() === "superadmin"}
+                                            onCheckedChange={() => void handleTogglePrivilege(selectedUserGroup, menu.id, canView)}
+                                            aria-label={`Toggle ${menu.name} access`}
+                                        />
                                     </td>
                                 </tr>
-                            ))
-                        ) : dbMenus.length === 0 ? (
-                            <tr>
-                                <td colSpan={2} className="text-center py-12 text-muted-foreground">
-                                    No menus found in database.
-                                </td>
-                            </tr>
-                        ) : filteredMenus.length === 0 ? (
-                            <tr>
-                                <td colSpan={2} className="text-center py-12 text-muted-foreground">
-                                    No menus match your search.
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredMenus.map((menu) => {
-                                const currentGroup = userGroups.find(
-                                    (g) => g.name.toLowerCase() === selectedUserGroup.toLowerCase()
-                                );
-                                const priv = privileges.find(
-                                    (p) => p.groupId === currentGroup?.id && p.menuId === menu.id
-                                );
-                                const canView = priv ? priv.canView : false;
-
-                                return (
-                                    <tr key={menu.id} className="hover:bg-muted/20 transition-colors">
-                                        <td className="py-3.5 px-5 font-medium text-foreground">
-                                            <div className="flex items-center gap-2">
-                                                {menu.parentId ? (
-                                                    <span className="text-primary text-xs pl-3.5 select-none font-bold">↳</span>
-                                                ) : (
-                                                    <span className="text-muted-foreground text-sm select-none">📁</span>
-                                                )}
-                                                <span className={cn("text-xs text-foreground", menu.parentId ? "font-normal text-foreground/90" : "font-semibold")}>
-                                                    {menu.name}
-                                                </span>
-                                                <code className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded-md border border-border/40">
-                                                    {menu.path}
-                                                </code>
-                                            </div>
-                                        </td>
-                                        <td className="py-3.5 px-5 text-right pr-6">
-                                            <div className="inline-flex items-center gap-2.5">
-                                                <span className="text-xs font-normal text-muted-foreground">
-                                                    view
-                                                </span>
-                                                <Switch
-                                                    checked={canView}
-                                                    disabled={selectedUserGroup.toLowerCase() === "superadmin"}
-                                                    onCheckedChange={() => handleTogglePrivilege(selectedUserGroup, menu.id, canView)}
-                                                    aria-label="Toggle privilege"
-                                                />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

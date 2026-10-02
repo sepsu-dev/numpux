@@ -1,16 +1,17 @@
 import type { Task, Project } from "@/types";
 import { pool, initDb } from "@/db";
+import { availableProjectKey, reserveIssueKey } from "@/lib/issue-keys";
 
 // Helper mapper from DB row to Project type
 function mapProjectRow(row: any): Project {
   return {
     id: row.id,
     userId: row.user_id || undefined,
-    workspaceId: row.workspace_id || undefined,
+    workspaceId: row.workspace_id,
+    key: row.key,
     title: row.title,
     description: row.description || "",
     category: row.category || "General",
-    status: row.status as "Active" | "Planning" | "Completed",
     tasks: Number(row.tasks_count || 0),
     progress: Number(row.progress || 0),
   };
@@ -32,6 +33,9 @@ function mapTaskRow(row: any): Task {
     description: row.description || undefined,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
     assigneeId: row.assignee_id || undefined,
+    sprintId: row.sprint_id || undefined,
+    reporterId: row.reporter_id || undefined,
+    backlogOrder: row.backlog_order == null ? undefined : Number(row.backlog_order),
     assignee: row.assignee_name
       ? {
           id: row.assignee_id,
@@ -135,42 +139,28 @@ export async function createTask(input: Omit<Task, "id">, userId?: string): Prom
 
   const id = crypto.randomUUID();
 
-  // Verify project exists and get title
+  const client = await pool.connect();
   let projectName = input.project;
-  const pRes = await pool.query("SELECT title FROM projects WHERE id = $1 LIMIT 1", [input.projectId]);
-  if (pRes.rows.length > 0) {
-    projectName = pRes.rows[0].title;
+  let taskKey = input.key;
+  let res;
+  try {
+    await client.query("BEGIN");
+    const reserved = await reserveIssueKey(client, input.projectId);
+    projectName = reserved.projectTitle;
+    taskKey = reserved.key;
+    res = await client.query(
+      `INSERT INTO tasks (id, user_id, reporter_id, project_id, title, project_name, priority, due_date, status, description, assignee_id, task_key, issue_type, backlog_order)
+       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING *`,
+      [id, userId || null, input.projectId, input.title, projectName, input.priority || "Medium", input.date || null, input.status || "To Do", input.description || null, input.assigneeId || null, taskKey, input.issueType || "Task", reserved.number]
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  // Generate Jira-style Task Key: project acronym + auto-increment count (e.g. NUM-1, PRJ-14)
-  const countRes = await pool.query("SELECT COUNT(*) FROM tasks WHERE project_id = $1", [input.projectId]);
-  const taskNumber = parseInt(countRes.rows[0].count, 10) + 1;
-  const prefix = projectName
-    .split(/\s+/)
-    .map((word: string) => word.charAt(0).toUpperCase())
-    .join("")
-    .slice(0, 4) || "NUM";
-  const taskKey = `${prefix}-${taskNumber}`;
-
-  const res = await pool.query(
-    `INSERT INTO tasks (id, user_id, project_id, title, project_name, priority, due_date, status, description, assignee_id, task_key, issue_type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-     RETURNING *`,
-    [
-      id,
-      userId || null,
-      input.projectId,
-      input.title,
-      projectName || "Project",
-      input.priority || "Medium",
-      input.date || null,
-      input.status || "To Do",
-      input.description || null,
-      input.assigneeId || null,
-      input.key || taskKey,
-      input.issueType || "Task",
-    ]
-  );
 
   await recalculateProjectStats(input.projectId);
 
@@ -285,21 +275,26 @@ export async function deleteTask(id: string, userId?: string): Promise<void> {
 export async function listProjects(userId?: string): Promise<Project[]> {
   await initDb();
   if (!userId) return [];
+  const { ensureActiveWorkspaceForUser } = await import("@/lib/workspace");
+  const workspace = await ensureActiveWorkspaceForUser(userId);
   let query = `
-    SELECT p.*, COUNT(DISTINCT pm.id) as members_count
+    SELECT p.*, COUNT(DISTINCT pm.id) as members_count,
+      MAX(CASE WHEN pm.user_id = $2 THEN pm.role END) as current_user_role,
+      MAX(CASE WHEN wm.user_id = $2 THEN wm.role END) as current_workspace_role
     FROM projects p
     LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.deleted_at IS NULL
+    LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.status = 'active' AND wm.deleted_at IS NULL
     WHERE p.deleted_at IS NULL
   `;
-  const params: any[] = [];
+  const params: any[] = [workspace.id, userId];
+  query += ` AND p.workspace_id = $1`;
 
   if (userId) {
-    params.push(userId);
     // User sees projects where they are owner OR member
-    query += ` AND (p.user_id = $${params.length} OR p.id IN (
-      SELECT project_id FROM project_members WHERE user_id = $${params.length} AND deleted_at IS NULL
+    query += ` AND (p.user_id = $2 OR p.id IN (
+      SELECT project_id FROM project_members WHERE user_id = $2 AND deleted_at IS NULL
     ) OR p.workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = $${params.length} AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
+      SELECT workspace_id FROM workspace_members WHERE user_id = $2 AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
     ))`;
   }
 
@@ -308,25 +303,31 @@ export async function listProjects(userId?: string): Promise<Project[]> {
   return res.rows.map((row) => ({
     ...mapProjectRow(row),
     membersCount: parseInt(row.members_count || "0", 10),
+    userRole: row.user_id === userId ? "owner" : row.current_user_role || (["owner", "admin"].includes(String(row.current_workspace_role).toLowerCase()) ? "admin" : undefined),
   }));
 }
 
 export async function getProject(id: string, userId?: string): Promise<Project | undefined> {
   await initDb();
+  if (!userId) return undefined;
+  const { ensureActiveWorkspaceForUser } = await import("@/lib/workspace");
+  const workspace = await ensureActiveWorkspaceForUser(userId);
   let query = `
-    SELECT p.*, COUNT(DISTINCT pm.id) as members_count
+    SELECT p.*, COUNT(DISTINCT pm.id) as members_count,
+      MAX(CASE WHEN pm.user_id = $3 THEN pm.role END) as current_user_role,
+      MAX(CASE WHEN wm.user_id = $3 THEN wm.role END) as current_workspace_role
     FROM projects p
     LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.deleted_at IS NULL
-    WHERE p.id = $1 AND p.deleted_at IS NULL
+    LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.status = 'active' AND wm.deleted_at IS NULL
+    WHERE p.id = $1 AND p.deleted_at IS NULL AND p.workspace_id = $2
   `;
-  const params: any[] = [id];
+  const params: any[] = [id, workspace.id, userId];
 
   if (userId) {
-    params.push(userId);
-    query += ` AND (p.user_id = $2 OR p.id IN (
-      SELECT project_id FROM project_members WHERE user_id = $2 AND deleted_at IS NULL
+    query += ` AND (p.user_id = $3 OR p.id IN (
+      SELECT project_id FROM project_members WHERE user_id = $3 AND deleted_at IS NULL
     ) OR p.workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = $2 AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
+      SELECT workspace_id FROM workspace_members WHERE user_id = $3 AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
     ))`;
   }
 
@@ -336,45 +337,43 @@ export async function getProject(id: string, userId?: string): Promise<Project |
   return {
     ...mapProjectRow(res.rows[0]),
     membersCount: parseInt(res.rows[0].members_count || "0", 10),
+    userRole: res.rows[0].user_id === userId ? "owner" : res.rows[0].current_user_role || (["owner", "admin"].includes(String(res.rows[0].current_workspace_role).toLowerCase()) ? "admin" : undefined),
   };
 }
 
-export async function createProject(input: Omit<Project, "id">, userId?: string): Promise<Project> {
+export async function createProject(input: Omit<Project, "id" | "workspaceId">, userId?: string): Promise<Project> {
   await initDb();
+  if (!userId) throw new Error("Authenticated user is required to create a project");
   const id = crypto.randomUUID();
-  let workspaceId: string | null = null;
-  if (userId) {
-    const { ensurePrimaryWorkspace } = await import("@/lib/workspace");
-    const userResult = await pool.query("SELECT name FROM users WHERE id = $1", [userId]);
-    workspaceId = (await ensurePrimaryWorkspace(userId, userResult.rows[0]?.name || "My")).id;
-  }
+  const { ensureActiveWorkspaceForUser } = await import("@/lib/workspace");
+  const workspaceId = (await ensureActiveWorkspaceForUser(userId)).id;
 
-  const res = await pool.query(
-    `INSERT INTO projects (id, user_id, workspace_id, title, description, category, status, tasks_count, progress)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 0)
-     RETURNING *`,
-    [
-      id,
-      userId || null,
-      workspaceId,
-      input.title,
-      input.description || "",
-      input.category || "General",
-      input.status || "Active",
-    ]
-  );
-
-  // If created by a user, automatically add them as Owner in project_members
-  if (userId) {
-    const memberId = crypto.randomUUID();
-    await pool.query(
+  const client = await pool.connect();
+  let res;
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [workspaceId]);
+    const keys = await client.query("SELECT key FROM projects WHERE workspace_id = $1 AND deleted_at IS NULL", [workspaceId]);
+    const key = availableProjectKey(input.title, keys.rows.map((item) => item.key));
+    res = await client.query(
+      `INSERT INTO projects (id, user_id, workspace_id, key, title, description, category, tasks_count, progress)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 0) RETURNING *`,
+      [id, userId, workspaceId, key, input.title, input.description || "", input.category || "General"]
+    );
+    await client.query(
       `INSERT INTO project_members (id, project_id, user_id, role)
        VALUES ($1, $2, $3, 'owner')
-       ON CONFLICT (project_id, user_id) DO NOTHING`,
-      [memberId, id, userId]
-    ).catch(() => {});
+       ON CONFLICT (project_id, user_id) DO UPDATE
+       SET role = 'owner', deleted_at = NULL, updated_at = NOW()`,
+      [crypto.randomUUID(), id, userId]
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
   return mapProjectRow(res.rows[0]);
 }
 
@@ -385,14 +384,13 @@ export async function updateProject(id: string, input: Partial<Omit<Project, "id
 
   const res = await pool.query(
     `UPDATE projects
-     SET title = $1, description = $2, category = $3, status = $4, updated_at = NOW()
-     WHERE id = $5
+      SET title = $1, description = $2, category = $3, updated_at = NOW()
+      WHERE id = $4
      RETURNING *`,
     [
       input.title !== undefined ? input.title : existing.title,
       input.description !== undefined ? input.description : existing.description,
       input.category !== undefined ? input.category : existing.category,
-      input.status !== undefined ? input.status : existing.status,
       id,
     ]
   );

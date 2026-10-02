@@ -26,6 +26,7 @@ import {
     CaretRight,
     Rows,
     Columns,
+    Buildings,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,9 +60,17 @@ import {
 import type { Project, MasterMenu } from "@/types";
 import { apiFetch } from "@/lib/api-client";
 import { useNavigationStore } from "@/stores/navigation-store";
+import { resetApiStores } from "@/stores/reset-api-stores";
 import { ProfileModal } from "./profile-modal";
 import { SettingsModal } from "./settings-modal";
 import { MENU_ICONS as DATABASE_MENU_ICONS } from "@/lib/menu-icons";
+
+type Workspace = {
+    id: string;
+    name: string;
+    role: string;
+    isActive: boolean;
+};
 
 const MENU_ICONS: Record<string, any> = {
     SquaresFour,
@@ -91,7 +100,6 @@ const MENU_ICONS: Record<string, any> = {
     issue_types: CheckSquare,
     priorities: Flag,
     statuses: Columns,
-    project_statuses: Columns,
     master_sections: Rows,
     settings: SlidersHorizontal,
 };
@@ -133,6 +141,8 @@ export function SidebarNav() {
     const { isMobile } = useSidebar();
 
     const [projects, setProjects] = useState<Project[]>([]);
+    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+    const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false);
     const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: "superadmin" | "admin" | "user" }>({
         name: "User",
         email: "user@numpux.com",
@@ -151,13 +161,20 @@ export function SidebarNav() {
     // Current active projectId from URL query parameter ?projectId=...
     const activeProjectId = searchParams.get("projectId") || "";
 
-    const fetchProjects = () => {
-        apiFetch("/api/projects")
-            .then((res) => res.json())
-            .then((res) => {
-                if (res.data) setProjects(res.data);
-            })
-            .catch(() => { });
+    const fetchProjects = async () => {
+        const response = await apiFetch("/api/projects", { cache: "no-store" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.message || "Failed to load projects");
+        setProjects(body.data || []);
+        return (body.data || []) as Project[];
+    };
+
+    const fetchWorkspaces = async () => {
+        const response = await apiFetch("/api/workspaces", { cache: "no-store" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.message || "Failed to load workspaces");
+        setWorkspaces(body.data || []);
+        return (body.data || []) as Workspace[];
     };
 
     const fetchUserAndPrivileges = () => {
@@ -174,11 +191,13 @@ export function SidebarNav() {
     };
 
     useEffect(() => {
-        fetchProjects();
+        void fetchProjects().catch(() => setProjects([]));
+        void fetchWorkspaces().catch(() => setWorkspaces([]));
         fetchUserAndPrivileges();
 
         const handleMasterUpdate = () => {
-            fetchProjects();
+            void fetchProjects().catch(() => setProjects([]));
+            void fetchWorkspaces().catch(() => setWorkspaces([]));
             fetchUserAndPrivileges();
         };
         window.addEventListener("numpux_master_data_updated", handleMasterUpdate);
@@ -189,23 +208,47 @@ export function SidebarNav() {
     const hasSingleProject = projects.length === 1;
     const effectiveProjectId = activeProjectId || (hasSingleProject ? projects[0].id : "");
     const activeProject = projects.find((p) => p.id === effectiveProjectId);
+    const activeWorkspace = workspaces.find((workspace) => workspace.isActive) || workspaces[0];
+
+    const currentPageWithProject = (projectId?: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (projectId) params.set("projectId", projectId);
+        else params.delete("projectId");
+        const query = params.toString();
+        return query ? `${pathname}?${query}` : pathname;
+    };
 
     const handleSelectProject = (projectId: string) => {
         if (!projectId) {
-            if (pathname === "/tasks" || pathname === "/tasks/kanban" || pathname === "/dashboard") {
-                router.push(pathname);
-            } else {
-                router.push("/tasks");
-            }
+            router.push(currentPageWithProject());
             toast.info("Showing all projects");
         } else {
             const chosen = projects.find((p) => p.id === projectId);
-            if (pathname === "/tasks" || pathname === "/tasks/kanban" || pathname === "/dashboard") {
-                router.push(`${pathname}?projectId=${projectId}`);
-            } else {
-                router.push(`/tasks/kanban?projectId=${projectId}`);
-            }
+            if (activeWorkspace) localStorage.setItem(`numpux:last-project:${activeWorkspace.id}`, projectId);
+            router.push(currentPageWithProject(projectId));
             toast.success(`Project changed to ${chosen?.title || "Project"}`);
+        }
+    };
+
+    const handleSelectWorkspace = async (workspace: Workspace) => {
+        if (workspace.isActive || isSwitchingWorkspace) return;
+        setIsSwitchingWorkspace(true);
+        try {
+            const response = await apiFetch(`/api/workspaces/${workspace.id}/activate`, { method: "POST" });
+            const body = await response.json();
+            if (!response.ok) throw new Error(body.message || "Failed to change workspace");
+            resetApiStores();
+            setProjects([]);
+            const nextProjects = await fetchProjects();
+            const lastProjectId = localStorage.getItem(`numpux:last-project:${workspace.id}`);
+            const nextProject = nextProjects.find((project) => project.id === lastProjectId);
+            setWorkspaces((items) => items.map((item) => ({ ...item, isActive: item.id === workspace.id })));
+            toast.success(`Workspace changed to ${workspace.name}`);
+            window.location.assign(currentPageWithProject(nextProject?.id));
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to change workspace");
+        } finally {
+            setIsSwitchingWorkspace(false);
         }
     };
 
@@ -221,21 +264,21 @@ export function SidebarNav() {
 
     // Helper links with project context
     const boardHref = effectiveProjectId ? `/tasks/kanban?projectId=${effectiveProjectId}` : "/tasks/kanban";
-    const backlogHref = effectiveProjectId ? `/tasks?projectId=${effectiveProjectId}` : "/tasks";
+    const backlogHref = effectiveProjectId ? `/tasks/backlog?projectId=${effectiveProjectId}` : "/tasks/backlog";
     const summaryHref = effectiveProjectId ? `/dashboard?projectId=${effectiveProjectId}` : "/dashboard";
 
     const isBoardActive = pathname === "/tasks/kanban";
-    const isBacklogActive = pathname === "/tasks" && !isBoardActive;
+    const isBacklogActive = pathname === "/tasks/backlog";
     const isSummaryActive = pathname === "/dashboard";
     const isProjectsActive = pathname === "/projects" || pathname.startsWith("/projects/");
     const isSettingsActive = pathname === "/master";
 
     return (
         <>
-            <SidebarHeader className="flex h-14 flex-row items-center justify-between border-b border-border bg-white px-2 py-0">
+            <SidebarHeader className="h-14 border-b border-border bg-white px-2 py-1.5">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left outline-none hover:bg-muted group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
+                        <button disabled={isSwitchingWorkspace} className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left outline-none hover:bg-muted disabled:opacity-60 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
                                 {activeProject ? (
                                     activeProject.title.slice(0, 1).toUpperCase()
@@ -248,7 +291,7 @@ export function SidebarNav() {
                                     {activeProject ? activeProject.title : "All projects"}
                                 </p>
                                 <p className="truncate text-[10px] text-muted-foreground">
-                                    {activeProject ? (activeProject.category || "Project") : "Numpux workspace"}
+                                    {activeWorkspace?.name || "Workspace"}
                                 </p>
                             </div>
                             <CaretUpDown className="w-3.5 h-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden shrink-0" />
@@ -261,6 +304,34 @@ export function SidebarNav() {
                         side={isMobile ? "bottom" : "right"}
                         sideOffset={8}
                     >
+                        <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            Workspace
+                        </DropdownMenuLabel>
+                        {workspaces.map((workspace) => (
+                            <DropdownMenuItem
+                                key={workspace.id}
+                                onClick={() => void handleSelectWorkspace(workspace)}
+                                className={cn(
+                                    "flex cursor-pointer items-center justify-between rounded-lg p-2 text-xs font-medium",
+                                    workspace.isActive && "bg-primary/10 font-semibold text-primary"
+                                )}
+                            >
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted">
+                                        <Buildings className="h-3.5 w-3.5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="truncate">{workspace.name}</p>
+                                        <p className="text-[9px] capitalize text-muted-foreground">{workspace.role}</p>
+                                    </div>
+                                </div>
+                                {workspace.isActive && <Check className="h-4 w-4 shrink-0" />}
+                            </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuItem asChild>
+                            <Link href="/workspace" className="cursor-pointer text-xs text-muted-foreground">Manage workspaces</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="my-1 bg-border/60" />
                         <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                             Projects
                         </DropdownMenuLabel>
@@ -386,7 +457,7 @@ export function SidebarNav() {
                                     } else {
                                         isItemActive =
                                             pathname === itemPath ||
-                                            (itemPath !== "/" && pathname.startsWith(itemPath) && itemPath !== "/tasks");
+                                            (itemPath !== "/" && pathname.startsWith(itemPath) && itemPath !== "/tasks/backlog");
                                     }
 
                                     const isSubActive = subItems.some((sub) => {
@@ -398,7 +469,7 @@ export function SidebarNav() {
                                     let href = item.path;
                                     if (
                                         effectiveProjectId &&
-                                        (item.path === "/tasks/kanban" || item.path === "/tasks" || item.path === "/dashboard")
+                                        (item.path === "/tasks/kanban" || item.path === "/tasks/backlog" || item.path === "/dashboard")
                                     ) {
                                         href = `${item.path}?projectId=${effectiveProjectId}`;
                                     }
@@ -450,7 +521,7 @@ export function SidebarNav() {
                                                                 let subHref = sub.path;
                                                                 if (
                                                                     effectiveProjectId &&
-                                                                    (sub.path === "/tasks/kanban" || sub.path === "/tasks" || sub.path === "/dashboard")
+                                                                    (sub.path === "/tasks/kanban" || sub.path === "/tasks/backlog" || sub.path === "/dashboard")
                                                                 ) {
                                                                     subHref = `${sub.path}?projectId=${effectiveProjectId}`;
                                                                 }
@@ -541,18 +612,6 @@ export function SidebarNav() {
                         >
                             <User className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
                             Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => router.push("/master/menus")}
-                            className="cursor-pointer text-xs p-2 flex items-center justify-between"
-                        >
-                            <div className="flex items-center">
-                                <SlidersHorizontal className="w-3.5 h-3.5 mr-2 text-primary" />
-                                <span>Workspace setup</span>
-                            </div>
-                            <span className="text-[9px] uppercase tracking-wider font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
-                                Admin
-                            </span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => setSettingsModalOpen(true)}

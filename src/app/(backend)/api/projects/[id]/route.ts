@@ -1,11 +1,10 @@
-import { validatePublicKey, validateAdminAuth, getOptionalAuthUser } from "@/lib/api-auth";
+import { validateAdminAuth } from "@/lib/api-auth";
 import {
   badRequestResponse,
   errorResponse,
   internalServerErrorResponse,
   notFoundResponse,
   successResponse,
-  unauthorizedResponse,
 } from "@/lib/response";
 import { updateProjectSchema } from "../schema";
 import { findProjectById, updateProjectById, deleteProjectById } from "../query";
@@ -38,7 +37,8 @@ export async function PUT(request: Request, { params }: Props) {
   const { id } = await params;
   try {
     const access = await findProjectAccess(auth.user.userId, id);
-    if (!access || !canManageProject(access.projectRole)) return errorResponse("Only project owners and administrators can update project settings", 403);
+    if (!access) return notFoundResponse(`Project #${id} not found`);
+    if (!canManageProject(access.projectRole)) return errorResponse("Only project owners and administrators can update project settings", 403);
     const body = await request.json();
     const parsed = updateProjectSchema.safeParse(body);
 
@@ -73,7 +73,8 @@ export async function DELETE(request: Request, { params }: Props) {
   const { id } = await params;
   try {
     const access = await findProjectAccess(auth.user.userId, id);
-    if (!access || access.projectRole !== "owner") return errorResponse("Only the project owner can delete this project", 403);
+    if (!access) return notFoundResponse(`Project #${id} not found`);
+    if (access.projectRole !== "owner") return errorResponse("Only the project owner can delete this project", 403);
     const deleted = await deleteProjectById(id, auth.user?.userId);
     if (!deleted) {
       return notFoundResponse(`Project #${id} not found or unauthorized`);

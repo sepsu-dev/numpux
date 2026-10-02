@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     workspaceName: invitation.workspaceName,
     projectName: invitation.projectName,
     projectRole: invitation.projectRole,
+    workspaceRole: invitation.workspaceRole,
     inviterName: invitation.inviterName,
     status: isExpired && invitation.status === "pending" ? "expired" : invitation.status,
     expiresAt: invitation.expiresAt,
@@ -34,9 +35,9 @@ export async function POST(request: Request) {
     await createNotification({
       userId: auth.user.userId,
       title: "Invitation accepted",
-      message: "You now have access to the invited workspace and project.",
-      link: accepted.projectId ? `/tasks/kanban?projectId=${accepted.projectId}` : "/projects",
-    });
+      message: accepted.projectId ? "You now have access to the invited workspace and project." : "You now have access to the invited workspace.",
+      link: accepted.projectId ? `/tasks/kanban?projectId=${accepted.projectId}` : "/workspace",
+    }).catch((notificationError) => console.error("Invitation accepted notification failed:", notificationError));
     return successResponse(accepted, "Invitation accepted successfully");
   } catch (error) {
     return badRequestResponse(error instanceof Error ? error.message : "Failed to accept invitation");

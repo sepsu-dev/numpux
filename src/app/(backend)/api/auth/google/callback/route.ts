@@ -2,37 +2,47 @@ import { NextResponse } from "next/server";
 import { initDb } from "@/db";
 import { findOrCreateOAuthUser, getUserSessionVersion, markUserLogin } from "@/lib/user-db";
 import { createSession } from "@/lib/session";
+import { cookies } from "next/headers";
+import { isValidOAuthState, OAUTH_STATE_COOKIE } from "@/lib/oauth-state";
+import { getOAuthConfig } from "@/lib/env";
+import { z } from "zod";
+
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_USER_INFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+const googleTokenSchema = z.object({ access_token: z.string().min(1) });
+const googleUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).optional(),
+});
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const oauth = getOAuthConfig();
+  if (!oauth) return NextResponse.json({ error: "Google OAuth is not configured" }, { status: 503 });
+  const loginUrl = new URL("/login", oauth.appUrl);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const state = searchParams.get("state");
+  const cookieStore = await cookies();
+  const expectedState = cookieStore.get(OAUTH_STATE_COOKIE)?.value;
+  cookieStore.delete(OAUTH_STATE_COOKIE);
 
-  if (error || !code) {
-    return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error || "Google authentication was cancelled")}`, origin)
-    );
+  if (error || !code || !isValidOAuthState(state, expectedState)) {
+    loginUrl.searchParams.set("error", error || (!code ? "Google authentication was cancelled" : "Invalid OAuth state"));
+    return NextResponse.redirect(loginUrl);
   }
 
-  const clientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = `${origin}/api/auth/google/callback`;
-
-  if (!clientId || !clientSecret) {
-    return NextResponse.redirect(
-      new URL("/login?error=Google+OAuth+credentials+are+missing+on+server", origin)
-    );
-  }
+  const redirectUri = new URL("/api/auth/google/callback", oauth.appUrl).toString();
 
   try {
     // 1. Exchange authorization code for tokens
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
-        client_id: clientId,
-        client_secret: clientSecret,
+        client_id: oauth.clientId,
+        client_secret: oauth.clientSecret,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }),
@@ -41,38 +51,25 @@ export async function GET(request: Request) {
     if (!tokenResponse.ok) {
       const errData = await tokenResponse.text();
       console.error("Failed to exchange Google token:", errData);
-      return NextResponse.redirect(
-        new URL("/login?error=Failed+to+exchange+Google+authorization+token", origin)
-      );
+      loginUrl.searchParams.set("error", "Failed to exchange Google authorization token");
+      return NextResponse.redirect(loginUrl);
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = googleTokenSchema.parse(await tokenResponse.json());
 
     // 2. Fetch user information from Google UserInfo endpoint
-    const userInfoResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    const userInfoResponse = await fetch(GOOGLE_USER_INFO_URL, {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
       },
     });
 
     if (!userInfoResponse.ok) {
-      return NextResponse.redirect(
-        new URL("/login?error=Failed+to+fetch+user+profile+from+Google", origin)
-      );
+      loginUrl.searchParams.set("error", "Failed to fetch user profile from Google");
+      return NextResponse.redirect(loginUrl);
     }
 
-    const googleUser = (await userInfoResponse.json()) as {
-      email?: string;
-      name?: string;
-      picture?: string;
-      sub?: string;
-    };
-
-    if (!googleUser.email) {
-      return NextResponse.redirect(
-        new URL("/login?error=Google+account+did+not+provide+an+email+address", origin)
-      );
-    }
+    const googleUser = googleUserSchema.parse(await userInfoResponse.json());
 
     // 3. Sync or create user in PostgreSQL
     await initDb();
@@ -95,11 +92,10 @@ export async function GET(request: Request) {
     });
 
     // 5. Redirect successfully to dashboard
-    return NextResponse.redirect(new URL("/dashboard", origin));
+    return NextResponse.redirect(new URL("/dashboard", oauth.appUrl));
   } catch (err) {
     console.error("Google OAuth error:", err);
-    return NextResponse.redirect(
-      new URL("/login?error=An+unexpected+error+occurred+during+Google+sign+in", origin)
-    );
+    loginUrl.searchParams.set("error", "An unexpected error occurred during Google sign in");
+    return NextResponse.redirect(loginUrl);
   }
 }

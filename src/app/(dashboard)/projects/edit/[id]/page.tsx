@@ -12,13 +12,6 @@ import Link from "next/link";
 import type { Project } from "@/types";
 import { apiFetch } from "@/lib/api-client";
 import { useMasterDataStore } from "@/stores/master-data-store";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 
 export default function EditProjectPage() {
     const router = useRouter();
@@ -28,7 +21,7 @@ export default function EditProjectPage() {
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const { categories, projectStatuses, loadAll } = useMasterDataStore();
+    const { categories, loadAll } = useMasterDataStore();
 
     useEffect(() => { void loadAll(); }, [loadAll]);
 
@@ -48,7 +41,6 @@ export default function EditProjectPage() {
         const formData = new FormData(e.currentTarget);
         const title = formData.get("title") as string;
         const category = formData.get("category") as string;
-        const status = formData.get("status") as string;
         const description = formData.get("description") as string;
 
         setIsSaving(true);
@@ -56,7 +48,7 @@ export default function EditProjectPage() {
             const res = await apiFetch(`/api/projects/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title, category, status, description }),
+                body: JSON.stringify({ title, category, description }),
             });
             if (!res.ok) throw new Error("Failed to save");
             toast.success(`Project "${title}" updated successfully!`);
@@ -85,7 +77,7 @@ export default function EditProjectPage() {
                 </Link>
                 <div>
                     <h2 className="text-2xl font-bold text-foreground tracking-tight">Edit project</h2>
-                    <p className="text-muted-foreground text-xs mt-0.5">Update the project name, status, category, and description.</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">Update the project name, category, and description.</p>
                 </div>
             </div>
 
@@ -103,22 +95,7 @@ export default function EditProjectPage() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="p-status" className="font-semibold text-xs text-foreground px-0.5">Status</Label>
-                                <input type="hidden" name="status" value={project?.status || projectStatuses[0]?.id || ""} />
-                                <Select
-                                    value={project?.status || projectStatuses[0]?.id || ""}
-                                    onValueChange={(val: any) => setProject((prev) => prev ? { ...prev, status: val } : null)}
-                                >
-                                    <SelectTrigger className="h-10 w-full rounded-lg border border-border bg-white px-3 text-xs font-medium text-foreground shadow-none">
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent className="text-xs">
-                                        {projectStatuses.map((item) => <SelectItem key={item.id} value={item.id} className="text-xs cursor-pointer">{item.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div>
                             <div className="grid gap-1.5">
                                 <Label htmlFor="p-category" className="font-semibold text-xs text-foreground px-0.5">Category</Label>
                                 <select

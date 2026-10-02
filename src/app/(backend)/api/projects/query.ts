@@ -1,17 +1,20 @@
 import { pool } from "@/db";
 import type { Project } from "@/types";
 import type { CreateProjectInput, UpdateProjectInput } from "./schema";
+import { ensureActiveWorkspaceForUser } from "@/lib/workspace";
+import { availableProjectKey } from "@/lib/issue-keys";
 
-export async function findProjects(userId?: string): Promise<Project[]> {
+export async function findProjects(userId: string): Promise<Project[]> {
+  const workspace = await ensureActiveWorkspaceForUser(userId);
   let query = `
     SELECT 
       p.id, 
       p.user_id, 
       p.workspace_id,
+      p.key,
       p.title, 
       p.description, 
       p.category, 
-      p.status, 
       COUNT(t.id)::int as tasks,
       p.progress,
       COUNT(DISTINCT pm.id)::int as members_count,
@@ -22,20 +25,15 @@ export async function findProjects(userId?: string): Promise<Project[]> {
     LEFT JOIN project_members pm ON pm.project_id = p.id AND pm.deleted_at IS NULL
     LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.status = 'active' AND wm.deleted_at IS NULL
   `;
-  const params: any[] = [];
+  const params: unknown[] = [userId, workspace.id];
 
-  query += ` WHERE p.deleted_at IS NULL`;
-
-  if (userId) {
-    query += `
+  query += ` WHERE p.deleted_at IS NULL AND p.workspace_id = $2
       AND (
         p.user_id = $1 
         OR p.id IN (SELECT project_id FROM project_members WHERE user_id = $1 AND deleted_at IS NULL)
         OR p.workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = $1 AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL)
       )
     `;
-    params.push(userId);
-  }
 
   query += ` GROUP BY p.id ORDER BY p.created_at DESC;`;
 
@@ -43,11 +41,11 @@ export async function findProjects(userId?: string): Promise<Project[]> {
   return res.rows.map((row) => ({
     id: row.id,
     userId: row.user_id,
-    workspaceId: row.workspace_id || undefined,
+    workspaceId: row.workspace_id,
+    key: row.key,
     title: row.title,
     description: row.description || "",
     category: row.category || "",
-    status: row.status || "",
     tasks: row.tasks || 0,
     progress: row.progress || 0,
     membersCount: row.members_count || 0,
@@ -55,16 +53,17 @@ export async function findProjects(userId?: string): Promise<Project[]> {
   }));
 }
 
-export async function findProjectById(id: string, userId?: string): Promise<Project | null> {
+export async function findProjectById(id: string, userId: string): Promise<Project | null> {
+  const workspace = await ensureActiveWorkspaceForUser(userId);
   let query = `
     SELECT 
       p.id, 
       p.user_id, 
       p.workspace_id,
+      p.key,
       p.title, 
       p.description, 
       p.category, 
-      p.status, 
       COUNT(t.id)::int as tasks,
       p.progress,
       COUNT(DISTINCT pm.id)::int as members_count,
@@ -74,20 +73,16 @@ export async function findProjectById(id: string, userId?: string): Promise<Proj
     LEFT JOIN tasks t ON t.project_id = p.id AND t.deleted_at IS NULL
     LEFT JOIN project_members pm ON pm.project_id = p.id AND pm.deleted_at IS NULL
     LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.status = 'active' AND wm.deleted_at IS NULL
-    WHERE p.id = $1 AND p.deleted_at IS NULL
+    WHERE p.id = $1 AND p.deleted_at IS NULL AND p.workspace_id = $3
   `;
-  const params: any[] = [id];
-
-  if (userId) {
-    query += `
+  const params: unknown[] = [id, userId, workspace.id];
+  query += `
       AND (
         p.user_id = $2 
         OR p.id IN (SELECT project_id FROM project_members WHERE user_id = $2 AND deleted_at IS NULL)
         OR p.workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = $2 AND role IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL)
       )
     `;
-    params.push(userId);
-  }
 
   query += ` GROUP BY p.id;`;
 
@@ -97,11 +92,11 @@ export async function findProjectById(id: string, userId?: string): Promise<Proj
   return {
     id: row.id,
     userId: row.user_id,
-    workspaceId: row.workspace_id || undefined,
+    workspaceId: row.workspace_id,
+    key: row.key,
     title: row.title,
     description: row.description || "",
     category: row.category || "",
-    status: row.status || "",
     tasks: row.tasks || 0,
     progress: row.progress || 0,
     membersCount: row.members_count || 0,
@@ -109,63 +104,50 @@ export async function findProjectById(id: string, userId?: string): Promise<Proj
   };
 }
 
-export async function insertProject(data: CreateProjectInput, userId?: string): Promise<Project> {
+export async function insertProject(data: CreateProjectInput, userId: string): Promise<Project> {
   const id = crypto.randomUUID();
-  let workspaceId: string | null = null;
-  if (userId) {
-    const { ensurePrimaryWorkspace } = await import("@/lib/workspace");
-    const userResult = await pool.query("SELECT name FROM users WHERE id = $1", [userId]);
-    const workspace = await ensurePrimaryWorkspace(userId, userResult.rows[0]?.name || "My");
-    workspaceId = workspace.id;
-  }
-  const res = await pool.query(
-    `INSERT INTO projects (id, user_id, workspace_id, title, description, category, status, tasks_count, progress)
+  const workspace = await ensureActiveWorkspaceForUser(userId);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [workspace.id]);
+    const existingKeys = await client.query(
+      "SELECT key FROM projects WHERE workspace_id = $1 AND deleted_at IS NULL",
+      [workspace.id]
+    );
+    const projectKey = availableProjectKey(data.title, existingKeys.rows.map((item) => item.key));
+    const res = await client.query(
+      `INSERT INTO projects (id, user_id, workspace_id, key, title, description, category, tasks_count, progress)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [
-      id,
-      userId || null,
-      workspaceId,
-      data.title,
-      data.description || "",
-      data.category,
-      data.status,
-      data.tasks || 0,
-      data.progress || 0,
-    ]
-  );
-  const row = res.rows[0];
-
-  // Auto assign creator as 'Owner' in project_members
-  if (userId) {
-    const memberId = crypto.randomUUID();
-    await pool.query(
+      [id, userId, workspace.id, projectKey, data.title, data.description || "", data.category, data.tasks || 0, data.progress || 0]
+    );
+    const row = res.rows[0];
+    await client.query(
       `INSERT INTO project_members (id, project_id, user_id, role)
        VALUES ($1, $2, $3, 'owner')
        ON CONFLICT (project_id, user_id) 
        DO UPDATE SET role = 'owner', deleted_at = NULL, updated_at = NOW()`,
-      [memberId, id, userId]
-    ).catch(() => {});
+      [crypto.randomUUID(), id, userId]
+    );
+    await client.query("COMMIT");
+    return {
+      id: row.id, userId: row.user_id, workspaceId: row.workspace_id, key: row.key,
+      title: row.title, description: row.description || "", category: row.category || "",
+      tasks: row.tasks_count || 0, progress: row.progress || 0, membersCount: 1,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  return {
-    id: row.id,
-    userId: row.user_id,
-    workspaceId: row.workspace_id || undefined,
-    title: row.title,
-    description: row.description || "",
-    category: row.category || "",
-    status: row.status || "",
-    tasks: row.tasks_count || 0,
-    progress: row.progress || 0,
-    membersCount: 1,
-  };
 }
 
 export async function updateProjectById(
   id: string,
   data: UpdateProjectInput,
-  userId?: string
+  userId: string
 ): Promise<Project | null> {
   const existing = await findProjectById(id, userId);
   if (!existing) return null;
@@ -185,10 +167,6 @@ export async function updateProjectById(
     fields.push(`category = $${params.length + 1}`);
     params.push(data.category);
   }
-  if (data.status !== undefined) {
-    fields.push(`status = $${params.length + 1}`);
-    params.push(data.status);
-  }
   if (data.progress !== undefined) {
     fields.push(`progress = $${params.length + 1}`);
     params.push(data.progress);
@@ -204,7 +182,7 @@ export async function updateProjectById(
   return findProjectById(id, userId);
 }
 
-export async function deleteProjectById(id: string, userId?: string): Promise<boolean> {
+export async function deleteProjectById(id: string, userId: string): Promise<boolean> {
   let query = "UPDATE projects SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL";
   const params: any[] = [id];
   if (userId) {

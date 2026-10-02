@@ -7,23 +7,7 @@ import { toast } from "sonner";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
 import { SettingsModal } from "@/components/dashboard/settings-modal";
-
-function getPageTitle(pathname: string) {
-  if (pathname === "/dashboard") return "Dashboard";
-  if (pathname === "/projects") return "Projects";
-  if (pathname === "/monitoring") return "Monitoring";
-  if (pathname === "/reports") return "Reports";
-  if (pathname === "/notifications") return "Notifications";
-  if (pathname.startsWith("/projects/new")) return "New project";
-  if (pathname.startsWith("/projects/edit")) return "Edit project";
-  if (pathname === "/tasks") return "Tasks";
-  if (pathname === "/tasks/kanban") return "Board";
-  if (pathname.startsWith("/tasks/new")) return "New task";
-  if (pathname.startsWith("/tasks/edit")) return "Edit task";
-  if (pathname === "/profile") return "Profile";
-  if (pathname.startsWith("/master")) return "Workspace settings";
-  return "Numpux";
-}
+import { getPageTitle } from "@/lib/page-title";
 
 export function GlobalJiraHeader() {
   const pathname = usePathname();

@@ -44,11 +44,10 @@ export function ProjectFormModal({
 
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("");
-    const [status, setStatus] = useState("");
     const [isCustomCategory, setIsCustomCategory] = useState(false);
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { projectStatuses, loadAll } = useMasterDataStore();
+    const { loadAll } = useMasterDataStore();
 
     useEffect(() => { if (open) void loadAll(); }, [open, loadAll]);
 
@@ -56,17 +55,15 @@ export function ProjectFormModal({
         if (project) {
             setTitle(project.title || "");
             setCategory(project.category || categories[0] || "");
-            setStatus(project.status || projectStatuses[0]?.id || "");
             setDescription(project.description || "");
             setIsCustomCategory(!categories.includes(project.category || ""));
         } else {
             setTitle("");
             setCategory(categories[0] || "");
-            setStatus(projectStatuses[0]?.id || "");
             setDescription("");
             setIsCustomCategory(false);
         }
-    }, [project, open, categories, projectStatuses]);
+    }, [project, open, categories]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -85,7 +82,6 @@ export function ProjectFormModal({
                 title: title.trim(),
                 category: category.trim(),
                 description: description.trim(),
-                status,
             };
 
             const res = await apiFetch(endpoint, {
@@ -211,16 +207,6 @@ export function ProjectFormModal({
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-foreground">Project status</Label>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild><button type="button" className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-white px-3 text-xs font-medium"><span>{projectStatuses.find((item) => item.id === status)?.name || "Select status"}</span><CaretDown size={14} className="opacity-60" /></button></DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width] p-1 text-xs">
-                                    {projectStatuses.map((item) => <DropdownMenuItem key={item.id} onClick={() => setStatus(item.id)} className="cursor-pointer py-2"><span className={`mr-2 rounded border px-1.5 py-0.5 ${item.colorClass}`}>{item.name}</span>{status === item.id && <Check size={14} className="ml-auto text-primary" />}</DropdownMenuItem>)}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-
-                        <div className="space-y-1.5">
                             <Label htmlFor="proj-modal-desc" className="text-xs font-semibold text-foreground">
                                 Description
                             </Label>
@@ -248,7 +234,7 @@ export function ProjectFormModal({
                         <Button
                             type="submit"
                             size="sm"
-                            disabled={isSubmitting || !category || !status}
+                            disabled={isSubmitting || !category}
                             className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none"
                         >
                             {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Create project"}

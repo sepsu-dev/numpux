@@ -1,27 +1,26 @@
 import { create } from "zustand";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import type { MasterCategoryItem, MasterIssueTypeItem, MasterPriorityItem, MasterProjectStatusItem, MasterStatusItem } from "@/lib/master-data";
+import type { MasterCategoryItem, MasterIssueTypeItem, MasterPriorityItem, MasterStatusItem } from "@/lib/master-data";
 
-type Resource = "categories" | "issueTypes" | "priorities" | "statuses" | "projectStatuses";
-interface MasterDataPayload { categories: MasterCategoryItem[]; issueTypes: MasterIssueTypeItem[]; priorities: MasterPriorityItem[]; statuses: MasterStatusItem[]; projectStatuses: MasterProjectStatusItem[]; }
+type Resource = "categories" | "issueTypes" | "priorities" | "statuses";
+interface MasterDataPayload { categories: MasterCategoryItem[]; issueTypes: MasterIssueTypeItem[]; priorities: MasterPriorityItem[]; statuses: MasterStatusItem[]; }
 interface MasterDataState {
   categories: string[];
   categoryItems: MasterCategoryItem[];
   issueTypes: MasterIssueTypeItem[];
   priorities: MasterPriorityItem[];
   statuses: MasterStatusItem[];
-  projectStatuses: MasterProjectStatusItem[];
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
   hasLoaded: boolean;
+  reset: () => void;
   loadAll: (force?: boolean) => Promise<void>;
   loadCategories: () => Promise<void>;
   loadIssueTypes: () => Promise<void>;
   loadPriorities: () => Promise<void>;
   loadStatuses: () => Promise<void>;
-  loadProjectStatuses: () => Promise<void>;
   addCategory: (name: string) => Promise<boolean>;
   updateCategory: (idx: number, name: string) => Promise<boolean>;
   removeCategory: (name: string) => Promise<boolean>;
@@ -35,13 +34,10 @@ interface MasterDataState {
   updateStatus: (id: string, updates: Partial<Omit<MasterStatusItem, "id">>) => Promise<boolean>;
   reorderStatuses: (items: MasterStatusItem[]) => Promise<boolean>;
   removeStatus: (id: string) => Promise<boolean>;
-  addProjectStatus: (item: MasterProjectStatusItem) => Promise<boolean>;
-  updateProjectStatus: (id: string, updates: Partial<Omit<MasterProjectStatusItem, "id">>) => Promise<boolean>;
-  removeProjectStatus: (id: string) => Promise<boolean>;
 }
 
 function payloadToState(payload: MasterDataPayload) {
-  return { categoryItems: payload.categories, categories: payload.categories.map((item) => item.name), issueTypes: payload.issueTypes, priorities: payload.priorities, statuses: payload.statuses, projectStatuses: payload.projectStatuses };
+  return { categoryItems: payload.categories, categories: payload.categories.map((item) => item.name), issueTypes: payload.issueTypes, priorities: payload.priorities, statuses: payload.statuses };
 }
 
 async function readResponse(response: Response): Promise<{ data?: MasterDataPayload; message?: string }> {
@@ -49,6 +45,8 @@ async function readResponse(response: Response): Promise<{ data?: MasterDataPayl
   if (!response.ok) throw new Error(body.message || "Master data request failed");
   return body;
 }
+
+let generation = 0;
 
 export const useMasterDataStore = create<MasterDataState>((set, get) => {
   const mutate = async (method: "POST" | "PUT" | "DELETE", body: Record<string, unknown>, successMessage: string) => {
@@ -68,21 +66,26 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => {
 
   const loadAll = async (force = false) => {
     if (get().isLoading || (get().hasLoaded && !force)) return;
+    const requestGeneration = generation;
     set({ isLoading: true, error: null });
     try {
       const result = await readResponse(await apiFetch("/api/master-data", { cache: "no-store" }));
-      if (result.data) set({ ...payloadToState(result.data), hasLoaded: true });
+      if (requestGeneration === generation && result.data) set({ ...payloadToState(result.data), hasLoaded: true });
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : "Failed to load master data" });
-    } finally { set({ isLoading: false }); }
+      if (requestGeneration === generation) set({ error: error instanceof Error ? error.message : "Failed to load master data" });
+    } finally { if (requestGeneration === generation) set({ isLoading: false }); }
   };
 
   const resource = (name: Resource) => name;
   return {
-    categories: [], categoryItems: [], issueTypes: [], priorities: [], statuses: [], projectStatuses: [],
+    categories: [], categoryItems: [], issueTypes: [], priorities: [], statuses: [],
     isLoading: false, isSaving: false, error: null, hasLoaded: false,
+    reset: () => {
+      generation += 1;
+      set({ categories: [], categoryItems: [], issueTypes: [], priorities: [], statuses: [], isLoading: false, isSaving: false, error: null, hasLoaded: false });
+    },
     loadAll,
-    loadCategories: () => loadAll(), loadIssueTypes: () => loadAll(), loadPriorities: () => loadAll(), loadStatuses: () => loadAll(), loadProjectStatuses: () => loadAll(),
+    loadCategories: () => loadAll(), loadIssueTypes: () => loadAll(), loadPriorities: () => loadAll(), loadStatuses: () => loadAll(),
     addCategory: async (name) => {
       const trimmed = name.trim();
       if (!trimmed) return false;
@@ -131,8 +134,5 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => {
       } finally { set({ isSaving: false }); }
     },
     removeStatus: (id) => mutate("DELETE", { resource: resource("statuses"), id }, "Status was deleted"),
-    addProjectStatus: (item) => mutate("POST", { resource: resource("projectStatuses"), item }, `Project status "${item.name}" was added`),
-    updateProjectStatus: (id, updates) => mutate("PUT", { resource: resource("projectStatuses"), id, updates }, "Project status was updated"),
-    removeProjectStatus: (id) => mutate("DELETE", { resource: resource("projectStatuses"), id }, "Project status was deleted"),
   };
 });

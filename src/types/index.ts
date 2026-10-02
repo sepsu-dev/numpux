@@ -102,6 +102,9 @@ export type Task = {
   description?: string;
   createdAt?: string;
   assigneeId?: string;
+  sprintId?: string;
+  reporterId?: string;
+  backlogOrder?: number;
   assignee?: {
     id: string;
     name: string;
@@ -112,11 +115,11 @@ export type Task = {
 export type Project = {
   id: string;
   userId?: string;
-  workspaceId?: string;
+  workspaceId: string;
+  key?: string;
   title: string;
   description: string;
   category: string;
-  status: "Active" | "Planning" | "Completed" | (string & {});
   tasks: number;
   progress: number;
   membersCount?: number;

@@ -1,31 +1,9 @@
-import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "crypto";
+import { randomUUID } from "crypto";
 import { pool } from "@/db";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import type { User } from "@/types";
 
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16);
-  const derivedKey = scryptSync(password, salt, 64);
-  return `scrypt$${salt.toString("hex")}$${derivedKey.toString("hex")}`;
-}
-
-export function verifyPassword(password: string, storedHash: string): boolean {
-  try {
-    if (storedHash.startsWith("scrypt$")) {
-      const [, saltHex, keyHex] = storedHash.split("$");
-      if (!saltHex || !keyHex) return false;
-      const expected = Buffer.from(keyHex, "hex");
-      const actual = scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
-      return expected.length === actual.length && timingSafeEqual(expected, actual);
-    }
-
-    // Backward compatibility for legacy, unsalted SHA-256 hashes.
-    const legacy = Buffer.from(createHash("sha256").update(password).digest("hex"), "utf8");
-    const expected = Buffer.from(storedHash, "utf8");
-    return legacy.length === expected.length && timingSafeEqual(legacy, expected);
-  } catch {
-    return false;
-  }
-}
+export { hashPassword, verifyPassword } from "@/lib/password";
 
 export async function verifyAndUpgradePassword(
   userId: string,
@@ -147,7 +125,7 @@ export async function findOrCreateOAuthUser(name: string, email: string): Promis
 
   // Generate secure random placeholder password hash for OAuth user
   const randomPass = randomUUID() + "-" + Date.now();
-  return createUser(name || email.split("@")[0], normalizedEmail, randomPass, "admin", "self_registered");
+  return createUser(name || email.split("@")[0], normalizedEmail, randomPass, "user", "self_registered");
 }
 
 export async function updateUserProfile(id: string, name: string): Promise<User | null> {

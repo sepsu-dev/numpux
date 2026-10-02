@@ -103,20 +103,12 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
       return { message: "Use the email address that received this invitation" };
     }
   }
-  const newUser = await createUser(
-    name.trim(),
-    email.trim().toLowerCase(),
-    password,
-    invitation ? "user" : "admin",
-    invitation ? "invited" : "self_registered",
-    invitation?.invitedBy || null
-  );
-  let acceptedProjectId: string | null = null;
-  if (invitationToken) {
-    const { acceptInvitation } = await import("@/lib/invitations");
-    acceptedProjectId = (await acceptInvitation(invitationToken, { id: newUser.id, email: newUser.email })).projectId;
-  }
-  await markUserLogin(newUser.id);
+  const invitedRegistration = invitationToken
+    ? await (await import("@/lib/invitations")).registerInvitedUser({ token: invitationToken, name, email, password })
+    : null;
+  const newUser = invitedRegistration?.user || await createUser(name.trim(), email.trim().toLowerCase(), password, "user", "self_registered");
+  const acceptedProjectId = invitedRegistration?.projectId || null;
+  if (!invitationToken) await markUserLogin(newUser.id);
   await createSession({
     userId: newUser.id,
     email: newUser.email,
@@ -187,10 +179,10 @@ export async function createTaskAction(formData: FormData) {
     session.userId
   );
 
-  revalidatePath("/tasks");
+  revalidatePath("/tasks/backlog");
   revalidatePath("/projects");
   revalidatePath("/dashboard");
-  redirect("/tasks");
+  redirect("/tasks/backlog");
 }
 
 export async function deleteTaskAction(id: string) {
@@ -198,7 +190,7 @@ export async function deleteTaskAction(id: string) {
   if (!session) return;
 
   await deleteTask(id, session.userId);
-  revalidatePath("/tasks");
+  revalidatePath("/tasks/backlog");
   revalidatePath("/projects");
   revalidatePath("/dashboard");
 }
@@ -216,7 +208,7 @@ export async function updateTaskStatusAction(id: string, status: string) {
   const access = await findProjectAccess(session.userId, task.projectId);
   if (!access || !canContributeToProject(access.projectRole)) return;
   await updateTask(id, { status: normalizedStatus as TaskStatus }, session.userId);
-  revalidatePath("/tasks");
+  revalidatePath("/tasks/backlog");
   revalidatePath("/dashboard");
 }
 
@@ -240,10 +232,8 @@ export async function createProjectAction(formData: FormData) {
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
 
   const { title, category, description } = parsed.data;
-  const projectStatus = (await findAllMasterData()).projectStatuses[0]?.id;
-  if (!projectStatus) return { errors: { category: ["Project status configuration is incomplete"] } };
   await createProject(
-    { title, category, description, status: projectStatus, tasks: 0, progress: 0 },
+    { title, category, description, tasks: 0, progress: 0 },
     session.userId
   );
   revalidatePath("/projects");
@@ -258,5 +248,5 @@ export async function deleteProjectAction(id: string) {
   await deleteProject(id, session.userId);
   revalidatePath("/projects");
   revalidatePath("/dashboard");
-  revalidatePath("/tasks");
+  revalidatePath("/tasks/backlog");
 }

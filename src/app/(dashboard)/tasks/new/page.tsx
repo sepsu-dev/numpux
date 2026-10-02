@@ -94,7 +94,7 @@ export default function NewTaskPage() {
             }
 
             toast.success("Task created");
-            router.push(selectedProjectId ? `/tasks?projectId=${selectedProjectId}` : "/tasks");
+            router.push(selectedProjectId ? `/tasks/backlog?projectId=${selectedProjectId}` : "/tasks/backlog");
             router.refresh();
         } catch (err: any) {
             toast.error(err.message || "Failed to save task.");
@@ -106,7 +106,7 @@ export default function NewTaskPage() {
     return (
         <div className="space-y-6 max-w-3xl">
             <div className="flex items-center gap-3">
-                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none cursor-pointer">
+                <Link href="/tasks/backlog" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none cursor-pointer">
                     <ArrowLeft size={15} />
                 </Link>
                 <div>

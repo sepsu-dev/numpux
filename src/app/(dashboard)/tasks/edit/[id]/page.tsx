@@ -88,7 +88,7 @@ export default function EditTaskPage() {
             });
             if (!res.ok) throw new Error("Failed to save");
             toast.success("Task updated successfully!");
-            router.push("/tasks");
+            router.push("/tasks/backlog");
             router.refresh();
         } catch {
             toast.error("Failed to update task.");
@@ -108,7 +108,7 @@ export default function EditTaskPage() {
     return (
         <div className="space-y-6 max-w-3xl">
             <div className="flex items-center gap-3">
-                <Link href="/tasks" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none cursor-pointer">
+                <Link href="/tasks/backlog" className="p-2 hover:bg-muted/70 rounded-lg text-foreground transition-colors border border-border bg-card shadow-none cursor-pointer">
                     <ArrowLeft size={15} />
                 </Link>
                 <div>

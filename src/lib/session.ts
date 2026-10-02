@@ -2,10 +2,10 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getEncodedSessionSecret } from "@/lib/session-secret";
+import { getSessionConfig } from "@/lib/env";
 import { pool } from "@/db";
 
 const SESSION_COOKIE = "session";
-const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
 export type SessionPayload = {
   userId: string;
@@ -16,10 +16,11 @@ export type SessionPayload = {
 };
 
 export async function encrypt(payload: SessionPayload) {
+  const { SESSION_TTL_SECONDS } = getSessionConfig();
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime(Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS)
     .sign(getEncodedSessionSecret());
 }
 
@@ -35,12 +36,13 @@ export async function decrypt(session: string | undefined = "") {
 }
 
 export async function createSession(payload: SessionPayload) {
+  const { SESSION_TTL_SECONDS } = getSessionConfig();
   const session = await encrypt(payload);
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    expires: new Date(Date.now() + SEVEN_DAYS),
+    maxAge: SESSION_TTL_SECONDS,
     sameSite: "lax",
     path: "/",
   });

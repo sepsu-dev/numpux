@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import {
     Sidebar,
     SidebarInset,
@@ -7,12 +8,15 @@ import {
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { GlobalJiraHeader } from "@/components/dashboard/global-jira-header";
 import { MonitoringHeartbeat } from "@/components/dashboard/monitoring-heartbeat";
+import { getSession } from "@/lib/session";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    if (!(await getSession())) redirect("/login");
+
     return (
         <SidebarProvider>
             <MonitoringHeartbeat />

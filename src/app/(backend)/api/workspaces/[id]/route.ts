@@ -2,6 +2,7 @@ import { pool } from "@/db";
 import { validateAdminAuth } from "@/lib/api-auth";
 import { badRequestResponse, errorResponse, internalServerErrorResponse, notFoundResponse, successResponse } from "@/lib/response";
 import { canManageWorkspace } from "@/lib/workspace";
+import { recordAudit } from "@/lib/audit";
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -40,4 +41,40 @@ export async function PATCH(request: Request, { params }: Props) {
   } catch (error) {
     return internalServerErrorResponse("Failed to update workspace");
   }
+}
+
+export async function DELETE(request: Request, { params }: Props) {
+  const auth = await validateAdminAuth(request);
+  if (!auth.isValid) return errorResponse(auth.error || "Unauthorized", auth.statusCode || 401);
+  const { id } = await params;
+  const client = await pool.connect();
+  let name = "";
+  let fallbackWorkspaceId: string | null = null;
+  try {
+    await client.query("BEGIN");
+    const workspace = await client.query(`SELECT w.name FROM workspaces w JOIN workspace_members wm ON wm.workspace_id = w.id WHERE w.id = $1 AND wm.user_id = $2 AND wm.role = 'owner' AND wm.status = 'active' AND wm.deleted_at IS NULL AND w.deleted_at IS NULL FOR UPDATE OF w`, [id, auth.user.userId]);
+    if (!workspace.rows.length) { await client.query("ROLLBACK"); return errorResponse("Only the workspace owner can delete it", 403); }
+    name = workspace.rows[0].name;
+    const projects = await client.query(`SELECT COUNT(*)::int AS count FROM projects WHERE workspace_id = $1`, [id]);
+    if (projects.rows[0].count > 0) { await client.query("ROLLBACK"); return badRequestResponse("Delete or permanently remove every project before deleting this workspace"); }
+    const fallback = await client.query(`SELECT w.id FROM workspace_members wm JOIN workspaces w ON w.id = wm.workspace_id WHERE wm.user_id = $1 AND wm.workspace_id <> $2 AND wm.status = 'active' AND wm.deleted_at IS NULL AND w.deleted_at IS NULL ORDER BY CASE wm.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'member' THEN 3 ELSE 4 END, wm.joined_at LIMIT 1`, [auth.user.userId, id]);
+    fallbackWorkspaceId = fallback.rows[0]?.id || null;
+    if (!fallbackWorkspaceId) {
+      fallbackWorkspaceId = crypto.randomUUID();
+      const personalName = `${auth.user.name.trim() || "My"}'s Workspace`;
+      const slug = `workspace-${auth.user.userId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12).toLowerCase()}-${fallbackWorkspaceId.slice(0, 8)}`;
+      await client.query(`INSERT INTO workspaces (id, name, slug, created_by) VALUES ($1, $2, $3, $4)`, [fallbackWorkspaceId, personalName, slug, auth.user.userId]);
+      await client.query(`INSERT INTO workspace_members (id, workspace_id, user_id, role, status) VALUES ($1, $2, $3, 'owner', 'active')`, [crypto.randomUUID(), fallbackWorkspaceId, auth.user.userId]);
+    }
+    await client.query(`UPDATE users SET active_workspace_id = $2, updated_at = NOW() WHERE id = $1 AND active_workspace_id = $3`, [auth.user.userId, fallbackWorkspaceId, id]);
+    await client.query(`DELETE FROM workspaces WHERE id = $1`, [id]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("DELETE /api/workspaces/[id] error:", error);
+    return internalServerErrorResponse("Failed to delete workspace");
+  } finally { client.release(); }
+  await recordAudit({ userId: auth.user.userId, userName: auth.user.name, action: "workspace_deleted", entityType: "workspace", entityId: id, summary: `Deleted workspace ${name}`, metadata: { fallbackWorkspaceId } })
+    .catch((auditError) => console.error("Workspace deletion audit failed:", auditError));
+  return successResponse({ id, activeWorkspaceId: fallbackWorkspaceId }, "Workspace deleted");
 }

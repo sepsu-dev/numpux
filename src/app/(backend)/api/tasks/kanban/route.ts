@@ -1,11 +1,10 @@
-import { validatePublicKey, validateAdminAuth, getOptionalAuthUser } from "@/lib/api-auth";
+import { validateAdminAuth } from "@/lib/api-auth";
 import {
   badRequestResponse,
   errorResponse,
   internalServerErrorResponse,
   notFoundResponse,
   successResponse,
-  unauthorizedResponse,
 } from "@/lib/response";
 import { kanbanPatchSchema } from "../schema";
 import { findTasks, updateTaskById } from "../query";

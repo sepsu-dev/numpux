@@ -1,27 +1,35 @@
 import { NextResponse } from "next/server";
+import { createOAuthState, OAUTH_STATE_COOKIE } from "@/lib/oauth-state";
+import { getOAuthConfig } from "@/lib/env";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const redirectUri = `${origin}/api/auth/google/callback`;
-  const clientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
-  if (!clientId) {
-    // If Google Client ID is not configured yet, redirect with helpful notification message
-    return NextResponse.redirect(
-      new URL(
-        "/login?error=Google+OAuth+credentials+not+configured.+Please+set+AUTH_GOOGLE_ID+and+AUTH_GOOGLE_SECRET+in+.env.local",
-        origin
-      )
-    );
+export async function GET() {
+  const oauth = getOAuthConfig();
+
+  if (!oauth) {
+    return NextResponse.json({ error: "Google OAuth is not configured" }, { status: 503 });
   }
 
-  const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  googleAuthUrl.searchParams.set("client_id", clientId);
+  const redirectUri = new URL("/api/auth/google/callback", oauth.appUrl).toString();
+  const googleAuthUrl = new URL(GOOGLE_AUTH_URL);
+  googleAuthUrl.searchParams.set("client_id", oauth.clientId);
   googleAuthUrl.searchParams.set("redirect_uri", redirectUri);
   googleAuthUrl.searchParams.set("response_type", "code");
   googleAuthUrl.searchParams.set("scope", "openid email profile");
   googleAuthUrl.searchParams.set("access_type", "offline");
   googleAuthUrl.searchParams.set("prompt", "consent");
+  const state = createOAuthState();
+  googleAuthUrl.searchParams.set("state", state);
 
-  return NextResponse.redirect(googleAuthUrl.toString());
+  const response = NextResponse.redirect(googleAuthUrl.toString());
+  response.cookies.set(OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: OAUTH_STATE_TTL_SECONDS,
+    path: "/",
+  });
+  return response;
 }

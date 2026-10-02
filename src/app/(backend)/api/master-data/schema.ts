@@ -5,7 +5,6 @@ export const masterResourceSchema = z.enum([
   "issueTypes",
   "priorities",
   "statuses",
-  "projectStatuses",
 ]);
 
 const baseItemSchema = z.object({
@@ -44,15 +43,6 @@ export const createMasterDataSchema = z.discriminatedUnion("resource", [
       dotColor: z.string().min(1).max(100),
       badgeClass: z.string().min(1).max(500),
       headerBorder: z.string().min(1).max(100),
-      isCompleted: z.boolean(),
-    }),
-  }),
-  z.object({
-    resource: z.literal("projectStatuses"),
-    item: baseItemSchema.extend({
-      description: z.string().max(500).optional(),
-      colorClass: z.string().min(1).max(500),
-      order: z.number().int().min(1),
       isCompleted: z.boolean(),
     }),
   }),

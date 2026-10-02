@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ListChecks, NavigationArrow, Sun, User } from "@phosphor-icons/react";
+import { ArrowRight, ListChecks, NavigationArrow, User } from "@phosphor-icons/react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface SettingsModalProps {
@@ -12,7 +12,7 @@ interface SettingsModalProps {
 const links = [
   { href: "/profile", icon: User, title: "Profile", text: "Update your name and password." },
   { href: "/master/menus", icon: NavigationArrow, title: "Navigation", text: "Organize the links shown in the sidebar." },
-  { href: "/master/statuses", icon: ListChecks, title: "Task setup", text: "Manage workflow statuses, task types, and priorities." },
+  { href: "/master/statuses", icon: ListChecks, title: "Statuses", text: "Manage workflow columns used on the board." },
 ];
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
@@ -26,18 +26,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </SheetHeader>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto p-6">
-          <section>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Appearance</p>
-            <div className="flex items-start gap-3 border border-border bg-background p-4">
-              <Sun size={18} className="mt-0.5 shrink-0 text-primary" />
-              <div>
-                <p className="text-sm font-medium">Light theme</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">Numpux uses one light theme so every screen stays consistent.</p>
-              </div>
-            </div>
-          </section>
-
+        <div className="flex-1 overflow-y-auto p-6">
           <section>
             <p className="mb-2 text-xs font-medium text-muted-foreground">Manage</p>
             <div className="divide-y divide-border border-y border-border">

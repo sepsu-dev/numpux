@@ -134,13 +134,13 @@ export default function MasterIssueTypesPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Task types</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Issue Types</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredIssueTypes.length} {filteredIssueTypes.length === 1 ? "type" : "types"}
                         </span>
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
-                        Define the task types and icons available across lists and boards.
+                        Define the issue types and icons available across lists and boards.
                     </p>
                 </div>
 
@@ -161,7 +161,7 @@ export default function MasterIssueTypesPage() {
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" size={14} />
                     <input
                         type="text"
-                        placeholder="Search task types"
+                        placeholder="Search issue types"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg focus:outline-none focus:border-primary/80 focus:ring-2 focus:ring-primary/20 transition-colors placeholder:text-muted-foreground/60"

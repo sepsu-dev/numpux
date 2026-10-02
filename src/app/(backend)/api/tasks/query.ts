@@ -2,6 +2,7 @@ import { pool } from "@/db";
 import type { Task, Priority, TaskStatus, IssueType, TaskActivity } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "./schema";
 import { createNotification } from "@/lib/notifications";
+import { reserveIssueKey } from "@/lib/issue-keys";
 
 export async function findTasks(userId?: string, projectId?: string): Promise<Task[]> {
   let query = `
@@ -18,6 +19,9 @@ export async function findTasks(userId?: string, projectId?: string): Promise<Ta
       t.status, 
       t.description, 
       t.created_at,
+      t.sprint_id,
+      t.reporter_id,
+      t.backlog_order,
       u.id as assignee_id, 
       u.name as assignee_name, 
       u.email as assignee_email
@@ -62,6 +66,9 @@ export async function findTasks(userId?: string, projectId?: string): Promise<Ta
     status: row.status as TaskStatus,
     description: row.description || undefined,
     createdAt: row.created_at,
+    sprintId: row.sprint_id || undefined,
+    reporterId: row.reporter_id || undefined,
+    backlogOrder: row.backlog_order == null ? undefined : Number(row.backlog_order),
     assigneeId: row.assignee_id || undefined,
     assignee: row.assignee_id
       ? {
@@ -88,6 +95,9 @@ export async function findTaskById(id: string, userId?: string): Promise<Task | 
       t.status, 
       t.description, 
       t.created_at,
+      t.sprint_id,
+      t.reporter_id,
+      t.backlog_order,
       u.id as assignee_id, 
       u.name as assignee_name, 
       u.email as assignee_email
@@ -123,6 +133,9 @@ export async function findTaskById(id: string, userId?: string): Promise<Task | 
     status: row.status as TaskStatus,
     description: row.description || undefined,
     createdAt: row.created_at,
+    sprintId: row.sprint_id || undefined,
+    reporterId: row.reporter_id || undefined,
+    backlogOrder: row.backlog_order == null ? undefined : Number(row.backlog_order),
     assigneeId: row.assignee_id || undefined,
     assignee: row.assignee_id
       ? {
@@ -137,37 +150,25 @@ export async function findTaskById(id: string, userId?: string): Promise<Task | 
 export async function insertTask(data: CreateTaskInput, userId?: string): Promise<Task> {
   const id = crypto.randomUUID();
 
-  // Generate task key
-  const countRes = await pool.query("SELECT COUNT(*) FROM tasks WHERE project_id = $1", [data.projectId]);
-  const taskNumber = parseInt(countRes.rows[0].count, 10) + 1;
-  const taskKey = `NUM-${taskNumber}`;
-
-  // Get project title
-  let projTitle = data.project || "Project";
-  const projRes = await pool.query("SELECT title FROM projects WHERE id = $1", [data.projectId]);
-  if (projRes.rows.length > 0) {
-    projTitle = projRes.rows[0].title;
+  const client = await pool.connect();
+  let taskKey = "";
+  try {
+    await client.query("BEGIN");
+    const reserved = await reserveIssueKey(client, data.projectId);
+    taskKey = reserved.key;
+    await client.query(
+      `INSERT INTO tasks (
+        id, user_id, reporter_id, project_id, title, project_name, priority, due_date, status, description, assignee_id, task_key, issue_type, backlog_order
+      ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, userId || null, data.projectId, data.title, reserved.projectTitle, data.priority, data.date || null, data.status, data.description || null, data.assigneeId || null, taskKey, data.issueType, reserved.number]
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  await pool.query(
-    `INSERT INTO tasks (
-      id, user_id, project_id, title, project_name, priority, due_date, status, description, assignee_id, task_key, issue_type
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [
-      id,
-      userId || null,
-      data.projectId,
-      data.title,
-      projTitle,
-      data.priority,
-      data.date || null,
-      data.status,
-      data.description || null,
-      data.assigneeId || null,
-      taskKey,
-      data.issueType,
-    ]
-  );
 
   await recordTaskActivity(id, userId, "created", `Created issue ${taskKey}: "${data.title}"`);
   if (data.assigneeId && data.assigneeId !== userId) {

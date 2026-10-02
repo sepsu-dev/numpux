@@ -159,13 +159,13 @@ export default function MasterStatusesPage() {
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold tracking-tight text-foreground">Task statuses</h2>
+                        <h2 className="text-2xl font-bold tracking-tight text-foreground">Statuses</h2>
                         <span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                             {filteredStatuses.length} {filteredStatuses.length === 1 ? "status" : "statuses"}
                         </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                        Define the workflow columns available on the task board.
+                        Define the workflow columns available on the board.
                     </p>
                 </div>
 

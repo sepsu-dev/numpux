@@ -13,7 +13,7 @@ async function getValidSession(request: NextRequest) {
   if (!session) return null;
   try {
     const { payload } = await jwtVerify(session, encodedKey, { algorithms: ["HS256"] });
-    return payload;
+    return payload.userId ? payload : null;
   } catch {
     return null;
   }

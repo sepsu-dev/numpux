@@ -1,9 +1,12 @@
-import { pool, initDb } from "./src/db/index";
-import { createHash } from "crypto";
+import { pool, initDb } from "./src/db";
+import { ensureActiveWorkspaceForUser } from "./src/lib/workspace";
+import { hashPassword } from "./src/lib/password";
 
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
+const seedPassword = process.env.SEED_USER_PASSWORD;
+if (!seedPassword || seedPassword.length < 12) {
+  throw new Error("SEED_USER_PASSWORD must contain at least 12 characters.");
 }
+const validatedSeedPassword: string = seedPassword;
 
 async function seedSepsuDev() {
   await initDb();
@@ -15,7 +18,7 @@ async function seedSepsuDev() {
 
   if (userRes.rows.length === 0) {
     const newId = crypto.randomUUID();
-    const pwHash = hashPassword("password123");
+    const pwHash = hashPassword(validatedSeedPassword);
     const insertRes = await pool.query(
       `INSERT INTO users (id, name, email, password_hash, role)
        VALUES ($1, 'Sepsu Dev', 'sepsu.dev@gmail.com', $2, 'admin')
@@ -48,7 +51,7 @@ async function seedSepsuDev() {
       memberUserIds.push(existing.rows[0]);
     } else {
       const id = crypto.randomUUID();
-      const pwHash = hashPassword("password123");
+      const pwHash = hashPassword(validatedSeedPassword);
       const inserted = await pool.query(
         `INSERT INTO users (id, name, email, password_hash, role)
          VALUES ($1, $2, $3, $4, $5)
@@ -60,6 +63,16 @@ async function seedSepsuDev() {
   }
 
   console.log(`Verified ${memberUserIds.length} team members.`);
+  const workspace = await ensureActiveWorkspaceForUser(sepsuUserId);
+  for (const member of memberUserIds) {
+    await pool.query(
+      `INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
+       VALUES ($1, $2, $3, 'member', 'active')
+       ON CONFLICT (workspace_id, user_id) DO UPDATE
+       SET status = 'active', deleted_at = NULL, updated_at = NOW()`,
+      [crypto.randomUUID(), workspace.id, member.id]
+    );
+  }
 
   // 3. Clear existing projects & tasks created by Sepsu so we have fresh, rich, realistic enterprise data
   await pool.query("DELETE FROM tasks WHERE user_id = $1", [sepsuUserId]);
@@ -73,7 +86,6 @@ async function seedSepsuDev() {
       title: "OmniChannel Payment Gateway 2.0",
       description: "Arsitektur modern microservices untuk integrasi QRIS Dinamis, Virtual Account, Credit Card 3DS 2.0, dan direct debit payment providers.",
       category: "Product & Tech",
-      status: "Active",
       members: [
         { userId: sepsuUserId, role: "Owner" },
         { userId: memberUserIds[0].id, role: "Admin" },
@@ -148,7 +160,6 @@ async function seedSepsuDev() {
       title: "Enterprise Core ERP & Inventory",
       description: "Platform manajemen pergudangan multi-cabang, barcode scanning logistik, procurement purchase order, dan auto-journaling keuangan.",
       category: "Operations",
-      status: "Active",
       members: [
         { userId: sepsuUserId, role: "Owner" },
         { userId: memberUserIds[2].id, role: "Admin" },
@@ -202,7 +213,6 @@ async function seedSepsuDev() {
       title: "Mobile Banking & Lifestyle SuperApp",
       description: "Aplikasi seluler cross-platform (React Native / iOS & Android) dengan biometrik login, transfer dana instan BI-FAST, dan split bill.",
       category: "Product & Tech",
-      status: "Active",
       members: [
         { userId: sepsuUserId, role: "Owner" },
         { userId: memberUserIds[0].id, role: "Member" },
@@ -256,7 +266,6 @@ async function seedSepsuDev() {
       title: "Customer Support & Ticketing AI Agent",
       description: "Platform customer support terpusat dengan routing cerdas, live agent chat, integrasi WhatsApp Business API, dan auto-reply berbasis LLM.",
       category: "Client Work",
-      status: "Planning",
       members: [
         { userId: sepsuUserId, role: "Owner" },
         { userId: memberUserIds[1].id, role: "Admin" },
@@ -289,7 +298,6 @@ async function seedSepsuDev() {
       title: "Infrastructure & DevSecOps Platform",
       description: "Modernisasi Kubernetes cluster, zero-trust network access, HashiCorp Vault secrets management, dan automated container scanning.",
       category: "Product & Tech",
-      status: "Active",
       members: [
         { userId: sepsuUserId, role: "Owner" },
         { userId: memberUserIds[0].id, role: "Admin" },
@@ -332,7 +340,6 @@ async function seedSepsuDev() {
       title: "Growth Marketing & SEO Automation",
       description: "Automasi penerbitan konten blog teknis, sitemap generator otomatis, monitoring Core Web Vitals, dan kampanye email newsletter berkala.",
       category: "Marketing & Growth",
-      status: "Completed",
       members: [
         { userId: sepsuUserId, role: "Owner" },
         { userId: memberUserIds[3].id, role: "Member" },
@@ -369,17 +376,17 @@ async function seedSepsuDev() {
     const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     await pool.query(
-      `INSERT INTO projects (id, user_id, title, description, category, status, tasks_count, progress)
+      `INSERT INTO projects (id, user_id, workspace_id, title, description, category, tasks_count, progress)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (id) DO UPDATE SET
          user_id = EXCLUDED.user_id,
+         workspace_id = EXCLUDED.workspace_id,
          title = EXCLUDED.title,
          description = EXCLUDED.description,
          category = EXCLUDED.category,
-         status = EXCLUDED.status,
          tasks_count = EXCLUDED.tasks_count,
          progress = EXCLUDED.progress`,
-      [proj.id, sepsuUserId, proj.title, proj.description, proj.category, proj.status, totalTasks, progress]
+      [proj.id, sepsuUserId, workspace.id, proj.title, proj.description, proj.category, totalTasks, progress]
     );
 
     // Insert Project Members

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     Select,
     SelectContent,
@@ -87,12 +88,8 @@ export default function ProjectPrivilegesPage() {
     const openEditRole = (role: ProjectGroup) => { setEditingRole(role); setNewRoleName(role.name); setNewRoleDisplayName(role.displayName); setNewRoleDescription(role.description || ""); setIsCreateRoleModalOpen(true); };
 
     const handleRemoveRole = async (groupId: string, roleName: string) => {
-        if (confirm(`Delete project role "${roleName}"?`)) {
-            const success = await removeProjectGroup(groupId);
-            if (success && selectedProjectGroup === roleName) {
-                setSelectedProjectGroup("member");
-            }
-        }
+        const success = await removeProjectGroup(groupId);
+        if (success && selectedProjectGroup === roleName) setSelectedProjectGroup("member");
     };
 
     return (
@@ -101,7 +98,7 @@ export default function ProjectPrivilegesPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Project roles</h2>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">Project Roles</h2>
                         <span className="text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredMenus.length} {filteredMenus.length === 1 ? "feature item" : "feature items"}
                         </span>
@@ -181,13 +178,7 @@ export default function ProjectPrivilegesPage() {
                                     <PencilSimple size={14} />
                                 </button>
                                 {!isSystemRole && (
-                                <button
-                                    onClick={() => handleRemoveRole(currentGroup.id, currentGroup.displayName || currentGroup.name)}
-                                    className="p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                                    title="Delete selected custom role"
-                                >
-                                    <Trash size={14} />
-                                </button>
+                                <ConfirmDialog title="Delete project role?" description={`Delete project role "${currentGroup.displayName || currentGroup.name}"?`} confirmLabel="Delete role" onConfirm={() => handleRemoveRole(currentGroup.id, currentGroup.name)}><button className="p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer" title="Delete selected custom role"><Trash size={14} /></button></ConfirmDialog>
                                 )}
                             </div>
                         );

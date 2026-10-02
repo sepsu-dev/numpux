@@ -22,7 +22,6 @@ export interface MasterCategoryItem { id: string; name: string; isDefault?: bool
 export interface MasterIssueTypeItem { id: string; name: string; description?: string; iconName: IssueTypeIconName; colorClass: string; isDefault?: boolean; }
 export interface MasterPriorityItem { id: string; name: string; level: number; dotColor: string; badgeClass: string; severityClass: string; isDefault?: boolean; }
 export interface MasterStatusItem { id: string; name: string; description?: string; order: number; dotColor: string; badgeClass: string; headerBorder: string; isCompleted: boolean; isDefault?: boolean; }
-export interface MasterProjectStatusItem { id: string; name: string; description?: string; colorClass: string; order: number; isCompleted: boolean; isDefault?: boolean; }
 
 export const ISSUE_TYPE_ICONS: Record<IssueTypeIconName, Icon> = {
   CheckSquare, Bug, BookmarkSimple, Lightning, Shield, Fire, Rocket,

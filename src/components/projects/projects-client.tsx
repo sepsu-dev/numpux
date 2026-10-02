@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Plus, DotsThree, PencilSimple, Trash, FolderSimple, SquaresFour, ListDashes, MagnifyingGlass, X, Tag, Users } from "@phosphor-icons/react";
+import { Plus, DotsThree, PencilSimple, Trash, FolderSimple, SquaresFour, ListDashes, MagnifyingGlass, X, Users } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
     DropdownMenu,
@@ -9,15 +9,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
     Select,
     SelectContent,
@@ -30,7 +22,6 @@ import { deleteProjectAction } from "@/lib/actions";
 import type { Project } from "@/types";
 import { motion, useReducedMotion } from "framer-motion";
 import { ProjectFormModal } from "./project-form-modal";
-import { ManageCategoriesModal } from "./manage-categories-modal";
 import { ProjectMembersModal } from "./project-members-modal";
 import { useMasterDataStore } from "@/stores/master-data-store";
 
@@ -40,12 +31,11 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [membersProject, setMembersProject] = useState<Project | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    const { categories: masterCategories, projectStatuses, loadAll } = useMasterDataStore();
+    const { categories: masterCategories, loadAll } = useMasterDataStore();
 
     useEffect(() => { void loadAll(); }, [loadAll]);
 
@@ -105,14 +95,6 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsCategoriesModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground rounded-lg text-xs font-semibold border border-border/60 hover:border-border transition-colors cursor-pointer"
-                        title="Manage categories"
-                    >
-                        <Tag size={14} className="text-muted-foreground" />
-                        <span>Categories</span>
-                    </button>
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-colors shadow-none cursor-pointer"
@@ -184,10 +166,6 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                     <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
                                         {project.category || "Uncategorized"}
                                     </span>
-                                    {(() => {
-                                        const status = projectStatuses.find((item) => item.id === project.status);
-                                        return <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${status?.colorClass || "bg-muted text-muted-foreground border-border"}`}>{status?.name || project.status}</span>;
-                                    })()}
                                     {project.userRole && (
                                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                                             project.userRole.toLowerCase() === "owner"
@@ -208,7 +186,7 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                         </button>
                                     )}
                                 </div>
-                                <DropdownMenu>
+                                {["owner", "admin"].includes((project.userRole || "").toLowerCase()) && <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-70 group-hover:opacity-100 cursor-pointer">
                                             <DotsThree size={18} weight="bold" />
@@ -234,10 +212,10 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                             <Trash size={13} /> Delete
                                         </DropdownMenuItem>}
                                     </DropdownMenuContent>
-                                </DropdownMenu>
+                                </DropdownMenu>}
                             </div>
 
-                            <Link href={`/tasks?projectId=${project.id}`} className="block group/link">
+                            <Link href={`/tasks/backlog?projectId=${project.id}`} className="block group/link">
                                 <h3 className="text-sm font-semibold text-foreground tracking-tight group-hover/link:text-primary transition-colors mb-1.5 line-clamp-1">
                                     {project.title}
                                 </h3>
@@ -270,7 +248,7 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                                     <span>Kanban</span>
                                 </Link>
                                 <Link
-                                    href={`/tasks?projectId=${project.id}`}
+                                    href={`/tasks/backlog?projectId=${project.id}`}
                                     className="flex-1 py-1.5 px-2 bg-muted/60 hover:bg-muted text-foreground font-medium text-[11px] rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-border/60"
                                 >
                                     <ListDashes size={13} />
@@ -311,12 +289,6 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                 onSuccess={handleProjectSaved}
             />
 
-            {/* Master Data Modal */}
-            <ManageCategoriesModal
-                open={isCategoriesModalOpen}
-                onOpenChange={setIsCategoriesModalOpen}
-            />
-
             {/* Project Members Modal */}
             <ProjectMembersModal
                 open={!!membersProject}
@@ -324,37 +296,20 @@ export function ProjectsClient({ projects: initialProjects }: { projects: Projec
                 project={membersProject}
             />
 
-            {/* Delete Confirmation Modal */}
-            <Dialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent className="rounded-lg border border-border p-6 font-sans shadow-none bg-card max-w-sm">
-                    <DialogHeader className="space-y-2">
+            <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
                         <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
                             <Trash size={18} />
                         </div>
-                        <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete project?</DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
+                        <AlertDialogTitle>Delete project?</AlertDialogTitle>
+                        <AlertDialogDescription>
                             This project and all of its tasks will be permanently deleted. This cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-4 flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 rounded-lg text-xs h-9 cursor-pointer"
-                            onClick={() => setDeleteId(null)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            className="flex-1 rounded-lg text-xs h-9 bg-rose-600 hover:bg-rose-700 text-white font-medium cursor-pointer"
-                            onClick={handleDeleteConfirm}
-                        >
-                            Delete
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => void handleDeleteConfirm()}>Delete</AlertDialogAction></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

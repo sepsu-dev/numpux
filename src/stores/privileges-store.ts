@@ -12,6 +12,7 @@ interface PrivilegesState {
   projectPrivileges: Array<ProjectPrivilege & { groupName: string; menuCode: string; menuName: string }>;
   isLoading: boolean;
   error: string | null;
+  reset: () => void;
 
   loadAllPrivileges: () => Promise<void>;
   toggleUserPrivilege: (groupName: string, menuId: string, currentVal: boolean) => Promise<boolean>;
@@ -29,6 +30,8 @@ interface PrivilegesState {
   reorderSections: (newSections: MasterSection[]) => Promise<boolean>;
 }
 
+let generation = 0;
+
 export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
   menus: [],
   sections: [],
@@ -42,10 +45,12 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
   error: null,
 
   loadAllPrivileges: async () => {
+    const requestGeneration = generation;
     set({ isLoading: true, error: null });
     try {
       const res = await apiFetch("/api/privileges");
       const json = await res.json();
+      if (requestGeneration !== generation) return;
       if (json.data) {
         set({
           menus: json.data.menus || [],
@@ -60,8 +65,13 @@ export const usePrivilegesStore = create<PrivilegesState>((set, get) => ({
         set({ isLoading: false });
       }
     } catch (err: any) {
-      set({ error: err.message || "Failed to load privileges", isLoading: false });
+      if (requestGeneration === generation) set({ error: err.message || "Failed to load privileges", isLoading: false });
     }
+  },
+
+  reset: () => {
+    generation += 1;
+    set({ menus: [], sections: [], userGroups: [], userPrivileges: [], projectGroups: [], projectPrivileges: [], isLoading: true, error: null });
   },
 
   toggleUserPrivilege: async (groupName: string, menuId: string, currentVal: boolean) => {

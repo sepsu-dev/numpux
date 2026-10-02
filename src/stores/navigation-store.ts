@@ -17,9 +17,12 @@ interface NavigationState {
   sections: string[];
   isLoading: boolean;
   error: string | null;
+  reset: () => void;
   fetchMenus: () => Promise<void>;
   setMenus: (menus: MasterMenu[]) => void;
 }
+
+let generation = 0;
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
   menus: [],
@@ -30,11 +33,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   error: null,
 
   fetchMenus: async () => {
+    const requestGeneration = generation;
     set({ isLoading: true, error: null });
     try {
       const res = await apiFetch("/api/privileges?mode=my-menus");
       if (!res.ok) throw new Error("Failed to fetch menus");
       const json = await res.json();
+      if (requestGeneration !== generation) return;
       if (json.data) {
         let menus: MasterMenu[] = [];
         let sections: string[] = [];
@@ -61,7 +66,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
         set({ menus: [], sections: [], isLoading: false });
       }
     } catch (err: any) {
-      set({ error: err.message || "Failed to fetch menus", isLoading: false });
+      if (requestGeneration === generation) set({ error: err.message || "Failed to fetch menus", isLoading: false });
     }
   },
 
@@ -71,5 +76,9 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       new Set(normalizedMenus.map((m) => m.section || "Planning"))
     );
     set({ menus: normalizedMenus, sections });
+  },
+  reset: () => {
+    generation += 1;
+    set({ menus: [], sections: [], isLoading: true, error: null });
   },
 }));

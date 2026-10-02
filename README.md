@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Numpux
 
-## Getting Started
+Project and task management app built with Next.js 16, React 19, Bun, and PostgreSQL.
 
-First, run the development server:
+## Requirements
+
+- Bun 1.3+
+- PostgreSQL 14+
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd numpux
+cp .env.example .env
+bun install --frozen-lockfile
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+On Windows PowerShell, copy environment config with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```powershell
+Copy-Item .env.example .env
+```
 
-## Learn More
+Set `DATABASE_URL`, `APP_URL`, and a random `JWT_SECRET` of at least 32 characters before starting. Runtime configuration is validated when each service is first used; insecure credential defaults are not provided.
 
-To learn more about Next.js, take a look at the following resources:
+To create the first owner, configure all bootstrap values before first startup:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```dotenv
+BOOTSTRAP_ADMIN_NAME=Application Owner
+BOOTSTRAP_ADMIN_EMAIL=owner@example.com
+BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-strong-password
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Remove the bootstrap values after the owner exists. Existing passwords are never overwritten during startup.
 
-## Deploy on Vercel
+## Google OAuth
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Create an OAuth 2.0 web client in Google Cloud and configure:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```dotenv
+AUTH_GOOGLE_ID=your-google-client-id.apps.googleusercontent.com
+AUTH_GOOGLE_SECRET=your-google-client-secret
+```
+
+Both Google values are optional, but must be configured together. The callback URL is derived from required `APP_URL`, not from an untrusted request host.
+
+Local callback URL:
+
+```text
+http://localhost:3000/api/auth/google/callback
+```
+
+## Commands
+
+```bash
+bun run dev        # development server
+bun run typecheck  # TypeScript validation
+bun test           # unit tests
+bun run build      # production build
+bun run start      # production server
+```
+
+## Docker
+
+```bash
+docker build -t numpux .
+docker run --rm -p 3000:3000 --env-file .env numpux
+```
+
+GitHub Actions validates types and tests before publishing images to GHCR.
+
+## Project layout
+
+```text
+src/app/          Next.js pages and API route handlers
+src/components/   shared and feature UI
+src/db/           PostgreSQL connection and current schema initialization
+src/lib/          authentication, data access, and server utilities
+src/stores/       client-side Zustand stores
+src/types/        shared TypeScript models
+```
+
+## Security notes
+
+- Session cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
+- Google OAuth requests use a short-lived state cookie for CSRF protection.
+- Browser API requests authenticate with the session cookie; no public API key is required.
+- Never commit `.env` or production credentials.

@@ -450,7 +450,7 @@ export default function KanbanPage() {
 
     if (!isMounted) return null;
 
-    const listHref = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
+    const listHref = projectId ? `/tasks/backlog?projectId=${projectId}` : "/tasks/backlog";
 
     return (
         <div className="space-y-5 pb-16">

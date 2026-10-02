@@ -72,7 +72,7 @@ function DashboardContent() {
 
     const activeProject = data?.project;
     const metrics = data?.metrics || [
-        { label: "Project Status", value: "-", change: "-", up: true },
+        { label: "Total Tasks", value: "0", change: "-", up: true },
         { label: "Completed Tasks", value: "0", change: "0% done", up: true },
         { label: "In Progress", value: "0", change: "0 in review", up: true },
         { label: "Pending Tasks", value: "0", change: "0 total", up: true },
@@ -106,9 +106,7 @@ function DashboardContent() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h2 className="text-xl font-bold text-foreground tracking-tight">
-                            {activeProject ? activeProject.title : "Work overview"}
-                        </h2>
+                        <h2 className="text-xl font-bold text-foreground tracking-tight">Overview</h2>
                         {activeProject ? (
                             <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-medium gap-1.5 rounded-md">
                                 <Briefcase className="w-3 h-3 text-primary" />
@@ -122,7 +120,7 @@ function DashboardContent() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                         {activeProject
-                            ? activeProject.description || "Status, task activity, and upcoming dates for this project."
+                            ? `${activeProject.title} — ${activeProject.description || "Status, task activity, and upcoming dates for this project."}`
                             : "A practical view of active projects, task progress, and upcoming dates."}
                     </p>
                 </div>
@@ -247,7 +245,7 @@ function DashboardContent() {
                                 {priorities.map((task) => (
                                     <Link
                                         key={task.id}
-                                        href={`/tasks?projectId=${projectId || ""}`}
+                                        href={`/tasks/backlog?projectId=${projectId || ""}`}
                                         className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 hover:border-border hover:bg-muted/30 transition-colors cursor-pointer group"
                                     >
                                         <div className="min-w-0 pr-2">
@@ -268,7 +266,7 @@ function DashboardContent() {
                     </div>
 
                     <Link
-                        href={projectId ? `/tasks?projectId=${projectId}` : "/tasks"}
+                        href={projectId ? `/tasks/backlog?projectId=${projectId}` : "/tasks/backlog"}
                         className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-4"
                     >
                         View all tasks →

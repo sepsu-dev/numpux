@@ -3,7 +3,6 @@ import type {
   MasterCategoryItem,
   MasterIssueTypeItem,
   MasterPriorityItem,
-  MasterProjectStatusItem,
   MasterStatusItem,
 } from "@/lib/master-data";
 
@@ -12,17 +11,15 @@ export interface MasterDataPayload {
   issueTypes: MasterIssueTypeItem[];
   priorities: MasterPriorityItem[];
   statuses: MasterStatusItem[];
-  projectStatuses: MasterProjectStatusItem[];
 }
 
 export async function findAllMasterData(): Promise<MasterDataPayload> {
   await initDb();
-  const [categories, issueTypes, priorities, statuses, projectStatuses] = await Promise.all([
+  const [categories, issueTypes, priorities, statuses] = await Promise.all([
     pool.query("SELECT id, name, is_default FROM master_categories WHERE is_active = true ORDER BY sort_order, name"),
     pool.query("SELECT id, name, description, icon_name, color_class, is_default FROM master_issue_types WHERE is_active = true ORDER BY sort_order, name"),
     pool.query("SELECT id, name, level, dot_color, badge_class, severity_class, is_default FROM master_priorities WHERE is_active = true ORDER BY sort_order, level, name"),
     pool.query("SELECT id, name, description, sort_order, dot_color, badge_class, header_border, is_completed, is_default FROM master_statuses WHERE is_active = true ORDER BY sort_order, name"),
-    pool.query("SELECT id, name, description, color_class, sort_order, is_completed, is_default FROM master_project_statuses WHERE is_active = true ORDER BY sort_order, name"),
   ]);
 
   return {
@@ -55,15 +52,6 @@ export async function findAllMasterData(): Promise<MasterDataPayload> {
       isCompleted: row.is_completed,
       isDefault: row.is_default,
     })),
-    projectStatuses: projectStatuses.rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description || undefined,
-      colorClass: row.color_class,
-      order: row.sort_order,
-      isCompleted: row.is_completed,
-      isDefault: row.is_default,
-    })),
   };
 }
 
@@ -92,11 +80,6 @@ export async function createMasterData(resource: string, item: Record<string, un
       "INSERT INTO master_statuses (id, name, description, sort_order, dot_color, badge_class, header_border, is_completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
       [id, item.name, item.description || null, item.order, item.dotColor, item.badgeClass, item.headerBorder, item.isCompleted]
     );
-  } else if (resource === "projectStatuses") {
-    await pool.query(
-      "INSERT INTO master_project_statuses (id, name, description, color_class, sort_order, is_completed) VALUES ($1, $2, $3, $4, $5, $6)",
-      [id, item.name, item.description || null, item.colorClass, item.order, item.isCompleted]
-    );
   }
 }
 
@@ -106,14 +89,12 @@ export async function updateMasterData(resource: string, id: string, updates: Re
     issueTypes: { name: "name", description: "description", iconName: "icon_name", colorClass: "color_class" },
     priorities: { name: "name", level: "level", dotColor: "dot_color", badgeClass: "badge_class", severityClass: "severity_class" },
     statuses: { name: "name", description: "description", order: "sort_order", dotColor: "dot_color", badgeClass: "badge_class", headerBorder: "header_border", isCompleted: "is_completed" },
-    projectStatuses: { name: "name", description: "description", order: "sort_order", colorClass: "color_class", isCompleted: "is_completed" },
   };
   const tables: Record<string, string> = {
     categories: "master_categories",
     issueTypes: "master_issue_types",
     priorities: "master_priorities",
     statuses: "master_statuses",
-    projectStatuses: "master_project_statuses",
   };
   const allowed = maps[resource];
   const entries = Object.entries(updates).filter(([key]) => allowed[key]);
@@ -156,7 +137,6 @@ export async function deleteMasterData(resource: string, id: string) {
     issueTypes: { table: "master_issue_types", usage: "tasks", valueColumn: "issue_type" },
     priorities: { table: "master_priorities", usage: "tasks", valueColumn: "priority" },
     statuses: { table: "master_statuses", usage: "tasks", valueColumn: "status" },
-    projectStatuses: { table: "master_project_statuses", usage: "projects", valueColumn: "status" },
   };
   const target = config[resource];
   const current = await pool.query(`SELECT is_default, name FROM ${target.table} WHERE id = $1`, [id]);

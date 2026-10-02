@@ -16,14 +16,12 @@ export default function NewProjectPage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [category, setCategory] = useState("");
-    const [status, setStatus] = useState("");
-    const { categories, projectStatuses, loadAll, isLoading } = useMasterDataStore();
+    const { categories, loadAll, isLoading } = useMasterDataStore();
 
     useEffect(() => { void loadAll(); }, [loadAll]);
     useEffect(() => {
         if (!category && categories[0]) setCategory(categories[0]);
-        if (!status && projectStatuses[0]) setStatus(projectStatuses[0].id);
-    }, [category, status, categories, projectStatuses]);
+    }, [category, categories]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -45,7 +43,6 @@ export default function NewProjectPage() {
                     title: title.trim(),
                     category: category.trim(),
                     description: description.trim(),
-                    status,
                 }),
             });
 
@@ -101,8 +98,6 @@ export default function NewProjectPage() {
                             ><option value="" disabled>Select category</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
                         </div>
 
-                        <div className="grid gap-1.5"><Label htmlFor="status" className="font-semibold text-xs text-foreground px-0.5">Status</Label><select id="status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-border bg-white px-3.5 text-xs font-medium"><option value="" disabled>Select status</option>{projectStatuses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
-
                         <div className="grid gap-1.5">
                             <Label htmlFor="description" className="font-semibold text-xs text-foreground px-0.5">Description</Label>
                             <Textarea
@@ -116,7 +111,7 @@ export default function NewProjectPage() {
 
                     <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2.5">
                         <Button type="button" variant="outline" size="sm" onClick={() => router.back()} className="rounded-lg text-xs h-9 px-4 border-border cursor-pointer hover:bg-muted">Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSubmitting || isLoading || !category || !status} className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none">
+                        <Button type="submit" size="sm" disabled={isSubmitting || isLoading || !category} className="rounded-lg text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-colors cursor-pointer shadow-none">
                             {isSubmitting ? "Creating..." : "Create project"}
                         </Button>
                     </div>

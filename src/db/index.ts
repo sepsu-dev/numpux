@@ -1,11 +1,12 @@
 import { Pool } from "pg";
+import { randomUUID } from "crypto";
+import { getBootstrapAdminConfig, getDatabaseConfig } from "@/lib/env";
+import { hashPassword } from "@/lib/password";
 
-const rawConnectionString =
-  process.env.DATABASE_URL ||
-  `postgresql://${process.env.DB_USER || "postgres"}:${encodeURIComponent(process.env.DB_PASSWORD || "password123")}@${process.env.DB_HOST || "localhost"}:${process.env.DB_PORT || "5432"}/${process.env.DB_NAME || "db_numpux"}`;
+const databaseConfig = getDatabaseConfig();
 
 // Ensure search_path=numpux,public is configured
-const connectionUrl = new URL(rawConnectionString);
+const connectionUrl = new URL(databaseConfig.DATABASE_URL);
 if (!connectionUrl.searchParams.has("search_path")) {
   connectionUrl.searchParams.set("search_path", "numpux,public");
 }
@@ -18,9 +19,9 @@ export const pool =
   new Pool({
     connectionString,
     options: "-c search_path=numpux,public",
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    max: databaseConfig.DB_POOL_MAX,
+    idleTimeoutMillis: databaseConfig.DB_IDLE_TIMEOUT_MS,
+    connectionTimeoutMillis: databaseConfig.DB_CONNECTION_TIMEOUT_MS,
   });
 
 if (process.env.NODE_ENV !== "production") {
@@ -121,7 +122,6 @@ export async function initDb() {
         title VARCHAR(255) NOT NULL,
         description TEXT,
         category VARCHAR(100) DEFAULT 'General',
-        status VARCHAR(50) DEFAULT 'Active',
         tasks_count INT DEFAULT 0,
         progress INT DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -395,18 +395,6 @@ export async function initDb() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
 
-      CREATE TABLE IF NOT EXISTS master_project_statuses (
-        id VARCHAR(64) PRIMARY KEY,
-        name VARCHAR(100) UNIQUE NOT NULL,
-        description TEXT,
-        color_class TEXT NOT NULL,
-        sort_order INT DEFAULT 1,
-        is_completed BOOLEAN DEFAULT FALSE,
-        is_default BOOLEAN DEFAULT FALSE,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
     `);
 
     await client.query(`
@@ -450,12 +438,6 @@ export async function initDb() {
         ('Done', 'Done', 'Completed and verified work', 4, 'bg-primary', 'bg-primary/10 text-primary', 'border-primary/25', true, true)
       ON CONFLICT (id) DO NOTHING;
 
-      INSERT INTO master_project_statuses (id, name, description, color_class, sort_order, is_completed, is_default)
-      VALUES
-        ('Planning', 'Planning', 'Project is being prepared', 'bg-[#fff7e6] text-[#946000] border-[#ffe0a3]', 1, false, true),
-        ('Active', 'Active', 'Project is actively being worked on', 'bg-[#eef6ff] text-[#1768c5] border-[#c8e0ff]', 2, false, true),
-        ('Completed', 'Completed', 'Project work has been completed', 'bg-primary/10 text-primary border-primary/20', 3, true, true)
-      ON CONFLICT (id) DO NOTHING;
     `);
 
     // Seed Default Sections
@@ -494,24 +476,23 @@ export async function initDb() {
     await client.query(`
       INSERT INTO master_menus (id, code, name, path, icon, section, sort_order, is_active)
       VALUES 
-        ('10000000-0000-0000-0000-000000000003', 'summary', 'Dashboard', '/dashboard', 'ChartLineUp', 'Planning', 1, true),
+        ('10000000-0000-0000-0000-000000000003', 'summary', 'Overview', '/dashboard', 'ChartLineUp', 'Planning', 1, true),
         ('10000000-0000-0000-0000-000000000001', 'board', 'Board', '/tasks/kanban', 'SquaresFour', 'Planning', 2, true),
-        ('10000000-0000-0000-0000-000000000002', 'backlog', 'Backlog', '/tasks', 'ListDashes', 'Planning', 3, true),
+        ('10000000-0000-0000-0000-000000000002', 'backlog', 'Backlog', '/tasks/backlog', 'ListDashes', 'Planning', 3, true),
         ('10000000-0000-0000-0000-000000000004', 'projects', 'Projects', '/projects', 'FolderSimple', 'Workspace', 4, true),
-        ('10000000-0000-0000-0000-000000000020', 'workspace_settings', 'Workspace', '/workspace', 'Stack', 'Workspace', 5, true),
+        ('10000000-0000-0000-0000-000000000020', 'workspace_settings', 'Workspaces', '/workspace', 'Stack', 'Workspace', 5, true),
         ('10000000-0000-0000-0000-000000000014', 'monitoring', 'Monitoring', '/monitoring', 'ChartBar', 'Workspace', 6, true),
         ('10000000-0000-0000-0000-000000000015', 'reports', 'Reports', '/reports', 'ChartBar', 'Workspace', 6, true),
         ('10000000-0000-0000-0000-000000000016', 'notifications', 'Notifications', '/notifications', 'Bell', 'Workspace', 7, true),
-        ('10000000-0000-0000-0000-000000000005', 'master_menus', 'Master Menus', '/master/menus', 'ListNumbers', 'Settings', 6, true),
-        ('10000000-0000-0000-0000-000000000006', 'user_privileges', 'User Privileges', '/master/user-privileges', 'ShieldCheck', 'Settings', 7, true),
-        ('10000000-0000-0000-0000-000000000007', 'project_privileges', 'Project Privileges', '/master/project-privileges', 'UsersThree', 'Settings', 8, true),
-        ('10000000-0000-0000-0000-000000000008', 'categories', 'Category Project', '/master/categories', 'Tag', 'Settings', 9, true),
-        ('10000000-0000-0000-0000-000000000009', 'issue_types', 'Issue Type', '/master/issue-types', 'CheckSquare', 'Settings', 10, true),
+        ('10000000-0000-0000-0000-000000000005', 'master_menus', 'Navigation', '/master/menus', 'ListNumbers', 'Settings', 6, true),
+        ('10000000-0000-0000-0000-000000000006', 'user_privileges', 'User Access', '/master/user-privileges', 'ShieldCheck', 'Settings', 7, true),
+        ('10000000-0000-0000-0000-000000000007', 'project_privileges', 'Project Roles', '/master/project-privileges', 'UsersThree', 'Settings', 8, false),
+        ('10000000-0000-0000-0000-000000000008', 'categories', 'Project Categories', '/master/categories', 'Tag', 'Settings', 9, true),
+        ('10000000-0000-0000-0000-000000000009', 'issue_types', 'Issue Types', '/master/issue-types', 'CheckSquare', 'Settings', 10, true),
         ('10000000-0000-0000-0000-000000000010', 'priorities', 'Priorities', '/master/priorities', 'Flag', 'Settings', 11, true),
-        ('10000000-0000-0000-0000-000000000012', 'statuses', 'Task Statuses', '/master/statuses', 'Columns', 'Settings', 12, true),
-        ('10000000-0000-0000-0000-000000000013', 'project_statuses', 'Project Statuses', '/master/project-statuses', 'Columns', 'Settings', 13, true),
-        ('10000000-0000-0000-0000-000000000011', 'master_sections', 'Master Sections', '/master/sections', 'Rows', 'Settings', 14, true),
-        ('10000000-0000-0000-0000-000000000017', 'users', 'User Management', '/master/users', 'UsersThree', 'Settings', 15, true),
+        ('10000000-0000-0000-0000-000000000012', 'statuses', 'Statuses', '/master/statuses', 'Columns', 'Settings', 12, true),
+        ('10000000-0000-0000-0000-000000000011', 'master_sections', 'Navigation Sections', '/master/sections', 'Rows', 'Settings', 14, true),
+        ('10000000-0000-0000-0000-000000000017', 'users', 'Users', '/master/users', 'UsersThree', 'Settings', 15, true),
         ('10000000-0000-0000-0000-000000000018', 'audit_log', 'Audit Log', '/master/audit-log', 'ListDashes', 'Settings', 16, true),
         ('10000000-0000-0000-0000-000000000019', 'trash', 'Trash', '/master/trash', 'Trash', 'Settings', 17, true)
       ON CONFLICT (code) DO UPDATE SET 
@@ -523,6 +504,10 @@ export async function initDb() {
 
       -- If old 'settings' menu exists, remove it in favor of individual menus
       DELETE FROM master_menus WHERE code = 'settings';
+      DELETE FROM master_menus WHERE code = 'project_statuses';
+
+      -- Project permissions remain role-based until the configurable matrix is enforced by APIs.
+      UPDATE master_menus SET is_active = false WHERE code = 'project_privileges';
     `);
 
     // Seed Default User Groups
@@ -693,17 +678,23 @@ export async function initDb() {
       UPDATE project_members SET role = 'contributor' WHERE LOWER(role) = 'member';
     `);
 
-    // Seed the application owner (admin@numpux.com / admin123)
-    const ADMIN_USER_ID = "00000000-0000-0000-0000-000000000001";
-    // SHA-256 for 'admin123'
-    const ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
-    const INVALID_LEGACY_ADMIN_PASS_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa82280f1a30e1ea6";
-
-    await client.query(`
-      INSERT INTO users (id, name, email, password_hash, role, account_origin)
-      VALUES ('${ADMIN_USER_ID}', 'Admin Numpux', 'admin@numpux.com', '${ADMIN_PASS_HASH}', 'superadmin', 'system')
-      ON CONFLICT (email) DO UPDATE SET role = 'superadmin', account_origin = 'system';
-    `);
+    const bootstrapAdmin = getBootstrapAdminConfig();
+    let adminUserId: string | null = null;
+    if (bootstrapAdmin) {
+      const adminResult = await client.query(
+        `INSERT INTO users (id, name, email, password_hash, role, account_origin)
+         VALUES ($1, $2, $3, $4, 'superadmin', 'system')
+         ON CONFLICT (email) DO UPDATE SET role = 'superadmin', account_origin = 'system'
+         RETURNING id`,
+        [randomUUID(), bootstrapAdmin.name, bootstrapAdmin.email, hashPassword(bootstrapAdmin.password)]
+      );
+      adminUserId = adminResult.rows[0].id;
+    } else {
+      const existingAdmin = await client.query(
+        "SELECT id FROM users WHERE role = 'superadmin' AND deleted_at IS NULL ORDER BY created_at LIMIT 1"
+      );
+      adminUserId = existingAdmin.rows[0]?.id ?? null;
+    }
 
     // Classify accounts created before account-origin tracking was introduced.
     await client.query(`
@@ -724,50 +715,37 @@ export async function initDb() {
       END $$;
     `);
 
-    // Repair only the invalid hash shipped by older versions. A successful login
-    // will transparently migrate this legacy SHA-256 value to scrypt.
-    await client.query(
-      "UPDATE users SET password_hash = $1 WHERE id = $2 AND password_hash = $3",
-      [ADMIN_PASS_HASH, ADMIN_USER_ID, INVALID_LEGACY_ADMIN_PASS_HASH]
-    );
-
-    // Backfill any existing projects/tasks without user_id to Admin
-    await client.query(`
-      UPDATE projects SET user_id = '${ADMIN_USER_ID}' WHERE user_id IS NULL;
-    `);
-    await client.query(`
-      UPDATE tasks SET user_id = '${ADMIN_USER_ID}' WHERE user_id IS NULL;
-    `);
-
-    // Check if initial projects exist, if not seed default data for Admin
-    const projectCheck = await client.query("SELECT COUNT(*) FROM projects WHERE user_id = $1;", [ADMIN_USER_ID]);
-    const count = parseInt(projectCheck.rows[0].count, 10);
-
-    if (count === 0) {
-      const PROJECT_ENGINE = "b3f8a42c-5d96-419b-a012-78d91c130001";
-      const PROJECT_MARKETING = "e1a924cd-870b-4221-a3f1-432d56a20002";
-      const PROJECT_APP = "74c10c12-302a-4df5-91db-fcbe9d150003";
-
-      await client.query(`
-        INSERT INTO projects (id, user_id, title, description, category, status, tasks_count, progress)
-        VALUES
-          ('${PROJECT_ENGINE}', '${ADMIN_USER_ID}', 'Numpux Engine', 'Core real-time task orchestration engine and event streaming service.', 'System', 'Active', 3, 33),
-          ('${PROJECT_MARKETING}', '${ADMIN_USER_ID}', 'Marketing Site', 'High-performance public landing page, interactive docs, and changelog.', 'Web', 'Planning', 1, 0),
-          ('${PROJECT_APP}', '${ADMIN_USER_ID}', 'Desktop & Mobile Client', 'Cross-platform client applications built for high-output engineering teams.', 'Product', 'Active', 1, 0)
-        ON CONFLICT (id) DO NOTHING;
-      `);
-
-      await client.query(`
-        INSERT INTO tasks (id, user_id, project_id, title, project_name, priority, due_date, status, description)
-        VALUES
-          ('a1100001-1111-4000-8000-000000000001', '${ADMIN_USER_ID}', '${PROJECT_ENGINE}', 'Refactor session token validation in auth service', 'Numpux Engine', 'High', 'Today', 'In Progress', 'Tighten token decoding, validation algorithms, and expiration check.'),
-          ('a1100001-1111-4000-8000-000000000002', '${ADMIN_USER_ID}', '${PROJECT_ENGINE}', 'Fix multi-stage Docker build cache invalidation', 'Numpux Engine', 'Medium', 'Tomorrow', 'To Do', 'Improve layer caching for fast CI runner cycles.'),
-          ('a1100001-1111-4000-8000-000000000003', '${ADMIN_USER_ID}', '${PROJECT_ENGINE}', 'Optimize Postgres indexes for high-throughput queries', 'Numpux Engine', 'Urgent', 'May 24', 'Done', 'Add composite indexes for foreign keys and status queries.'),
-          ('a1100001-1111-4000-8000-000000000004', '${ADMIN_USER_ID}', '${PROJECT_MARKETING}', 'Write OpenAPI documentation with interactive sandbox', 'Marketing Site', 'Low', 'May 25', 'Review', 'Ensure all endpoints include request/response schemas.'),
-          ('a1100001-1111-4000-8000-000000000005', '${ADMIN_USER_ID}', '${PROJECT_APP}', 'Implement offline state synchronization with optimistic UI', 'Desktop & Mobile Client', 'Medium', 'Tomorrow', 'To Do', 'Support offline caching and optimistic updates.')
-        ON CONFLICT (id) DO NOTHING;
-      `);
+    // Preserve legacy records only when an explicit or existing owner is available.
+    if (adminUserId) {
+      await client.query("UPDATE projects SET user_id = $1 WHERE user_id IS NULL", [adminUserId]);
+      await client.query("UPDATE tasks SET user_id = $1 WHERE user_id IS NULL", [adminUserId]);
     }
+
+    // Ensure every project owner has a workspace before inserting or repairing projects.
+    await client.query(`
+      INSERT INTO workspaces (id, name, slug, created_by)
+      SELECT gen_random_uuid()::text,
+             CASE WHEN u.name IS NULL OR BTRIM(u.name) = '' THEN 'My Workspace' ELSE u.name || '''s Workspace' END,
+             'workspace-' || SUBSTRING(MD5(u.id) FROM 1 FOR 16),
+             u.id
+      FROM users u
+      WHERE u.deleted_at IS NULL
+        AND (u.role IN ('superadmin', 'admin') OR EXISTS (SELECT 1 FROM projects p WHERE p.user_id = u.id))
+        AND NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.created_by = u.id AND w.deleted_at IS NULL)
+      ON CONFLICT (slug) DO NOTHING;
+
+      INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
+      SELECT gen_random_uuid()::text, w.id, w.created_by, 'owner', 'active'
+      FROM workspaces w
+      WHERE w.deleted_at IS NULL
+      ON CONFLICT (workspace_id, user_id) DO UPDATE
+      SET role = 'owner', status = 'active', deleted_at = NULL, updated_at = NOW();
+    `);
+
+    await client.query(`
+      ALTER TABLE projects DROP COLUMN IF EXISTS status;
+      DROP TABLE IF EXISTS master_project_statuses;
+    `);
 
     // Backfill tenant boundaries for legacy users and projects. This is idempotent
     // and keeps the current project owner as the workspace owner.
@@ -802,9 +780,14 @@ export async function initDb() {
       WHERE u.id = selected.user_id AND u.active_workspace_id IS NULL;
 
       UPDATE projects p
-      SET workspace_id = w.id
-      FROM workspaces w
-      WHERE p.workspace_id IS NULL AND w.created_by = p.user_id AND w.deleted_at IS NULL;
+      SET workspace_id = selected.workspace_id
+      FROM (
+        SELECT DISTINCT ON (created_by) created_by, id AS workspace_id
+        FROM workspaces
+        WHERE deleted_at IS NULL
+        ORDER BY created_by, created_at, id
+      ) selected
+      WHERE p.workspace_id IS NULL AND selected.created_by = p.user_id;
 
       INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
       SELECT gen_random_uuid()::text, membership.workspace_id, membership.user_id, 'member', 'active'
@@ -829,6 +812,130 @@ export async function initDb() {
 
       INSERT INTO schema_migrations (version, description)
       VALUES ('2026-10-workspace-foundation-v1', 'Workspace tenancy, project roles, and invitation foundation')
+      ON CONFLICT (version) DO NOTHING;
+
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM projects WHERE workspace_id IS NULL) THEN
+          RAISE EXCEPTION 'Cannot enforce project workspace ownership: orphan projects remain';
+        END IF;
+      END $$;
+
+      ALTER TABLE projects ALTER COLUMN workspace_id SET NOT NULL;
+
+      DO $$
+      DECLARE constraint_name TEXT;
+      BEGIN
+        SELECT con.conname INTO constraint_name
+        FROM pg_constraint con
+        JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
+        WHERE con.conrelid = 'projects'::regclass AND con.contype = 'f' AND att.attname = 'workspace_id'
+        LIMIT 1;
+        IF constraint_name IS NOT NULL THEN
+          EXECUTE format('ALTER TABLE projects DROP CONSTRAINT %I', constraint_name);
+        END IF;
+        ALTER TABLE projects ADD CONSTRAINT projects_workspace_id_fkey
+          FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT;
+      END $$;
+
+      INSERT INTO schema_migrations (version, description)
+      VALUES ('2026-10-project-workspace-required-v1', 'Require exactly one workspace for every project')
+      ON CONFLICT (version) DO NOTHING;
+    `);
+
+    // Jira-lite foundation. Additive and idempotent; legacy task columns remain.
+    await client.query(`
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS key VARCHAR(16);
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS next_issue_number INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+      WITH candidates AS (
+        SELECT id, workspace_id,
+          CASE
+            WHEN raw_key ~ '^[A-Z]' THEN LEFT(raw_key, 12)
+            ELSE 'P' || LEFT(raw_key, 11)
+          END AS base_key
+        FROM (
+          SELECT id, workspace_id,
+            COALESCE(NULLIF(UPPER(REGEXP_REPLACE(title, '[^A-Za-z0-9]', '', 'g')), ''), 'PRJ') AS raw_key
+          FROM projects WHERE key IS NULL
+        ) source
+      ), numbered AS (
+        SELECT id, base_key,
+          ROW_NUMBER() OVER (PARTITION BY workspace_id, base_key ORDER BY id) AS duplicate_number
+        FROM candidates
+      )
+      UPDATE projects p
+      SET key = CASE WHEN n.duplicate_number = 1 THEN n.base_key
+                     ELSE LEFT(n.base_key, 12) || n.duplicate_number::text END
+      FROM numbered n WHERE p.id = n.id;
+
+      CREATE TABLE IF NOT EXISTS sprints (
+        id VARCHAR(64) PRIMARY KEY,
+        project_id VARCHAR(64) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        goal TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'future',
+        start_date DATE,
+        end_date DATE,
+        started_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        created_by VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ,
+        CONSTRAINT sprints_status_check CHECK (status IN ('future', 'active', 'completed'))
+      );
+
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sprint_id VARCHAR(64) REFERENCES sprints(id) ON DELETE SET NULL;
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS reporter_id VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL;
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS backlog_order BIGINT;
+      ALTER TABLE tasks ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+      UPDATE tasks SET reporter_id = user_id WHERE reporter_id IS NULL AND user_id IS NOT NULL;
+      WITH ordered AS (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY created_at, id) AS position
+        FROM tasks WHERE backlog_order IS NULL
+      )
+      UPDATE tasks t SET backlog_order = ordered.position FROM ordered WHERE t.id = ordered.id;
+
+      UPDATE projects p SET next_issue_number = greatest_issue.next_number
+      FROM (
+        SELECT project_id, COALESCE(MAX(backlog_order), 0)::integer + 1 AS next_number
+        FROM tasks GROUP BY project_id
+      ) greatest_issue
+      WHERE p.id = greatest_issue.project_id AND p.next_issue_number < greatest_issue.next_number;
+
+      ALTER TABLE projects ALTER COLUMN key SET NOT NULL;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'projects_next_issue_number_check'
+            AND conrelid = 'projects'::regclass
+        ) THEN
+          ALTER TABLE projects ADD CONSTRAINT projects_next_issue_number_check
+            CHECK (next_issue_number >= 1) NOT VALID;
+        END IF;
+      END $$;
+      ALTER TABLE projects VALIDATE CONSTRAINT projects_next_issue_number_check;
+      ALTER TABLE tasks ALTER COLUMN backlog_order SET NOT NULL;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_projects_workspace_key_active
+        ON projects (workspace_id, LOWER(key)) WHERE deleted_at IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_tasks_project_key
+        ON tasks (project_id, LOWER(task_key)) WHERE task_key IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_sprints_one_active_per_project
+        ON sprints (project_id) WHERE status = 'active' AND deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_sprints_project_status
+        ON sprints (project_id, status, created_at);
+      CREATE INDEX IF NOT EXISTS idx_tasks_backlog_board
+        ON tasks (project_id, sprint_id, status, backlog_order);
+      CREATE INDEX IF NOT EXISTS idx_tasks_assignee_active
+        ON tasks (assignee_id, deleted_at);
+
+      INSERT INTO schema_migrations (version, description)
+      VALUES ('2026-10-scrum-foundation-v1', 'Project keys, atomic issue sequence, sprint and backlog fields')
       ON CONFLICT (version) DO NOTHING;
     `);
 

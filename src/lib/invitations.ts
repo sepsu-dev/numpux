@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "crypto";
+import type { PoolClient } from "pg";
 import { pool } from "@/db";
+import { hashPassword } from "@/lib/user-db";
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -21,6 +23,7 @@ export async function createProjectInvitation(input: {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`project-invitation:${input.projectId}:${email}`]);
     await client.query(
       `UPDATE invitations SET status = 'revoked', updated_at = NOW()
        WHERE project_id = $1 AND LOWER(email) = $2 AND status = 'pending'`,
@@ -42,6 +45,42 @@ export async function createProjectInvitation(input: {
   } finally {
     client.release();
   }
+}
+
+export async function createWorkspaceInvitation(input: { workspaceId: string; email: string; workspaceRole: string; invitedBy: string }) {
+  const email = input.email.trim().toLowerCase();
+  const token = randomBytes(32).toString("base64url");
+  const id = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`workspace-invitation:${input.workspaceId}:${email}`]);
+    await client.query(`UPDATE invitations SET status = 'revoked', updated_at = NOW() WHERE workspace_id = $1 AND project_id IS NULL AND LOWER(email) = $2 AND status = 'pending'`, [input.workspaceId, email]);
+    const result = await client.query(
+      `INSERT INTO invitations (id, workspace_id, project_id, email, workspace_role, invited_by, token_hash, status, expires_at)
+       VALUES ($1, $2, NULL, $3, $4, $5, $6, 'pending', $7)
+       RETURNING id, email, workspace_role, status, expires_at, created_at`,
+      [id, input.workspaceId, email, input.workspaceRole, input.invitedBy, hashToken(token), expiresAt]
+    );
+    await client.query("COMMIT");
+    return { ...result.rows[0], token };
+  } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
+}
+
+export async function findPendingWorkspaceInvitations(workspaceId: string) {
+  const result = await pool.query(
+    `SELECT i.id, i.email, i.workspace_role, i.status, i.expires_at, i.created_at, inviter.name AS invited_by_name
+     FROM invitations i JOIN users inviter ON inviter.id = i.invited_by
+     WHERE i.workspace_id = $1 AND i.project_id IS NULL AND i.status = 'pending' AND i.expires_at > NOW()
+     ORDER BY i.created_at DESC`, [workspaceId]
+  );
+  return result.rows.map((row) => ({ id: row.id, email: row.email, workspaceRole: row.workspace_role, status: row.status, expiresAt: row.expires_at, createdAt: row.created_at, invitedByName: row.invited_by_name }));
+}
+
+export async function revokeWorkspaceInvitation(invitationId: string, workspaceId: string) {
+  const result = await pool.query(`UPDATE invitations SET status = 'revoked', updated_at = NOW() WHERE id = $1 AND workspace_id = $2 AND project_id IS NULL AND status = 'pending'`, [invitationId, workspaceId]);
+  return (result.rowCount || 0) > 0;
 }
 
 export async function findPendingProjectInvitations(projectId: string) {
@@ -95,61 +134,87 @@ export async function findInvitationByToken(token: string) {
   };
 }
 
-export async function acceptInvitation(token: string, user: { id: string; email: string }) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const result = await client.query(
+async function acceptInvitationWithClient(client: PoolClient, token: string, user: { id: string; email: string }) {
+  const result = await client.query(
       `SELECT * FROM invitations WHERE token_hash = $1 FOR UPDATE`,
       [hashToken(token)]
-    );
-    if (!result.rows.length) throw new Error("Invitation not found");
-    const invitation = result.rows[0];
-    if (invitation.status !== "pending") throw new Error("Invitation is no longer active");
-    if (new Date(invitation.expires_at).getTime() <= Date.now()) {
-      await client.query("UPDATE invitations SET status = 'expired', updated_at = NOW() WHERE id = $1", [invitation.id]);
-      await client.query("COMMIT");
-      throw new Error("Invitation has expired");
-    }
-    if (String(invitation.email).toLowerCase() !== user.email.trim().toLowerCase()) {
-      throw new Error("This invitation was sent to a different email address");
-    }
-    if (String(invitation.project_role || "").toLowerCase() === "owner") {
-      throw new Error("Project ownership cannot be granted through an invitation");
-    }
+  );
+  if (!result.rows.length) throw new Error("Invitation not found");
+  const invitation = result.rows[0];
+  if (invitation.status !== "pending") throw new Error("Invitation is no longer active");
+  if (new Date(invitation.expires_at).getTime() <= Date.now()) throw new Error("Invitation has expired");
+  if (String(invitation.email).toLowerCase() !== user.email.trim().toLowerCase()) throw new Error("This invitation was sent to a different email address");
+  if (String(invitation.project_role || "").toLowerCase() === "owner") throw new Error("Project ownership cannot be granted through an invitation");
 
-    await client.query(
+  await client.query(
       `INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
        VALUES ($1, $2, $3, $4, 'active')
        ON CONFLICT (workspace_id, user_id) DO UPDATE SET
          role = CASE WHEN workspace_members.role IN ('owner', 'admin') THEN workspace_members.role ELSE EXCLUDED.role END,
          status = 'active', deleted_at = NULL, updated_at = NOW()`,
       [crypto.randomUUID(), invitation.workspace_id, user.id, invitation.workspace_role || "member"]
-    );
+  );
 
-    if (invitation.project_id) {
-      await client.query(
+  if (invitation.project_id) {
+    await client.query(
         `INSERT INTO project_members (id, project_id, user_id, role, invited_by)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (project_id, user_id) DO UPDATE SET
            role = CASE WHEN LOWER(project_members.role) IN ('owner', 'admin') THEN project_members.role ELSE EXCLUDED.role END,
            invited_by = EXCLUDED.invited_by, deleted_at = NULL, updated_at = NOW()`,
         [crypto.randomUUID(), invitation.project_id, user.id, invitation.project_role || "contributor", invitation.invited_by]
-      );
-    }
+    );
+  }
 
-    await client.query(
+  await client.query(
       "UPDATE users SET active_workspace_id = COALESCE(active_workspace_id, $2), email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1",
       [user.id, invitation.workspace_id]
-    );
+  );
 
-    await client.query(
+  await client.query(
       `UPDATE invitations SET status = 'accepted', accepted_by = $2,
        accepted_at = NOW(), updated_at = NOW() WHERE id = $1`,
       [invitation.id, user.id]
-    );
+  );
+  return { projectId: invitation.project_id as string | null, workspaceId: invitation.workspace_id as string };
+}
+
+export async function acceptInvitation(token: string, user: { id: string; email: string }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const accepted = await acceptInvitationWithClient(client, token, user);
     await client.query("COMMIT");
-    return { projectId: invitation.project_id as string | null, workspaceId: invitation.workspace_id as string };
+    return accepted;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function registerInvitedUser(input: { token: string; name: string; email: string; password: string }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const id = crypto.randomUUID();
+    const email = input.email.trim().toLowerCase();
+    const invitation = await client.query(
+      `SELECT invited_by FROM invitations WHERE token_hash = $1 AND LOWER(email) = $2 AND status = 'pending' AND expires_at > NOW() FOR UPDATE`,
+      [hashToken(input.token), email]
+    );
+    if (!invitation.rows.length) throw new Error("This invitation is invalid or has expired");
+    const result = await client.query(
+      `INSERT INTO users (id, name, email, password_hash, role, account_origin, invited_by, last_login_at, last_seen_at)
+       VALUES ($1, $2, $3, $4, 'user', 'invited', $5, NOW(), NOW())
+       RETURNING id, name, email, role, created_at`,
+      [id, input.name.trim(), email, hashPassword(input.password), invitation.rows[0].invited_by]
+    );
+    const accepted = await acceptInvitationWithClient(client, input.token, { id, email });
+    await client.query("COMMIT");
+    const row = result.rows[0];
+    return { user: { id: row.id, name: row.name, email: row.email, role: row.role || "user", createdAt: row.created_at }, ...accepted };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

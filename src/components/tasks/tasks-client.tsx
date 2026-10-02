@@ -32,14 +32,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
     Sheet,
     SheetContent,
@@ -231,9 +224,9 @@ export function TasksClient({
 
     const handleSelectProject = (newId: string) => {
         if (newId) {
-            router.push(`/tasks?projectId=${newId}`);
+            router.push(`/tasks/backlog?projectId=${newId}`);
         } else {
-            router.push(`/tasks`);
+            router.push(`/tasks/backlog`);
         }
     };
 
@@ -243,7 +236,7 @@ export function TasksClient({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h2 className="text-xl font-bold tracking-tight text-foreground">Tasks</h2>
+                        <h2 className="text-xl font-bold tracking-tight text-foreground">Backlog</h2>
 
                         <span className="text-xs font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"}
@@ -708,37 +701,20 @@ export function TasksClient({
                 </SheetContent>
             </Sheet>
 
-            {/* Delete Confirmation Modal */}
-            <Dialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent className="rounded-lg border border-border p-6 font-sans shadow-none bg-card max-w-sm">
-                    <DialogHeader className="space-y-2">
+            <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
                         <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
                             <Trash size={18} />
                         </div>
-                        <DialogTitle className="text-base font-semibold text-foreground tracking-tight">Delete task?</DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
+                        <AlertDialogTitle>Delete task?</AlertDialogTitle>
+                        <AlertDialogDescription>
                             This task will be permanently deleted. This cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-4 flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 rounded-lg text-xs h-9 cursor-pointer"
-                            onClick={() => setDeleteId(null)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            className="flex-1 rounded-lg text-xs h-9 bg-rose-600 hover:bg-rose-700 text-white font-medium cursor-pointer"
-                            onClick={handleDeleteConfirm}
-                        >
-                            Delete
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => void handleDeleteConfirm()}>Delete</AlertDialogAction></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

@@ -1,11 +1,10 @@
-import { validatePublicKey, validateAdminAuth, getOptionalAuthUser } from "@/lib/api-auth";
+import { validateAdminAuth } from "@/lib/api-auth";
 import {
   badRequestResponse,
   errorResponse,
   internalServerErrorResponse,
   paginatedResponse,
   successResponse,
-  unauthorizedResponse,
 } from "@/lib/response";
 import { createTaskSchema, listTasksQuerySchema } from "./schema";
 import { findTasks, insertTask } from "./query";

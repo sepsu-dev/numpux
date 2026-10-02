@@ -37,14 +37,10 @@ export async function POST(request: Request) {
       if (!invitation || invitation.status !== "pending" || new Date(invitation.expiresAt).getTime() <= Date.now()) return badRequestResponse("This invitation is invalid or has expired");
       if (invitation.email.toLowerCase() !== email.trim().toLowerCase()) return badRequestResponse("Use the email address that received this invitation");
     }
-    const newUser = invitation
-      ? await (await import("@/lib/user-db")).createUser(name.trim(), email.trim().toLowerCase(), password, "user", "invited", invitation.invitedBy)
-      : await createNewUser(name.trim(), email.trim().toLowerCase(), password, "admin");
-    if (invitationToken) {
-      const { acceptInvitation } = await import("@/lib/invitations");
-      await acceptInvitation(invitationToken, { id: newUser.id, email: newUser.email });
-    }
-    await markUserLogin(newUser.id);
+    const newUser = invitationToken
+      ? (await (await import("@/lib/invitations")).registerInvitedUser({ token: invitationToken, name, email, password })).user
+      : await createNewUser(name.trim(), email.trim().toLowerCase(), password, "user");
+    if (!invitationToken) await markUserLogin(newUser.id);
     const sessionVersion = await getUserSessionVersion(newUser.id);
 
     await createSession({

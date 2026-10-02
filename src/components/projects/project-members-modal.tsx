@@ -22,6 +22,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ProjectMembersModalProps {
     open: boolean;
@@ -130,7 +131,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
     };
 
     const handleTransferOwnership = async (member: ProjectMember) => {
-        if (!project || !confirm(`Transfer ownership of ${project.title} to ${member.name}?`)) return;
+        if (!project) return;
         const res = await apiFetch(`/api/projects/${project.id}/members/${member.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "transfer_ownership" }) });
         const body = await res.json();
         if (!res.ok) return toast.error(body.message || "Failed to transfer ownership");
@@ -246,7 +247,7 @@ export function ProjectMembersModal({ open, onOpenChange, project }: ProjectMemb
                                                 ) : <span className="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold capitalize">{member.role}</span>}
 
                                                 {canManage && member.role.toLowerCase() !== "owner" && (
-                                                    <>{project?.userRole?.toLowerCase() === "owner" && <button type="button" onClick={() => void handleTransferOwnership(member)} className="rounded-md p-1 text-muted-foreground opacity-60 transition-colors hover:text-amber-600 group-hover:opacity-100" title={`Transfer ownership to ${member.name}`}><Crown size={14} /></button>}<button
+                                                    <>{project?.userRole?.toLowerCase() === "owner" && <ConfirmDialog title="Transfer project ownership?" description={`Transfer ${project.title} to ${member.name}?`} confirmLabel="Transfer ownership" onConfirm={() => handleTransferOwnership(member)}><button type="button" className="rounded-md p-1 text-muted-foreground opacity-60 transition-colors hover:text-amber-600 group-hover:opacity-100" title={`Transfer ownership to ${member.name}`}><Crown size={14} /></button></ConfirmDialog>}<button
                                                         type="button"
                                                         onClick={() => handleRemove(member)}
                                                         className="text-muted-foreground hover:text-rose-600 p-1 rounded-md opacity-60 group-hover:opacity-100 transition-colors cursor-pointer"

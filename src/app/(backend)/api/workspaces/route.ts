@@ -11,7 +11,7 @@ export async function GET(request: Request) {
       `SELECT w.id, w.name, w.slug, w.status, wm.role, wm.joined_at,
               (u.active_workspace_id = w.id) AS is_active,
               (SELECT COUNT(*)::int FROM workspace_members x WHERE x.workspace_id = w.id AND x.status = 'active' AND x.deleted_at IS NULL) AS members_count,
-              (SELECT COUNT(*)::int FROM projects p WHERE p.workspace_id = w.id AND p.deleted_at IS NULL) AS projects_count
+              (SELECT COUNT(*)::int FROM projects p WHERE p.workspace_id = w.id) AS projects_count
        FROM workspace_members wm
        JOIN workspaces w ON w.id = wm.workspace_id
        JOIN users u ON u.id = wm.user_id
